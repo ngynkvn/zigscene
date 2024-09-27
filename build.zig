@@ -1,5 +1,4 @@
 const std = @import("std");
-const raySdk = @import("raylib");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
@@ -14,14 +13,11 @@ pub fn build(b: *std.Build) void {
 
     b.installArtifact(exe);
 
-    const raylib = try raySdk.addRaylib(
-        b,
-        target,
-        optimize,
-        .{},
-    );
-    exe.addIncludePath(raylib.getEmittedIncludeTree());
-    exe.linkLibrary(raylib);
+    const raylib = b.dependency("raylib", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    exe.linkLibrary(raylib.artifact("raylib"));
 
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
