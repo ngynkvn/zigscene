@@ -13,10 +13,12 @@ pub fn build(b: *std.Build) void {
 
     b.installArtifact(exe);
 
+    // Dependencies
     const raylib = b.dependency("raylib", .{
         .target = target,
         .optimize = optimize,
     });
+    exe.addIncludePath(raylib.path("src/external"));
     exe.linkLibrary(raylib.artifact("raylib"));
 
     const run_cmd = b.addRunArtifact(exe);
