@@ -18,8 +18,8 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    exe.addIncludePath(raylib.path("src/external"));
-    exe.linkLibrary(raylib.artifact("raylib"));
+    const libraylib = raylib.artifact("raylib");
+    exe.linkLibrary(libraylib);
 
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
