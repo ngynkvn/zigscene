@@ -6,13 +6,15 @@ const c = @cImport({
     @cInclude("raymath.h");
 });
 
-var curr_buffer = std.mem.zeroes([256]f32);
-var curr_fft = std.mem.zeroes([256]f32);
+var curr_buffer = std.mem.zeroes([256:0]f32);
+var curr_len: usize = 0;
+var curr_fft = std.mem.zeroes([256:0]f32);
 fn callback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
     if (ptr == null) return;
     const buffer: []f32 = @as([*]f32, @ptrCast(@alignCast(ptr)))[0..n];
     var l: f32 = 0;
     var r: f32 = 0;
+    curr_len = n / 2;
     for (0..n / 2 - 1) |fi| {
         l = buffer[fi * 2 + 0];
         r = buffer[fi * 2 + 1];
@@ -36,6 +38,7 @@ pub fn main() !void {
     c.PlayMusicStream(music);
 
     const camera = initCamera();
+    _ = camera;
 
     c.SetTargetFPS(60); // Set our game to run at 60 frames-per-second
 
@@ -43,65 +46,22 @@ pub fn main() !void {
     var cmodel = c.LoadModelFromMesh(cmesh);
     cmodel.transform = c.MatrixMultiply(cmodel.transform, c.MatrixRotateX(std.math.pi / 2.0));
 
-    //const shader = c.LoadShader(0, "./shaders/checkers.fs");
-    //const target = c.LoadRenderTexture(screenWidth, screenHeight);
-
-    // const snd = try soundio.create();
-    // defer snd.destroy();
-    // try snd.connect();
-    // snd.flush_events();
-    // if (snd.current_backend == .None) {
-    //     return error.NoBackend;
-    // }
-    // const default_output_index = snd.default_output_device_index();
-    // if (default_output_index < 0) return error.NoOutputDeviceFound;
-    // var device = snd.get_output_device(default_output_index);
-    // var outstream = try device.outstream_create();
-    // try outstream.open();
-    // defer outstream.destroy();
-
     // Main game loop
     while (!c.WindowShouldClose()) { // Detect window close button or ESC key
         c.UpdateMusicStream(music);
-        // c.BeginTextureMode(target);
-        // {
-        //     c.ClearBackground(c.WHITE);
-        //     defer c.EndTextureMode();
-        //     c.BeginMode3D(camera);
-        //     {
-        //         defer c.EndMode3D();
-        //         c.rlPushMatrix();
-        //         c.rlRotatef(20, 0, 1, 0);
-        //         c.DrawCube(.{ .x = 0, .y = @sin(t / 2) / 3, .z = 0 }, 5, 4, 4, c.BLUE);
-        //         c.rlPopMatrix();
-        //         c.DrawGrid(10, 4.0);
-        //     }
-        // }
 
         // Draw
         c.BeginDrawing();
         {
             defer c.EndDrawing();
-            c.ClearBackground(c.RAYWHITE);
-            // c.BeginShaderMode(shader);
-            // {
-            //     defer c.EndShaderMode();
-            //     c.DrawTextureRec(
-            //         target.texture,
-            //         .{ .x = 0, .y = 0, .width = @floatFromInt(target.texture.width), .height = @floatFromInt(-target.texture.height) },
-            //         .{},
-            //         c.WHITE,
-            //     );
-            // }
-            c.BeginMode3D(camera);
-            {
-                defer c.EndMode3D();
-                c.rlPushMatrix();
-                c.rlRotatef(20, 0, 1, 0);
-                c.DrawCube(.{ .x = 3, .y = @sin(t / 2) / 3, .z = 0 }, 5, 4, 4, c.BLUE);
-                c.DrawGrid(10, 4.0);
-                c.rlPopMatrix();
-                c.DrawSphere(.{ .x = -5 }, 2, c.RED);
+            c.ClearBackground(c.BLACK);
+
+            for (curr_buffer[0..curr_len], 0..) |v, i| {
+                var x: c_int = 10;
+                x += @as(c_int, @intCast(i * 4));
+                var y: c_int = 200;
+                y += @intFromFloat(v * 80);
+                c.DrawRectangle(x, y, 2, 2, c.RAYWHITE);
             }
         }
         t += 0.05;
