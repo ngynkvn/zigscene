@@ -5,6 +5,7 @@ const c = @cImport({
     @cInclude("rlgl.h");
     @cInclude("raymath.h");
     @cInclude("miniaudio.h");
+    @cInclude("dr_wav.h");
 });
 
 pub fn main() !void {
@@ -110,19 +111,25 @@ fn initAudio() !void {
     config.pUserData = null;
 
     result = c.ma_device_init(&context, &config, &device);
+    errdefer _ = c.ma_context_uninit(&context);
     if (result != c.MA_SUCCESS) {
-        _ = c.ma_context_uninit(&context);
         return error.NoAudio;
     }
 
     // Keep the device running the whole time. May want to consider doing something a bit smarter and only have the device running
     // while there's at least one sound being played
     result = c.ma_device_start(&device);
+    errdefer _ = c.ma_device_uninit(&device);
     if (result != c.MA_SUCCESS) {
-        _ = c.ma_device_uninit(&device);
-        _ = c.ma_context_uninit(&context);
         return error.NoAudio;
     }
+    var pwav = c.drwav{};
+    const success = c.drwav_init_file(&pwav, "./sounds/sample.wav", 0);
+    if (success == 0) {
+        std.debug.print("{}\n", .{success});
+        return error.FailedInit;
+    }
+    std.debug.print("{}\n", .{pwav.bytesRemaining});
 }
 
 fn initCamera() c.Camera3D {
