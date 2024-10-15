@@ -1,44 +1,29 @@
 const std = @import("std");
-const o = @import("objects.zig");
 const c = @cImport({
     @cInclude("raylib.h");
     @cInclude("rlgl.h");
     @cInclude("raymath.h");
 });
-
-var curr_buffer = std.mem.zeroes([256:0]f32);
-var curr_len: usize = 0;
-var curr_fft = std.mem.zeroes([256:0]f32);
-fn callback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
-    if (ptr == null) return;
-    const buffer: []f32 = @as([*]f32, @ptrCast(@alignCast(ptr)))[0..n];
-    var l: f32 = 0;
-    var r: f32 = 0;
-    curr_len = n / 2;
-    for (0..n / 2 - 1) |fi| {
-        l = buffer[fi * 2 + 0];
-        r = buffer[fi * 2 + 1];
-        curr_buffer[fi] = l;
-    }
-}
+const music_file = "./sounds/sample.wav";
+const screenWidth = 900;
+const screenHeight = 500;
 
 pub fn main() !void {
     var t: f32 = 0.0;
-    const screenWidth = 800;
-    const screenHeight = 450;
 
     c.InitWindow(screenWidth, screenHeight, "neo");
     defer c.CloseWindow(); // Close window and OpenGL context
 
     c.InitAudioDevice();
     defer c.CloseAudioDevice();
-    const music = c.LoadMusicStream("sounds/sample.wav");
-    std.debug.assert(music.stream.sampleSize == 32);
-    c.AttachAudioStreamProcessor(music.stream, callback);
-    c.PlayMusicStream(music);
 
-    const camera = initCamera();
-    _ = camera;
+    const music = startMusic(music_file);
+    c.SetMasterVolume(0.11);
+
+    const camera = c.Camera2D{
+        .zoom = 1,
+        .offset = .{ .x = 0, .y = screenHeight / 2 },
+    };
 
     c.SetTargetFPS(60); // Set our game to run at 60 frames-per-second
 
@@ -50,32 +35,61 @@ pub fn main() !void {
     while (!c.WindowShouldClose()) { // Detect window close button or ESC key
         c.UpdateMusicStream(music);
 
-        // Draw
-        c.BeginDrawing();
+        c.BeginMode2D(camera);
         {
-            defer c.EndDrawing();
-            c.ClearBackground(c.BLACK);
-
-            for (curr_buffer[0..curr_len], 0..) |v, i| {
-                var x: c_int = 10;
-                x += @as(c_int, @intCast(i * 4));
-                var y: c_int = 200;
-                y += @intFromFloat(v * 80);
-                c.DrawRectangle(x, y, 2, 2, c.RAYWHITE);
+            defer c.EndMode2D();
+            // Draw
+            c.BeginDrawing();
+            {
+                const center = c.GetWorldToScreen2D(.{ .x = 0, .y = 0 }, camera);
+                defer c.EndDrawing();
+                c.ClearBackground(c.BLACK);
+                // Direct map of buffer
+                for (curr_buffer[0..curr_len], 0..) |v, i| {
+                    const x = @as(f32, @floatFromInt(i)) * 4;
+                    const y = (v * 80);
+                    // "plot" x and y
+                    const px = @as(c_int, @intFromFloat(x + center.x));
+                    const py = @as(c_int, @intFromFloat(y + center.y));
+                    c.DrawRectangle(px, py, 2, 2, c.RAYWHITE);
+                    c.DrawRectangle(px, py + 8, 1, 1, c.GREEN);
+                }
             }
         }
         t += 0.05;
     }
 }
 
-fn initCamera() c.Camera3D {
+fn project(camera: c.Camera, x: f32, y: f32) struct { c_int, c_int } {
+    _ = y; // autofix
+    _ = x; // autofix
+    _ = camera; // autofix
+    return .{};
+}
 
-    // Define the camera to look into our 3d world
-    var cam: c.Camera3D = undefined;
-    cam.position = c.Vector3{ .x = 0.0, .y = 3.0, .z = 10.0 }; // Camera position
-    cam.target = c.Vector3{ .x = 0.0, .y = 0.0, .z = 0.0 }; // Camera looking at point
-    cam.up = c.Vector3{ .x = 0.0, .y = 1.0, .z = 0.0 }; // Camera up vector (rotation towards target)
-    cam.fovy = 45.0; // Camera field-of-view Y
-    cam.projection = c.CAMERA_PERSPECTIVE; // Camera projection type
-    return cam;
+fn startMusic(path: [*c]const u8) c.Music {
+    const music = c.LoadMusicStream(path);
+    {
+        std.debug.assert(music.stream.sampleSize == 32);
+    }
+    c.AttachAudioStreamProcessor(music.stream, audioStreamCallback);
+    c.PlayMusicStream(music);
+    return music;
+}
+
+var curr_buffer = std.mem.zeroes([256:0]f32);
+var curr_len: usize = 0;
+var curr_fft = std.mem.zeroes([256:0]f32);
+fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
+    if (ptr == null) return;
+    const buffer: []f32 = @as([*]f32, @ptrCast(@alignCast(ptr)))[0..n];
+    var l: f32 = 0;
+    var r: f32 = 0;
+    curr_len = n / 2;
+    for (0..n / 2 - 1) |fi| {
+        l = buffer[fi * 2 + 0];
+        r = buffer[fi * 2 + 1];
+        curr_buffer[fi] += (l + r) / 2;
+        curr_buffer[fi] *= 0.95;
+    }
 }
