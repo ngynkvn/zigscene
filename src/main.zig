@@ -49,22 +49,19 @@ pub fn main() !void {
                     const x = @as(f32, @floatFromInt(i)) * 4;
                     const y = (v * 80);
                     // "plot" x and y
-                    const px = @as(c_int, @intFromFloat(x + center.x));
-                    const py = @as(c_int, @intFromFloat(y + center.y));
-                    c.DrawRectangle(px, py, 2, 2, c.RAYWHITE);
-                    c.DrawRectangle(px, py + 8, 1, 1, c.GREEN);
+                    const px = x + center.x;
+                    const py = y + center.y;
+                    c.DrawRectangleRec(.{ .x = px, .y = py, .width = 2, .height = 2 }, c.RAYWHITE);
+                    c.DrawRectangleRec(.{ .x = px, .y = py + 8, .width = 1, .height = 1 }, c.GREEN);
+                    c.DrawRectangleRec(
+                        .{ .x = @mod(px + t, screenWidth), .y = y + center.y + 80 + @abs(v) * 20, .width = 2, .height = screenHeight },
+                        c.ORANGE,
+                    );
                 }
             }
         }
-        t += 0.05;
+        t += 3.14;
     }
-}
-
-fn project(camera: c.Camera, x: f32, y: f32) struct { c_int, c_int } {
-    _ = y; // autofix
-    _ = x; // autofix
-    _ = camera; // autofix
-    return .{};
 }
 
 fn startMusic(path: [*c]const u8) c.Music {
@@ -89,7 +86,7 @@ fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
     for (0..n / 2 - 1) |fi| {
         l = buffer[fi * 2 + 0];
         r = buffer[fi * 2 + 1];
-        curr_buffer[fi] += (l + r) / 2;
-        curr_buffer[fi] *= 0.95;
+        curr_buffer[fi] += (l + r) / 3;
+        curr_buffer[fi] *= 0.96;
     }
 }
