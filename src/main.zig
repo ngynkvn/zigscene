@@ -1,8 +1,6 @@
 const std = @import("std");
 const c = @cImport({
     @cInclude("raylib.h");
-    @cInclude("rlgl.h");
-    @cInclude("raymath.h");
 });
 const music_file = "./sounds/sample.wav";
 const screenWidth = 900;
@@ -18,7 +16,7 @@ pub fn main() !void {
     defer c.CloseAudioDevice();
 
     const music = startMusic(music_file);
-    c.SetMasterVolume(0.11);
+    c.SetMasterVolume(0.10);
 
     const camera = c.Camera2D{
         .zoom = 1,
@@ -26,10 +24,6 @@ pub fn main() !void {
     };
 
     c.SetTargetFPS(60); // Set our game to run at 60 frames-per-second
-
-    const cmesh = c.GenMeshCylinder(0.5, 0.7, 16);
-    var cmodel = c.LoadModelFromMesh(cmesh);
-    cmodel.transform = c.MatrixMultiply(cmodel.transform, c.MatrixRotateX(std.math.pi / 2.0));
 
     // Main game loop
     while (!c.WindowShouldClose()) { // Detect window close button or ESC key
@@ -41,8 +35,8 @@ pub fn main() !void {
             // Draw
             c.BeginDrawing();
             {
-                const center = c.GetWorldToScreen2D(.{ .x = 0, .y = 0 }, camera);
                 defer c.EndDrawing();
+                const center = c.GetWorldToScreen2D(.{ .x = 0, .y = 0 }, camera);
                 c.ClearBackground(c.BLACK);
                 // Direct map of buffer
                 for (curr_buffer[0..curr_len], 0..) |v, i| {
@@ -51,12 +45,15 @@ pub fn main() !void {
                     // "plot" x and y
                     const px = x + center.x;
                     const py = y + center.y;
-                    c.DrawRectangleRec(.{ .x = px, .y = py, .width = 2, .height = 2 }, c.RAYWHITE);
-                    c.DrawRectangleRec(.{ .x = px, .y = py + 8, .width = 1, .height = 1 }, c.GREEN);
-                    c.DrawRectangleRec(
-                        .{ .x = @mod(px + t, screenWidth), .y = y + center.y + 80 + @abs(v) * 20, .width = 2, .height = screenHeight },
-                        c.ORANGE,
+                    c.DrawRectangleGradientEx(
+                        .{ .x = @mod(px + t, screenWidth + 40), .y = y + center.y + 80 + @abs(v) * 20, .width = 1, .height = screenHeight / 2 },
+                        c.BLUE,
+                        c.BLACK,
+                        c.BLACK,
+                        c.BLUE,
                     );
+                    c.DrawRectangleRec(.{ .x = px, .y = py, .width = 1, .height = 2 }, c.RAYWHITE);
+                    c.DrawRectangleRec(.{ .x = px, .y = py + 12, .width = 2, .height = 1 }, c.GREEN);
                 }
             }
         }
@@ -86,7 +83,7 @@ fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
     for (0..n / 2 - 1) |fi| {
         l = buffer[fi * 2 + 0];
         r = buffer[fi * 2 + 1];
-        curr_buffer[fi] += (l + r) / 3;
-        curr_buffer[fi] *= 0.96;
+        curr_buffer[fi] += (l + r) / 4;
+        curr_buffer[fi] *= 0.97;
     }
 }
