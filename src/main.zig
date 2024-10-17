@@ -3,7 +3,7 @@ const c = @cImport({
     @cInclude("raylib.h");
 });
 const music_file = "./sounds/sample.wav";
-const screenWidth = 900;
+const screenWidth = 800;
 const screenHeight = 500;
 
 pub fn main() !void {
@@ -35,29 +35,37 @@ pub fn main() !void {
             // Draw
             c.BeginDrawing();
             {
+                c.ClearBackground(c.BLACK);
                 defer c.EndDrawing();
                 const center = c.GetWorldToScreen2D(.{ .x = 0, .y = 0 }, camera);
-                c.ClearBackground(c.BLACK);
+                const SPACING = 8;
                 // Direct map of buffer
                 for (curr_buffer[0..curr_len], 0..) |v, i| {
-                    const x = @as(f32, @floatFromInt(i)) * 4;
+                    const x = @as(f32, @floatFromInt(i)) * SPACING;
                     const y = (v * 80);
                     // "plot" x and y
                     const px = x + center.x;
                     const py = y + center.y;
+                    const tgrad = c.BLUE;
+                    const bgrad = c.BLUE;
                     c.DrawRectangleGradientEx(
-                        .{ .x = @mod(px + t, screenWidth + 40), .y = y + center.y + 80 + @abs(v) * 20, .width = 1, .height = screenHeight / 2 },
-                        c.BLUE,
-                        c.BLACK,
-                        c.BLACK,
-                        c.BLUE,
+                        .{
+                            .x = @mod(px + t, screenWidth + 80),
+                            .y = y + center.y + 80 + @abs(v) * 20,
+                            .width = 4,
+                            .height = screenHeight / 2,
+                        },
+                        tgrad,
+                        bgrad,
+                        bgrad,
+                        tgrad,
                     );
                     c.DrawRectangleRec(.{ .x = px, .y = py, .width = 1, .height = 2 }, c.RAYWHITE);
                     c.DrawRectangleRec(.{ .x = px, .y = py + 12, .width = 2, .height = 1 }, c.GREEN);
                 }
             }
         }
-        t += 3.14;
+        t += 3;
     }
 }
 
@@ -80,10 +88,14 @@ fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
     var l: f32 = 0;
     var r: f32 = 0;
     curr_len = n / 2;
-    for (0..n / 2 - 1) |fi| {
+    for (0..curr_len) |fi| {
         l = buffer[fi * 2 + 0];
         r = buffer[fi * 2 + 1];
         curr_buffer[fi] += (l + r) / 4;
         curr_buffer[fi] *= 0.97;
     }
+    // Mix the first and last so they are "zipped" together lol
+    const zips = curr_buffer[0] * 0.5 + curr_buffer[curr_len - 1] * 0.5;
+    curr_buffer[0] = zips;
+    curr_buffer[curr_len - 1] = zips;
 }
