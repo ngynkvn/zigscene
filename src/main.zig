@@ -2,8 +2,8 @@ const std = @import("std");
 const c = @cImport({
     @cInclude("raylib.h");
 });
-const screenWidth = 1200;
-const screenHeight = 800;
+const screenWidth = 800;
+const screenHeight = 600;
 
 pub fn main() !void {
     var t: f32 = 0.0;
@@ -49,33 +49,21 @@ pub fn main() !void {
         c.BeginDrawing();
         defer c.EndDrawing();
         c.ClearBackground(c.BLACK);
-        const mtp = c.GetMusicTimePlayed(music);
-        const mtl = c.GetMusicTimeLength(music);
-        const txt = try std.fmt.bufPrint(&info, "{s}\n{d:3.2} | {d:3.2}", .{ filename[0..clen], mtl, mtp });
-        c.DrawText(txt.ptr, 0, 0, 10, c.WHITE);
+        if (c.IsMusicStreamPlaying(music)) {
+            const mtp = c.GetMusicTimePlayed(music);
+            const mtl = c.GetMusicTimeLength(music);
+            const txt = try std.fmt.bufPrint(&info, "{s}\n{d:3.2} | {d:3.2}", .{ filename[0..clen], mtl, mtp });
+            c.DrawText(txt.ptr, 0, 0, 10, c.WHITE);
+        }
         const center = c.GetWorldToScreen2D(.{ .x = 0, .y = 0 }, camera);
-        const tsteps = std.math.pi * 2 / @as(f32, @floatFromInt(curr_len));
         for (curr_buffer[0..curr_len], 0..) |v, i| {
-            line_graph(center, i, v);
-            bar_graph(center, i, v, t);
-            for (bubbles) |b| {
-                const r = b[0] + (@abs(v) * b[1]);
-                const x = (@cos(@as(f32, @floatFromInt(i)) * tsteps + t) * r) + center.x;
-                const y = (@sin(@as(f32, @floatFromInt(i)) * tsteps + t) * r) + center.y;
-                c.DrawRectangleRec(.{ .x = x, .y = y, .width = 2, .height = 2 }, c.ORANGE);
-            }
+            draw_line(center, i, v);
+            draw_bars(center, i, v, t);
+            draw_bubbles(center, i, v, t);
         }
         t += 0.01;
     }
 }
-
-const bubbles = [_][2]f32{
-    .{ 260, 120 },
-    .{ 260, 80 },
-    .{ 260, 60 },
-    .{ 260, 40 },
-    .{ 250, 10 },
-};
 
 fn startMusic(music: *c.Music, path: [*c]const u8) !void {
     music.* = c.LoadMusicStream(path);
@@ -87,6 +75,8 @@ fn startMusic(music: *c.Music, path: [*c]const u8) !void {
 var curr_buffer = std.mem.zeroes([256:0]f32);
 var curr_len: usize = 0;
 var curr_fft = std.mem.zeroes([256:0]f32);
+// understand what *this* is?
+// a buffer of the stream + the lengtth of the buffer
 fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
     if (ptr == null) return;
     const buffer: []f32 = @as([*]f32, @ptrCast(@alignCast(ptr)))[0..n];
@@ -97,7 +87,7 @@ fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
         l = buffer[fi * 2 + 0];
         r = buffer[fi * 2 + 1];
         curr_buffer[fi] += (l + r) / 4;
-        curr_buffer[fi] *= 0.98;
+        curr_buffer[fi] *= 0.91;
     }
     // Mix the first and last so they are "zipped" together lol
     const zips = curr_buffer[0] * 0.5 + curr_buffer[curr_len - 1] * 0.5;
@@ -105,7 +95,7 @@ fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
     curr_buffer[curr_len - 1] = zips;
 }
 
-fn line_graph(center: c.Vector2, i: usize, v: f32) void {
+fn draw_line(center: c.Vector2, i: usize, v: f32) void {
     const SPACING = 8;
     const x = @as(f32, @floatFromInt(i)) * SPACING;
     const y = (v * 80);
@@ -116,7 +106,7 @@ fn line_graph(center: c.Vector2, i: usize, v: f32) void {
     c.DrawRectangleRec(.{ .x = px, .y = py + 12, .width = 2, .height = 1 }, c.GREEN);
 }
 
-fn bar_graph(center: c.Vector2, i: usize, v: f32, t: f32) void {
+fn draw_bars(center: c.Vector2, i: usize, v: f32, t: f32) void {
     const SPACING = 8;
     const x = @as(f32, @floatFromInt(i)) * SPACING;
     const y = (v * 80);
@@ -136,4 +126,21 @@ fn bar_graph(center: c.Vector2, i: usize, v: f32, t: f32) void {
         bgrad,
         tgrad,
     );
+}
+
+const bubbles = [_][2]f32{
+    .{ 240, 60 },
+    .{ 240, 40 },
+    .{ 240, 20 },
+    .{ 240, 10 },
+    .{ 220, 10 },
+};
+fn draw_bubbles(center: c.Vector2, i: usize, v: f32, t: f32) void {
+    const tsteps = std.math.pi * 2 / @as(f32, @floatFromInt(curr_len));
+    for (bubbles) |b| {
+        const r = b[0] + (@abs(v) * b[1]);
+        const x = (@cos(@as(f32, @floatFromInt(i)) * tsteps + t) * r) + center.x;
+        const y = (@sin(@as(f32, @floatFromInt(i)) * tsteps + t) * r) + center.y;
+        c.DrawRectangleRec(.{ .x = x, .y = y, .width = 2, .height = 2 }, c.ORANGE);
+    }
 }
