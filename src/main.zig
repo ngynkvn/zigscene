@@ -3,7 +3,7 @@ const c = @cImport({
     @cInclude("raylib.h");
 });
 const music_file = "./sounds/sample.wav";
-const screenWidth = 800;
+const screenWidth = 1200;
 const screenHeight = 800;
 
 pub fn main() !void {
@@ -15,7 +15,7 @@ pub fn main() !void {
     c.InitAudioDevice();
     defer c.CloseAudioDevice();
 
-    const music = startMusic(music_file);
+    var music = c.Music{};
     c.SetMasterVolume(0.10);
 
     const camera = c.Camera2D{
@@ -27,7 +27,15 @@ pub fn main() !void {
 
     // Main game loop
     while (!c.WindowShouldClose()) { // Detect window close button or ESC key
-        c.UpdateMusicStream(music);
+        if (c.IsFileDropped()) {
+            const files = c.LoadDroppedFiles();
+            defer c.UnloadDroppedFiles(files);
+            const file = files.paths[0];
+            music = startMusic(file) catch @panic("oml");
+        }
+        if (c.IsMusicStreamPlaying(music)) {
+            c.UpdateMusicStream(music);
+        }
 
         c.BeginMode2D(camera);
         {
@@ -64,11 +72,9 @@ const bubbles = [_][2]f32{
     .{ 250, 10 },
 };
 
-fn startMusic(path: [*c]const u8) c.Music {
+fn startMusic(path: [*c]const u8) !c.Music {
     const music = c.LoadMusicStream(path);
-    {
-        std.debug.assert(music.stream.sampleSize == 32);
-    }
+    if (music.stream.sampleSize != 32) return error.NoMusic;
     c.AttachAudioStreamProcessor(music.stream, audioStreamCallback);
     c.PlayMusicStream(music);
     return music;
