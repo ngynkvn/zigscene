@@ -8,8 +8,9 @@ pub var curr_buffer = std.mem.zeroes([256:0]f32);
 pub var curr_len: usize = 256;
 pub var intensity: f32 = 0;
 pub var curr_fft = std.mem.zeroes([256]Cf32);
-// understand what *this* is?
-// a buffer of the stream + the lengtth of the buffer
+/// Accepts a buffer of the stream + the length of the buffer
+/// The buffer is composed of PCM samples from the audio stream
+/// passed to raylib / miniaudio.h
 pub fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
     if (ptr == null) return;
     const buffer: []f32 = @as([*]f32, @ptrCast(@alignCast(ptr)))[0..n];
@@ -30,6 +31,7 @@ pub fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
     fft(curr_fft[0..curr_len]);
 }
 
+/// https://en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm
 fn fft(values: []Cf32) void {
     const N = values.len;
     if (N <= 1) return;
