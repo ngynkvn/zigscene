@@ -2,7 +2,6 @@ const std = @import("std");
 const c = @cImport({
     @cInclude("raylib.h");
 });
-const music_file = "./sounds/sample.wav";
 const screenWidth = 1200;
 const screenHeight = 800;
 
@@ -16,6 +15,9 @@ pub fn main() !void {
     defer c.CloseAudioDevice();
 
     var music = c.Music{};
+    var filename = std.mem.zeroes([64:0]u8);
+    var clen: usize = 0;
+    var info = std.mem.zeroes([256:0]u8);
     c.SetMasterVolume(0.10);
 
     const camera = c.Camera2D{
@@ -26,38 +28,41 @@ pub fn main() !void {
     c.SetTargetFPS(60); // Set our game to run at 60 frames-per-second
 
     // Main game loop
-    while (!c.WindowShouldClose()) { // Detect window close button or ESC key
+    // Detects window close button or ESC key
+    while (!c.WindowShouldClose()) {
         if (c.IsFileDropped()) {
             const files = c.LoadDroppedFiles();
             defer c.UnloadDroppedFiles(files);
             const file = files.paths[0];
-            music = startMusic(file) catch @panic("oml");
+            const cfilename = c.GetFileName(file);
+            clen = std.mem.len(cfilename);
+            @memcpy(filename[0..clen], cfilename[0..clen]);
+            startMusic(&music, file) catch @panic("oml");
         }
         if (c.IsMusicStreamPlaying(music)) {
             c.UpdateMusicStream(music);
         }
 
         c.BeginMode2D(camera);
-        {
-            defer c.EndMode2D();
-            // Draw
-            c.BeginDrawing();
-            {
-                c.ClearBackground(c.BLACK);
-                defer c.EndDrawing();
-                const center = c.GetWorldToScreen2D(.{ .x = 0, .y = 0 }, camera);
-                const tsteps = std.math.pi * 2 / @as(f32, @floatFromInt(curr_len));
-                // Direct map of buffer
-                for (curr_buffer[0..curr_len], 0..) |v, i| {
-                    line_graph(center, i, v);
-                    bar_graph(center, i, v, t);
-                    for (bubbles) |b| {
-                        const r = b[0] + (@abs(v) * b[1]);
-                        const x = (@cos(@as(f32, @floatFromInt(i)) * tsteps + t) * r) + center.x;
-                        const y = (@sin(@as(f32, @floatFromInt(i)) * tsteps + t) * r) + center.y;
-                        c.DrawRectangleRec(.{ .x = x, .y = y, .width = 2, .height = 2 }, c.ORANGE);
-                    }
-                }
+        defer c.EndMode2D();
+
+        c.BeginDrawing();
+        defer c.EndDrawing();
+        c.ClearBackground(c.BLACK);
+        const mtp = c.GetMusicTimePlayed(music);
+        const mtl = c.GetMusicTimeLength(music);
+        const txt = try std.fmt.bufPrint(&info, "{s}\n{d:3.2} | {d:3.2}", .{ filename[0..clen], mtl, mtp });
+        c.DrawText(txt.ptr, 0, 0, 10, c.WHITE);
+        const center = c.GetWorldToScreen2D(.{ .x = 0, .y = 0 }, camera);
+        const tsteps = std.math.pi * 2 / @as(f32, @floatFromInt(curr_len));
+        for (curr_buffer[0..curr_len], 0..) |v, i| {
+            line_graph(center, i, v);
+            bar_graph(center, i, v, t);
+            for (bubbles) |b| {
+                const r = b[0] + (@abs(v) * b[1]);
+                const x = (@cos(@as(f32, @floatFromInt(i)) * tsteps + t) * r) + center.x;
+                const y = (@sin(@as(f32, @floatFromInt(i)) * tsteps + t) * r) + center.y;
+                c.DrawRectangleRec(.{ .x = x, .y = y, .width = 2, .height = 2 }, c.ORANGE);
             }
         }
         t += 0.01;
@@ -72,12 +77,11 @@ const bubbles = [_][2]f32{
     .{ 250, 10 },
 };
 
-fn startMusic(path: [*c]const u8) !c.Music {
-    const music = c.LoadMusicStream(path);
+fn startMusic(music: *c.Music, path: [*c]const u8) !void {
+    music.* = c.LoadMusicStream(path);
     if (music.stream.sampleSize != 32) return error.NoMusic;
     c.AttachAudioStreamProcessor(music.stream, audioStreamCallback);
-    c.PlayMusicStream(music);
-    return music;
+    c.PlayMusicStream(music.*);
 }
 
 var curr_buffer = std.mem.zeroes([256:0]f32);
