@@ -20,7 +20,14 @@ pub fn main() !void {
     var info = std.mem.zeroes([256:0]u8);
     c.SetMasterVolume(0.10);
 
-    const camera = c.Camera2D{
+    const camera3d: c.Camera3D = .{
+        .position = .{ .x = 0.0, .y = 3.0, .z = 10.0 }, // Camera position
+        .target = .{ .x = 0.0, .y = 0.0, .z = 0.0 }, // Camera looking at point
+        .up = .{ .x = 0.0, .y = 1.0, .z = 0.0 }, // Camera up vector (rotation towards target)
+        .fovy = 45.0, // Camera field-of-view Y
+        .projection = c.CAMERA_PERSPECTIVE, // Camera projection type
+    };
+    const camera2d: c.Camera2D = .{
         .zoom = 1,
         .offset = .{ .x = screenWidth / 2, .y = screenHeight / 2 },
     };
@@ -43,7 +50,7 @@ pub fn main() !void {
             c.UpdateMusicStream(music);
         }
 
-        c.BeginMode2D(camera);
+        c.BeginMode2D(camera2d);
         defer c.EndMode2D();
 
         c.BeginDrawing();
@@ -55,10 +62,10 @@ pub fn main() !void {
             const txt = try std.fmt.bufPrint(&info, "{s}\n{d:3.2} | {d:3.2}", .{ filename[0..clen], mtl, mtp });
             c.DrawText(txt.ptr, 0, 0, 10, c.WHITE);
         }
-        const center = c.GetWorldToScreen2D(.{ .x = 0, .y = 0 }, camera);
+        const center = c.GetWorldToScreen(.{ .x = 0, .y = 0 }, camera3d);
         for (curr_buffer[0..curr_len], 0..) |v, i| {
             draw_line(center, i, v);
-            draw_bars(center, i, v, t);
+            draw_bars(center, i, v);
             draw_bubbles(center, i, v, t);
         }
         t += 0.01;
@@ -87,39 +94,36 @@ fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
         l = buffer[fi * 2 + 0];
         r = buffer[fi * 2 + 1];
         curr_buffer[fi] += (l + r) / 4;
-        curr_buffer[fi] *= 0.91;
+        curr_buffer[fi] *= 0.97;
     }
-    // Mix the first and last so they are "zipped" together lol
-    const zips = curr_buffer[0] * 0.5 + curr_buffer[curr_len - 1] * 0.5;
-    curr_buffer[0] = zips;
-    curr_buffer[curr_len - 1] = zips;
 }
 
 fn draw_line(center: c.Vector2, i: usize, v: f32) void {
-    const SPACING = 8;
+    const SPACING = 4;
     const x = @as(f32, @floatFromInt(i)) * SPACING;
-    const y = (v * 80);
+    const y = (v * 60);
     // "plot" x and y
     const px = x;
-    const py = y + center.y;
+    const py = -y + center.y - 60;
     c.DrawRectangleRec(.{ .x = px, .y = py, .width = 1, .height = 2 }, c.RAYWHITE);
     c.DrawRectangleRec(.{ .x = px, .y = py + 12, .width = 2, .height = 1 }, c.GREEN);
 }
 
-fn draw_bars(center: c.Vector2, i: usize, v: f32, t: f32) void {
-    const SPACING = 8;
+fn draw_bars(center: c.Vector2, i: usize, v: f32) void {
+    const SPACING = 4;
     const x = @as(f32, @floatFromInt(i)) * SPACING;
-    const y = (v * 80);
+    const y = (v * 40);
+    const base_h: f32 = 40;
     const tgrad = c.BLUE;
     const bgrad = c.BLUE;
     const px = x;
     //const py = y + center.y;
     c.DrawRectangleGradientEx(
         .{
-            .x = @mod(px + t * 30, screenWidth + 80),
-            .y = center.y * 2 - y, //y + center.y + 80 + @abs(v) * 20,
-            .width = 4,
-            .height = y,
+            .x = px,
+            .y = center.y * 2 - y - base_h, //y + center.y + 80 + @abs(v) * 20,
+            .width = 3,
+            .height = y + base_h,
         },
         tgrad,
         bgrad,
