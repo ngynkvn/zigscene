@@ -83,20 +83,12 @@ pub fn main() !void {
             }
             // Drawing
             graphics.draw3DScene(camera3d, rot_offset, mtp, t);
-            for (audio.curr_buffer, 0..) |v, i| {
+            for (audio.curr_buffer, audio.curr_fft, 0..) |v, fv, i| {
                 graphics.drawWaveformLine(center, i, v);
                 graphics.drawWaveformBar(center, i, v);
+                graphics.drawWaveformLine(.{ .y = center.y + 400 }, i, fv.magnitude() * 0.05);
+                graphics.drawFft(center, i, fv.magnitude());
                 //graphics.draw_bubbles(center, i, v, t);
-            }
-            for (audio.curr_fft, 0..) |v, i| {
-                const SPACING = 5;
-                const x = @as(f32, @floatFromInt(i)) * SPACING;
-                const y = v.magnitude();
-                // "plot" x and y
-                const px = x;
-                const py = -y + center.y * 2 - 5;
-                c.DrawRectangleRec(.{ .x = px, .y = py, .width = 3, .height = 2 }, c.RAYWHITE);
-                c.DrawRectangleRec(.{ .x = px, .y = py + 12, .width = 3, .height = y + 2 }, c.RED);
             }
             t += 0.01;
         }

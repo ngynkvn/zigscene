@@ -10,7 +10,7 @@ const asF32 = @import("extras.zig").asF32;
 pub fn drawWaveformLine(center: c.Vector2, i: usize, v: f32) void {
     const SPACING = main.screenWidth / asF32(audio.curr_buffer.len);
     const x = @as(f32, @floatFromInt(i)) * SPACING;
-    const y = (v * 60);
+    const y = -(v * 60);
     // "plot" x and y
     const px = x;
     const py = y + center.y - 80;
@@ -40,14 +40,27 @@ pub fn drawWaveformBar(center: c.Vector2, i: usize, v: f32) void {
     );
 }
 
+pub fn drawFft(center: c.Vector2, i: usize, v: f32) void {
+    const SPACING = main.screenWidth / asF32(audio.curr_buffer.len);
+    const x = @as(f32, @floatFromInt(i)) * SPACING;
+    const y = v;
+    // "plot" x and y
+    const px = x;
+    const py = -y + center.y * 2 - 5;
+    c.DrawRectangleRec(.{ .x = px, .y = py, .width = 3, .height = 2 }, c.RAYWHITE);
+    c.DrawRectangleRec(.{ .x = px, .y = py + 12, .width = 3, .height = y + 2 }, c.RED);
+}
+
 pub fn draw3DScene(camera3d: c.Camera3D, rot_offset: f32, mtp: f32, t: f32) void {
     c.BeginMode3D(camera3d);
     defer c.EndMode3D();
     c.rlRotatef(rot_offset, 0, 1, 0);
-    c.rlPushMatrix();
-    c.rlTranslatef(0, -5, mtp * 0.4);
-    c.DrawGrid(256, 8);
-    c.rlPopMatrix();
+    if (false) {
+        c.rlPushMatrix();
+        c.rlTranslatef(0, -5, mtp * 0.4);
+        c.DrawGrid(64, 16);
+        c.rlPopMatrix();
+    }
     const R = 4;
     const SCALE = 1;
     c.rlPushMatrix();
