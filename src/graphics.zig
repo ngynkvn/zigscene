@@ -7,18 +7,20 @@ const main = @import("main.zig");
 const audio = @import("audio.zig");
 
 pub fn draw_line(center: c.Vector2, i: usize, v: f32) void {
-    const SPACING = main.screenWidth / 400;
+    //const SPACING = main.screenWidth / 400;
+    const SPACING = 1;
     const x = @as(f32, @floatFromInt(i)) * SPACING;
     const y = (v * 60);
     // "plot" x and y
     const px = x;
-    const py = y + center.y - 80;
+    const py = y + center.y - 240;
     c.DrawRectangleRec(.{ .x = px, .y = py, .width = 1, .height = 2 }, c.RAYWHITE);
     c.DrawRectangleRec(.{ .x = px, .y = py + 12, .width = 2, .height = 1 }, c.GREEN);
 }
 
 pub fn draw_bars(center: c.Vector2, i: usize, v: f32) void {
-    const SPACING = main.screenWidth / 400;
+    // const SPACING = main.screenWidth / 400;
+    const SPACING = 4;
     const x = @as(f32, @floatFromInt(i)) * SPACING;
     const y = (v * 40);
     const base_h: f32 = 40;

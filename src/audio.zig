@@ -4,23 +4,29 @@ const c = @cImport({
 });
 
 const Cf32 = std.math.Complex(f32);
-var audio_framebuffer = std.mem.zeroes([4096]f32);
-var fft_framebuffer = std.mem.zeroes([4096]Cf32);
+const N = 440;
+var audio_framebuffer = std.mem.zeroes([N * 2]f32);
+var fft_framebuffer = std.mem.zeroes([N * 2]Cf32);
 pub var avg_intensity: f32 = 0;
 
-var dupe_audio_buffer = std.mem.zeroes([2048]f32);
-var dupe_fft_buffer = std.mem.zeroes([2048]Cf32);
+var dupe_audio_buffer = std.mem.zeroes([N * 2]f32);
+var dupe_fft_buffer = std.mem.zeroes([N * 2]Cf32);
 
 // TODO: I have a bug! this is a race condition
 pub var curr_buffer: []f32 = &dupe_audio_buffer;
 pub var curr_fft: []Cf32 = &dupe_fft_buffer;
 var curr_len: usize = 0;
+var tick: usize = 0;
+var m: std.Thread.Mutex = .{};
 
 /// Accepts a buffer of the stream + the length of the buffer
 /// The buffer is composed of PCM samples from the audio stream
 /// passed to raylib / miniaudio.h
 pub fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
     if (ptr == null) return;
+    // m.lock();
+    // defer m.unlock();
+    const k = curr_len;
     const buffer: []f32 = @as([*]f32, @ptrCast(@alignCast(ptr)))[0..n];
 
     var l: f32 = 0;
@@ -29,26 +35,28 @@ pub fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
         l = buffer[fi * 2 + 0];
         r = buffer[fi * 2 + 1];
         // Damping
-        audio_framebuffer[fi + curr_len] += (l + r) / 4;
-        audio_framebuffer[fi + curr_len] *= 0.97;
+        audio_framebuffer[fi + k] += (l + r) / 4;
+        audio_framebuffer[fi + k] *= 0.99;
         avg_intensity += @abs(l + r) / @as(f32, @floatFromInt(n / 2));
         avg_intensity *= 0.99;
         // No Damping
-        fft_framebuffer[fi + curr_len] = Cf32.init(l + r, 0);
+        fft_framebuffer[fi + k] = Cf32.init(l + r, 0);
     }
     curr_len += n / 2;
-    if (curr_len >= n + 1) {
-        fft(fft_framebuffer[0..curr_len]);
-        curr_buffer = audio_framebuffer[0..curr_len];
-        curr_fft = fft_framebuffer[0..curr_len];
+    if (curr_len >= N) {
+        @memcpy(dupe_audio_buffer[0..curr_len], audio_framebuffer[0..curr_len]);
+        @memcpy(dupe_fft_buffer[0..curr_len], fft_framebuffer[0..curr_len]);
+        fft(dupe_fft_buffer[0..curr_len]);
+        curr_buffer = dupe_audio_buffer[0..curr_len];
+        curr_fft = dupe_fft_buffer[0..curr_len];
         curr_len = 0;
     }
 }
 
 /// https://en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm
 fn fft(values: []Cf32) void {
-    const N = values.len;
-    if (N <= 1) return;
+    const NV = values.len;
+    if (NV <= 1) return;
     var parts = std.mem.zeroes([2][512]Cf32);
     var pi: [2]usize = .{ 0, 0 };
     for (values, 0..) |v, i| {
@@ -59,13 +67,13 @@ fn fft(values: []Cf32) void {
     const odds = parts[1][0..pi[1]];
     fft(evens);
     fft(odds);
-    for (0..N / 2) |i| {
+    for (0..NV / 2) |i| {
         const index = Cf32.init(
-            @cos(-2 * std.math.pi * @as(f32, @floatFromInt(i)) / @as(f32, @floatFromInt(N))),
-            @sin(-2 * std.math.pi * @as(f32, @floatFromInt(i)) / @as(f32, @floatFromInt(N))),
+            @cos(-2 * std.math.pi * @as(f32, @floatFromInt(i)) / @as(f32, @floatFromInt(NV))),
+            @sin(-2 * std.math.pi * @as(f32, @floatFromInt(i)) / @as(f32, @floatFromInt(NV))),
         ).mul(odds[i]);
         values[i] = evens[i].add(index);
-        values[i + N / 2] = evens[i].sub(index);
+        values[i + NV / 2] = evens[i].sub(index);
     }
 }
 

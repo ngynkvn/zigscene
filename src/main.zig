@@ -26,7 +26,9 @@ pub fn main() !void {
     defer c.CloseAudioDevice();
 
     var music = c.Music{};
+    try startMusic(&music, "./sounds/willix.mp3");
     var filename: []const u8 = undefined;
+    filename = "willix";
     var rot_offset: f32 = 0.0;
     c.SetMasterVolume(0.10);
 
@@ -121,7 +123,7 @@ pub fn main() !void {
             //graphics.draw_bubbles(center, i, v, t);
         }
         for (audio.curr_fft, 0..) |v, i| {
-            const SPACING = 5;
+            const SPACING = 4;
             const x = @as(f32, @floatFromInt(i)) * SPACING;
             const y = v.magnitude();
             // "plot" x and y
@@ -146,6 +148,7 @@ fn handleFile(buf: []u8, music: *c.Music) ![]const u8 {
 }
 
 fn startMusic(music: *c.Music, path: [*c]const u8) !void {
+    c.StopMusicStream(music.*);
     music.* = c.LoadMusicStream(path);
     if (music.stream.sampleSize != 32) return error.NoMusic;
     c.AttachAudioStreamProcessor(music.stream, audio.audioStreamCallback);
