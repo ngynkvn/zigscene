@@ -39,11 +39,11 @@ var Options = .{
 var value_buffer = std.mem.zeroes([128]u8);
 
 const window_width = 400;
-pub fn frame() void {
+pub fn frame(status: []const u8) void {
     const base = R(5, 5, 16, 16);
     _ = cdef.GuiToggle(base.translate(0, 0).c(), std.fmt.comptimePrint("#{}#", .{cdef.ICON_FX}), &active_menu.scalar);
     _ = cdef.GuiToggle(base.translate(21, 0).c(), std.fmt.comptimePrint("#{}#", .{cdef.ICON_COLOR_PICKER}), &active_menu.color);
-    _ = cdef.GuiStatusBar(base.translate(base.width * 2 + 10, 0).resize(window_width - base.width * 2, 16).c(), "");
+    _ = cdef.GuiStatusBar(base.translate(base.width * 2 + 10, 0).resize(window_width - base.width * 2, 16).c(), status.ptr);
 
     if (active_menu.scalar) {
         const anchor = base.translate(2, 20).resize(window_width, 400);

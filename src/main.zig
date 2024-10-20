@@ -87,12 +87,12 @@ pub fn main() !void {
                 graphics.FFT.render(center, i, fv.magnitude());
                 //graphics.draw_bubbles(center, i, v, t);
             }
+            var txt: ?[]const u8 = null;
             if (c.IsMusicStreamPlaying(music)) {
                 const ftime = c.GetFrameTime();
-                const txt = try std.fmt.bufPrint(&text_buffer, "{s}\n{d:3.2} | {d:3.2}\nftime:{d:2.2}", .{ filename, mtl, mtp, ftime });
-                c.DrawText(txt.ptr, screenWidth - 100, 0, 10, c.WHITE);
+                txt = try std.fmt.bufPrint(&text_buffer, "#{}# {s} | {d:3.2} / {d:3.2} [T:{d:7.4}]", .{ c.ICON_PLAYER_PLAY, filename, mtp, mtl, ftime });
             }
-            gui.frame();
+            gui.frame(txt orelse "");
             t += 0.01;
         }
     }
