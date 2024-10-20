@@ -17,8 +17,37 @@ pub fn build(b: *std.Build) void {
     const raylib = b.dependency("raylib", .{
         .target = target,
         .optimize = optimize,
+        .linux_display_backend = .X11,
     });
     const libraylib = raylib.artifact("raylib");
+    // SOURCE: https://github.com/Not-Nik/raylib-zig/blob/c191e12e7c50e5dc2b1addd1e5dbd16bd405d2b5/build.zig#L119
+    // (Thank you!)
+    const raygui = b.dependency("raygui", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    var gen = b.addWriteFiles();
+    libraylib.step.dependOn(&gen.step);
+
+    const raygui_c_path = gen.add("raygui.c",
+        \\#define RAYGUI_IMPLEMENTATION
+        \\#include "raygui.h"
+    );
+    libraylib.addCSourceFile(.{
+        .file = raygui_c_path,
+        .flags = &[_][]const u8{
+            "-std=gnu99",
+            "-D_GNU_SOURCE",
+            "-DGL_SILENCE_DEPRECATION=199309L",
+            "-fno-sanitize=undefined", // https://github.com/raysan5/raylib/issues/3674
+        },
+    });
+    libraylib.addIncludePath(raylib.path("src"));
+    libraylib.addIncludePath(raygui.path("src"));
+    libraylib.addIncludePath(raygui.path("styles/dark"));
+    libraylib.installHeader(raygui.path("src/raygui.h"), "raygui.h");
+    libraylib.installHeader(raygui.path("styles/dark/style_dark.h"), "style_dark.h");
     exe.linkLibrary(libraylib);
 
     const run_cmd = b.addRunArtifact(exe);
