@@ -68,7 +68,6 @@ pub fn main() !void {
         } else {
             camera3d.position.z += wheelMove.y;
         }
-        while (!c.IsAudioStreamProcessed(music.stream)) {}
         {
             c.BeginDrawing();
             defer c.EndDrawing();
