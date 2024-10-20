@@ -13,6 +13,8 @@ const APP_NAME = "zigscene";
 
 const projections = .{ c.CAMERA_PERSPECTIVE, c.CAMERA_ORTHOGRAPHIC };
 
+var filename_buffer = std.mem.zeroes([64:0]u8);
+var text_buffer = std.mem.zeroes([256:0]u8);
 pub fn main() !void {
     var t: f32 = 0.0;
 
@@ -24,9 +26,7 @@ pub fn main() !void {
     defer c.CloseAudioDevice();
 
     var music = c.Music{};
-    var filename = std.mem.zeroes([64:0]u8);
-    var clen: usize = 0;
-    var txtbuffer = std.mem.zeroes([256:0]u8);
+    var filename: []const u8 = undefined;
     var rot_offset: f32 = 0.0;
     c.SetMasterVolume(0.10);
 
@@ -43,14 +43,8 @@ pub fn main() !void {
     // Detects window close button or ESC key
     while (!c.WindowShouldClose()) {
         if (c.IsFileDropped()) {
-            const files = c.LoadDroppedFiles();
-            defer c.UnloadDroppedFiles(files);
-            const file = files.paths[0];
-            const cfilename = c.GetFileName(file);
-            clen = std.mem.len(cfilename);
-            @memset(&txtbuffer, 0);
-            @memcpy(filename[0..clen], cfilename[0..clen]);
-            startMusic(&music, file) catch @panic("oml");
+            filename = try handleFile(&filename_buffer, &music);
+            @memset(&text_buffer, 0);
         }
         if (c.IsMusicStreamPlaying(music)) {
             c.UpdateMusicStream(music);
@@ -77,7 +71,7 @@ pub fn main() !void {
         const mtp = c.GetMusicTimePlayed(music);
         const mtl = c.GetMusicTimeLength(music);
         if (c.IsMusicStreamPlaying(music)) {
-            const txt = try std.fmt.bufPrint(&txtbuffer, "{s}\n{d:3.2} | {d:3.2}", .{ filename[0..clen], mtl, mtp });
+            const txt = try std.fmt.bufPrint(&text_buffer, "{s}\n{d:3.2} | {d:3.2}", .{ filename, mtl, mtp });
             c.DrawText(txt.ptr, 0, 0, 10, c.WHITE);
         }
         {
@@ -132,6 +126,17 @@ pub fn main() !void {
         }
         t += 0.01;
     }
+}
+
+fn handleFile(buf: []u8, music: *c.Music) ![]const u8 {
+    const files = c.LoadDroppedFiles();
+    defer c.UnloadDroppedFiles(files);
+    const file = files.paths[0];
+    const cfilename = c.GetFileName(file);
+    const clen = std.mem.len(cfilename);
+    @memcpy(buf[0..clen], cfilename[0..clen]);
+    try startMusic(music, file);
+    return buf[0..clen];
 }
 
 fn startMusic(music: *c.Music, path: [*c]const u8) !void {
