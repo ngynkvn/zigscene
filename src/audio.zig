@@ -24,8 +24,8 @@ var m: std.Thread.Mutex = .{};
 /// passed to raylib / miniaudio.h
 pub fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
     if (ptr == null) return;
-    // m.lock();
-    // defer m.unlock();
+    m.lock();
+    defer m.unlock();
     const k = curr_len;
     const buffer: []f32 = @as([*]f32, @ptrCast(@alignCast(ptr)))[0..n];
 
@@ -35,8 +35,7 @@ pub fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
         l = buffer[fi * 2 + 0];
         r = buffer[fi * 2 + 1];
         // Damping
-        audio_framebuffer[fi + k] += (l + r) / 4;
-        audio_framebuffer[fi + k] *= 0.99;
+        audio_framebuffer[fi + k] = (l + r) / 4;
         avg_intensity += @abs(l + r) / @as(f32, @floatFromInt(n / 2));
         avg_intensity *= 0.99;
         // No Damping

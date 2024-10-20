@@ -10,7 +10,7 @@ pub fn draw_line(center: c.Vector2, i: usize, v: f32) void {
     //const SPACING = main.screenWidth / 400;
     const SPACING = 1;
     const x = @as(f32, @floatFromInt(i)) * SPACING;
-    const y = (v * 60);
+    const y = -(v * 16);
     // "plot" x and y
     const px = x;
     const py = y + center.y - 240;
