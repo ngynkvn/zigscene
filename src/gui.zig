@@ -3,6 +3,10 @@ const graphics = @import("graphics.zig");
 const rl = @import("raylib.zig");
 const cdef = rl.c;
 
+var buffer = std.mem.zeroes([1024]u8);
+var fba = std.heap.FixedBufferAllocator.init(&buffer);
+const allocator = fba.allocator();
+
 pub const Rectangle = struct {
     x: f32,
     y: f32,
@@ -23,20 +27,27 @@ pub const Rectangle = struct {
 };
 pub const R = Rectangle.R;
 
-var open = true;
+const active_menu = struct {
+    var scalar: bool = false;
+    var color: bool = true;
+};
 var Options = .{
     graphics.WaveFormLine,
     graphics.WaveFormBar,
+    graphics.Bubble,
 };
 var value_buffer = std.mem.zeroes([128]u8);
+
+const window_width = 400;
 pub fn frame() void {
     const base = R(5, 5, 16, 16);
-    _ = cdef.GuiToggle(base.c(), std.fmt.comptimePrint("#{}#", .{cdef.ICON_FX}), &open);
-    if (open) {
-        const anchor = base.translate(0, 20).resize(500, 400);
-        _ = cdef.GuiPanel(anchor.c(), "Controls");
-        // _ = cdef.GuiLabel(anchor.resize(200, 8).translate(5, 28).c(), "Bubble.R");
-        // _ = cdef.GuiSlider(anchor.resize(200, 8).translate(5, 40).c(), "", buf.ptr, &graphics.Bubble.R, 0, 10);
+    _ = cdef.GuiToggle(base.translate(0, 0).c(), std.fmt.comptimePrint("#{}#", .{cdef.ICON_FX}), &active_menu.scalar);
+    _ = cdef.GuiToggle(base.translate(21, 0).c(), std.fmt.comptimePrint("#{}#", .{cdef.ICON_COLOR_PICKER}), &active_menu.color);
+    _ = cdef.GuiStatusBar(base.translate(base.width * 2 + 10, 0).resize(window_width - base.width * 2, 16).c(), "");
+
+    if (active_menu.scalar) {
+        const anchor = base.translate(2, 20).resize(window_width, 400);
+        _ = cdef.GuiPanel(anchor.c(), "Scalars");
 
         comptime var yoff: f32 = 0;
         comptime var i: usize = 0;
@@ -44,16 +55,39 @@ pub fn frame() void {
             const name = @typeName(info);
             _ = cdef.GuiLabel(anchor.resize(200, 8).translate(5, 40 + yoff).c(), name.ptr);
             yoff += 20;
-            const cfg = @field(info, "CFG");
+            const cfg = @field(info, "Scalars");
             inline for (cfg) |optinfo| {
                 const fname = optinfo.name;
-                const fval = optinfo.field_value;
-                const buf = std.fmt.bufPrint(value_buffer[i * 7 .. i * 7 + 7], "{d:6.2}", .{fval.*}) catch unreachable;
-                _ = cdef.GuiSlider(anchor.resize(200, 8).translate(160, 40 + yoff).c(), fname.ptr, buf.ptr, fval, optinfo.range[0], optinfo.range[1]);
+                const fval = optinfo.value;
+                const buf = std.fmt.bufPrintZ(value_buffer[i * 7 .. i * 7 + 7], "{d:6.2}", .{fval.*}) catch unreachable;
+                _ = cdef.GuiSlider(anchor.resize(100, 8).translate(80, 40 + yoff).c(), fname.ptr, buf.ptr, fval, optinfo.range[0], optinfo.range[1]);
                 yoff += 20;
                 i += 1;
             }
             yoff += 20;
         }
+    } else if (active_menu.color) {
+        const anchor = base.translate(2, 20).resize(window_width / 2, 400);
+        const panel_size = 90;
+        const panel_spacing = 40;
+        const panel = anchor.resize(16, panel_size);
+        _ = cdef.GuiPanel(anchor.c(), "Colors");
+
+        comptime var yoff: f32 = 0;
+        inline for (&Options) |info| {
+            comptime var i: usize = 0;
+            const name = @typeName(info);
+            _ = cdef.GuiLabel(anchor.resize(200, 8).translate(5, 40 + yoff).c(), name.ptr);
+            yoff += 20;
+            const cfg = @field(info, "Colors");
+            inline for (cfg) |optinfo| {
+                const fname = optinfo.name;
+                const fval: *f32 = optinfo.hue;
+                _ = cdef.GuiColorBarHue(panel.translate(40 + panel_spacing * (i % 3), 40 + yoff).c(), fname.ptr, fval);
+                i += 1;
+            }
+            yoff += 100;
+        }
     }
 }
+var v: f32 = 0;

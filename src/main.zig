@@ -23,6 +23,8 @@ pub fn main() !void {
     c.InitAudioDevice();
     defer c.CloseAudioDevice();
 
+    graphics.initColors();
+
     c.GuiLoadStyleDark();
 
     var music = c.Music{};
