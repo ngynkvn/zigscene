@@ -62,6 +62,12 @@ pub fn main() !void {
         if (rl.IsKeyDown(.RIGHT)) {
             rot_offset += 1;
         }
+        const wheelMove = c.GetMouseWheelMoveV();
+        if (@abs(wheelMove.x) > @abs(wheelMove.y)) {
+            rot_offset += wheelMove.x;
+        } else {
+            camera3d.position.z += wheelMove.y;
+        }
 
         c.BeginDrawing();
         defer c.EndDrawing();
@@ -85,6 +91,10 @@ pub fn main() !void {
             const R = 4;
             const SCALE = 1;
             c.rlPushMatrix();
+            c.rlRotatef(t * 32, 1, 1, 1);
+            c.DrawSphereWires(.{}, 2 + audio.avg_intensity, 10, 10, c.PURPLE);
+            c.rlPopMatrix();
+            c.rlPushMatrix();
             c.rlRotatef(t * 32, 0.2, 0.2, 1);
             const tsteps = 2 * std.math.pi / @as(f32, @floatFromInt(audio.curr_buffer.len));
             for (audio.curr_buffer, 0..) |v, i| {
@@ -95,15 +105,12 @@ pub fn main() !void {
                 c.rlPushMatrix();
                 c.rlTranslatef(x, y, 0);
                 c.rlRotatef(90 + angle_rad * 180 / std.math.pi, 0, 0, 1);
-                c.DrawCubeWires(.{
-                    .x = 0,
-                    .y = 0,
-                }, 0.1, 0.1 + @abs(v) * 0.5, 0.1, c.ORANGE);
-                c.rlTranslatef(0.1, 0.1, 0);
-                c.DrawCubeWires(.{
-                    .x = 0,
-                    .y = 0,
-                }, 0.05, 0.03, 0.05, c.GREEN);
+                c.DrawCubeWires(.{}, 0.1, 0.1 + @abs(v) * 0.5, 0.1, c.ORANGE);
+                c.rlTranslatef(-0.1, 0.1, 0);
+                inline for (0..3) |j| {
+                    c.DrawCubeWires(.{ .z = 0.05 - 0.05 * @as(f32, @floatFromInt(j)) }, 0.03, 0.03, 0.03, c.GREEN);
+                }
+
                 c.rlPopMatrix();
             }
             c.rlPopMatrix();
@@ -142,6 +149,7 @@ fn startMusic(music: *c.Music, path: [*c]const u8) !void {
     music.* = c.LoadMusicStream(path);
     if (music.stream.sampleSize != 32) return error.NoMusic;
     c.AttachAudioStreamProcessor(music.stream, audio.audioStreamCallback);
+    std.log.info("samplesize = {}, samplerate = {}\n", .{ music.stream.sampleSize, music.stream.sampleRate });
     c.PlayMusicStream(music.*);
 }
 
