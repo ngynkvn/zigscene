@@ -46,7 +46,7 @@ const bubbles = [_][2]f32{
     .{ 220, 10 },
 };
 pub fn draw_bubbles(center: c.Vector2, i: usize, v: f32, t: f32) void {
-    const tsteps = std.math.pi * 2 / @as(f32, @floatFromInt(audio.curr_len));
+    const tsteps = std.math.pi * 2 / @as(f32, @floatFromInt(audio.curr_buffer.len));
     for (bubbles) |b| {
         const r = b[0] + (@abs(v) * b[1]);
         const x = (@cos(@as(f32, @floatFromInt(i)) * tsteps + t) * r) + center.x;

@@ -67,12 +67,12 @@ pub fn main() !void {
             c.DrawText(txt.ptr, 0, 0, 10, c.WHITE);
         }
         const center = c.GetWorldToScreen(.{ .x = 0, .y = 0 }, camera3d);
-        for (audio.curr_buffer[0..audio.curr_len], 0..) |v, i| {
+        for (audio.curr_buffer, 0..) |v, i| {
             graphics.draw_line(center, i, v);
             graphics.draw_bars(center, i, v);
             graphics.draw_bubbles(center, i, v, t);
         }
-        for (audio.curr_fft[0..audio.curr_len], 0..) |v, i| {
+        for (audio.curr_fft, 0..) |v, i| {
             const SPACING = 6;
             const x = @as(f32, @floatFromInt(i)) * SPACING;
             const y = v.magnitude();
@@ -91,4 +91,8 @@ fn startMusic(music: *c.Music, path: [*c]const u8) !void {
     if (music.stream.sampleSize != 32) return error.NoMusic;
     c.AttachAudioStreamProcessor(music.stream, audio.audioStreamCallback);
     c.PlayMusicStream(music.*);
+}
+
+test "root" {
+    std.testing.refAllDecls(@This());
 }
