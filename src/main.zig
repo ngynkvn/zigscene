@@ -48,6 +48,7 @@ pub fn main() !void {
             const file = files.paths[0];
             const cfilename = c.GetFileName(file);
             clen = std.mem.len(cfilename);
+            @memset(&txtbuffer, 0);
             @memcpy(filename[0..clen], cfilename[0..clen]);
             startMusic(&music, file) catch @panic("oml");
         }
