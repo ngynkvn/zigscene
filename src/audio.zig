@@ -2,12 +2,14 @@ const std = @import("std");
 const c = @cImport({
     @cInclude("raylib.h");
 });
+const asF32 = @import("extras.zig").asF32;
 
 const Cf32 = std.math.Complex(f32);
 var audio_buffer = std.mem.zeroes([256]f32);
-pub var curr_buffer: []f32 = &audio_buffer;
-pub var avg_intensity: f32 = 0;
 var fft_buffer = std.mem.zeroes([256]Cf32);
+pub var avg_intensity: f32 = 0;
+
+pub var curr_buffer: []f32 = &audio_buffer;
 pub var curr_fft: []Cf32 = &fft_buffer;
 /// Accepts a buffer of the stream + the length of the buffer
 /// The buffer is composed of PCM samples from the audio stream
@@ -26,10 +28,9 @@ pub fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
         audio_buffer[fi] *= 0.97;
         // No Damping
         fft_buffer[fi] = Cf32.init(l + r, 0);
-        avg_intensity = (l + r);
+        avg_intensity = (l + r) / asF32(6);
     }
     fft(fft_buffer[0..curr_len]);
-    avg_intensity /= @floatFromInt(curr_len);
     curr_buffer = audio_buffer[0..curr_len];
     curr_fft = fft_buffer[0..curr_len];
 }
