@@ -1,11 +1,9 @@
 const std = @import("std");
-const c = @cImport({
-    @cInclude("raylib.h");
-    @cInclude("rlgl.h");
-});
 const rl = @import("raylib.zig");
+const c = rl.c;
 const audio = @import("audio.zig");
 const graphics = @import("graphics.zig");
+const gui = @import("gui.zig");
 
 pub const screenWidth = 1200;
 pub const screenHeight = 800;
@@ -24,6 +22,10 @@ pub fn main() !void {
 
     c.InitAudioDevice();
     defer c.CloseAudioDevice();
+
+    graphics.initColors();
+
+    c.GuiLoadStyleDark();
 
     var music = c.Music{};
     var filename: []const u8 = undefined;
@@ -77,19 +79,20 @@ pub fn main() !void {
             const mtp = c.GetMusicTimePlayed(music);
             const mtl = c.GetMusicTimeLength(music);
             // Drawing
-            graphics.draw3DScene(camera3d, rot_offset, mtp, t);
+            graphics.Bubble.render(camera3d, rot_offset, mtp, t);
             for (audio.curr_buffer, audio.curr_fft, 0..) |v, fv, i| {
-                graphics.drawWaveformLine(.{ .y = center.y - 80 }, i, v);
-                graphics.drawWaveformBar(center, i, v);
-                graphics.drawWaveformLine(.{ .y = center.y * 2 }, i, fv.magnitude() * 0.15);
-                graphics.drawFft(center, i, fv.magnitude());
+                graphics.WaveFormLine.render(.{ .y = center.y - 80 }, i, v);
+                graphics.WaveFormBar.render(center, i, v);
+                graphics.WaveFormLine.render(.{ .y = center.y * 2 }, i, fv.magnitude() * 0.15);
+                graphics.FFT.render(center, i, fv.magnitude());
                 //graphics.draw_bubbles(center, i, v, t);
             }
+            var txt: ?[]const u8 = null;
             if (c.IsMusicStreamPlaying(music)) {
                 const ftime = c.GetFrameTime();
-                const txt = try std.fmt.bufPrint(&text_buffer, "{s}\n{d:3.2} | {d:3.2}\nftime:{d:2.2}", .{ filename, mtl, mtp, ftime });
-                c.DrawText(txt.ptr, 0, 0, 10, c.WHITE);
+                txt = try std.fmt.bufPrint(&text_buffer, "#{}# {s} | {d:3.2} / {d:3.2} [T:{d:7.4}]", .{ c.ICON_PLAYER_PLAY, filename, mtp, mtl, ftime });
             }
+            gui.frame(txt orelse "");
             t += 0.01;
         }
     }
