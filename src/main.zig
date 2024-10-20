@@ -71,6 +71,7 @@ pub fn main() !void {
             camera3d.position.z += wheelMove.y;
         }
 
+        while (!c.IsAudioStreamProcessed(music.stream)) {}
         c.BeginDrawing();
         defer c.EndDrawing();
         const center = c.GetWorldToScreen(.{ .x = 0, .y = 0 }, camera3d);
