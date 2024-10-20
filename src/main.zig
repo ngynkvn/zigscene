@@ -57,10 +57,10 @@ pub fn main() !void {
             };
         }
         if (rl.IsKeyDown(.LEFT)) {
-            rot_offset -= 0.5;
+            rot_offset -= 1;
         }
         if (rl.IsKeyDown(.RIGHT)) {
-            rot_offset += 0.5;
+            rot_offset += 1;
         }
 
         c.BeginDrawing();
@@ -77,9 +77,10 @@ pub fn main() !void {
         {
             c.BeginMode3D(camera3d);
             defer c.EndMode3D();
+            c.rlRotatef(rot_offset, 0, 1, 0);
             c.rlPushMatrix();
-            c.rlTranslatef(0, 0, mtp * 0.4);
-            c.DrawGrid(256, 2);
+            c.rlTranslatef(0, -5, mtp * 0.4);
+            c.DrawGrid(256, 8);
             c.rlPopMatrix();
             const R = 4;
             const SCALE = 1;
@@ -91,8 +92,6 @@ pub fn main() !void {
                 const angle_rad = @as(f32, @floatFromInt(i)) * tsteps;
                 const x = @cos(angle_rad) * r;
                 const y = @sin(angle_rad) * r;
-                // _ = x;
-                // _ = y;
                 c.rlPushMatrix();
                 c.rlTranslatef(x, y, 0);
                 c.rlRotatef(90 + angle_rad * 180 / std.math.pi, 0, 0, 1);
