@@ -2,12 +2,15 @@ const std = @import("std");
 const c = @cImport({
     @cInclude("raylib.h");
 });
+const asF32 = @import("extras.zig").asF32;
 
+const N = 256;
 const Cf32 = std.math.Complex(f32);
-var audio_buffer = std.mem.zeroes([256]f32);
-pub var curr_buffer: []f32 = &audio_buffer;
+var audio_buffer = std.mem.zeroes([N]f32);
+var fft_buffer = std.mem.zeroes([N]Cf32);
 pub var avg_intensity: f32 = 0;
-var fft_buffer = std.mem.zeroes([256]Cf32);
+
+pub var curr_buffer: []f32 = &audio_buffer;
 pub var curr_fft: []Cf32 = &fft_buffer;
 /// Accepts a buffer of the stream + the length of the buffer
 /// The buffer is composed of PCM samples from the audio stream
@@ -23,22 +26,22 @@ pub fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
         r = buffer[fi * 2 + 1];
         // Damping
         audio_buffer[fi] += (l + r) / 4;
-        audio_buffer[fi] *= 0.97;
+        audio_buffer[fi] *= 0.98;
         // No Damping
         fft_buffer[fi] = Cf32.init(l + r, 0);
-        avg_intensity = (l + r);
+        avg_intensity += @abs(l + r) / asF32(curr_len);
+        avg_intensity *= 0.99;
     }
     fft(fft_buffer[0..curr_len]);
-    avg_intensity /= @floatFromInt(curr_len);
     curr_buffer = audio_buffer[0..curr_len];
     curr_fft = fft_buffer[0..curr_len];
 }
 
 /// https://en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm
 fn fft(values: []Cf32) void {
-    const N = values.len;
-    if (N <= 1) return;
-    var parts = std.mem.zeroes([2][128]Cf32);
+    const len = values.len;
+    if (len <= 1) return;
+    var parts = std.mem.zeroes([2][N / 2]Cf32);
     var pi: [2]usize = .{ 0, 0 };
     for (values, 0..) |v, i| {
         parts[i % 2][pi[i % 2]] = v;
@@ -48,13 +51,13 @@ fn fft(values: []Cf32) void {
     const odds = parts[1][0..pi[1]];
     fft(evens);
     fft(odds);
-    for (0..N / 2) |i| {
+    for (0..len / 2) |i| {
         const index = Cf32.init(
-            @cos(-2 * std.math.pi * @as(f32, @floatFromInt(i)) / @as(f32, @floatFromInt(N))),
-            @sin(-2 * std.math.pi * @as(f32, @floatFromInt(i)) / @as(f32, @floatFromInt(N))),
+            @cos(-2 * std.math.pi * @as(f32, @floatFromInt(i)) / @as(f32, @floatFromInt(len))),
+            @sin(-2 * std.math.pi * @as(f32, @floatFromInt(i)) / @as(f32, @floatFromInt(len))),
         ).mul(odds[i]);
         values[i] = evens[i].add(index);
-        values[i + N / 2] = evens[i].sub(index);
+        values[i + len / 2] = evens[i].sub(index);
     }
 }
 
