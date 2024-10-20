@@ -68,7 +68,7 @@ pub fn main() !void {
         } else {
             camera3d.position.z += wheelMove.y;
         }
-
+        while (!c.IsAudioStreamProcessed(music.stream)) {}
         {
             c.BeginDrawing();
             defer c.EndDrawing();
@@ -77,18 +77,19 @@ pub fn main() !void {
             c.ClearBackground(c.BLACK);
             const mtp = c.GetMusicTimePlayed(music);
             const mtl = c.GetMusicTimeLength(music);
-            if (c.IsMusicStreamPlaying(music)) {
-                const txt = try std.fmt.bufPrint(&text_buffer, "{s}\n{d:3.2} | {d:3.2}", .{ filename, mtl, mtp });
-                c.DrawText(txt.ptr, 0, 0, 10, c.WHITE);
-            }
             // Drawing
             graphics.draw3DScene(camera3d, rot_offset, mtp, t);
             for (audio.curr_buffer, audio.curr_fft, 0..) |v, fv, i| {
-                graphics.drawWaveformLine(center, i, v);
+                graphics.drawWaveformLine(.{ .y = center.y - 80 }, i, v);
                 graphics.drawWaveformBar(center, i, v);
-                graphics.drawWaveformLine(.{ .y = center.y + 400 }, i, fv.magnitude() * 0.05);
+                graphics.drawWaveformLine(.{ .y = center.y * 2 }, i, fv.magnitude() * 0.15);
                 graphics.drawFft(center, i, fv.magnitude());
                 //graphics.draw_bubbles(center, i, v, t);
+            }
+            if (c.IsMusicStreamPlaying(music)) {
+                const ftime = c.GetFrameTime();
+                const txt = try std.fmt.bufPrint(&text_buffer, "{s}\n{d:3.2} | {d:3.2}\nftime:{d:2.2}", .{ filename, mtl, mtp, ftime });
+                c.DrawText(txt.ptr, 0, 0, 10, c.WHITE);
             }
             t += 0.01;
         }
