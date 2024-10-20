@@ -31,7 +31,7 @@ pub fn main() !void {
     c.SetMasterVolume(0.10);
 
     var camera3d: c.Camera3D = .{
-        .position = .{ .x = 0.0, .y = 0.5, .z = 10.0 }, // Camera position
+        .position = .{ .x = 0.0, .y = 0, .z = 10.0 }, // Camera position
         .target = .{ .x = 0.0, .y = 0.0, .z = 0.0 }, // Camera looking at point
         .up = .{ .x = 0.0, .y = 1.0, .z = 0.0 }, // Camera up vector (rotation towards target)
         .fovy = 65.0, // Camera field-of-view Y
