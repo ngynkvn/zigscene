@@ -1,8 +1,5 @@
 const std = @import("std");
-const c = @cImport({
-    @cInclude("raylib.h");
-    @cInclude("rlgl.h");
-});
+const c = @import("raylib.zig").c;
 const main = @import("main.zig");
 const audio = @import("audio.zig");
 const asF32 = @import("extras.zig").asF32;

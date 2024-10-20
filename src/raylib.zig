@@ -1,7 +1,11 @@
 const std = @import("std");
-const c = @cImport({
+pub const c = @cImport({
+    @cInclude("stdlib.h");
+    @cInclude("memory.h");
     @cInclude("raylib.h");
     @cInclude("rlgl.h");
+    @cInclude("raygui.h");
+    @cInclude("style_dark.h");
 });
 
 const Self = @This();

@@ -1,11 +1,9 @@
 const std = @import("std");
-const c = @cImport({
-    @cInclude("raylib.h");
-    @cInclude("rlgl.h");
-});
 const rl = @import("raylib.zig");
+const c = rl.c;
 const audio = @import("audio.zig");
 const graphics = @import("graphics.zig");
+const gui = @import("gui.zig");
 
 pub const screenWidth = 1200;
 pub const screenHeight = 800;
@@ -24,6 +22,8 @@ pub fn main() !void {
 
     c.InitAudioDevice();
     defer c.CloseAudioDevice();
+
+    c.GuiLoadStyleDark();
 
     var music = c.Music{};
     var filename: []const u8 = undefined;
@@ -68,7 +68,6 @@ pub fn main() !void {
         } else {
             camera3d.position.z += wheelMove.y;
         }
-        while (!c.IsAudioStreamProcessed(music.stream)) {}
         {
             c.BeginDrawing();
             defer c.EndDrawing();
@@ -78,19 +77,20 @@ pub fn main() !void {
             const mtp = c.GetMusicTimePlayed(music);
             const mtl = c.GetMusicTimeLength(music);
             // Drawing
-            graphics.draw3DScene(camera3d, rot_offset, mtp, t);
+            graphics.Bubble.render(camera3d, rot_offset, mtp, t);
             for (audio.curr_buffer, audio.curr_fft, 0..) |v, fv, i| {
                 graphics.WaveFormLine.render(.{ .y = center.y - 80 }, i, v);
                 graphics.WaveFormBar.render(center, i, v);
                 graphics.WaveFormLine.render(.{ .y = center.y * 2 }, i, fv.magnitude() * 0.15);
-                graphics.FFT.drawFft(center, i, fv.magnitude());
+                graphics.FFT.render(center, i, fv.magnitude());
                 //graphics.draw_bubbles(center, i, v, t);
             }
             if (c.IsMusicStreamPlaying(music)) {
                 const ftime = c.GetFrameTime();
                 const txt = try std.fmt.bufPrint(&text_buffer, "{s}\n{d:3.2} | {d:3.2}\nftime:{d:2.2}", .{ filename, mtl, mtp, ftime });
-                c.DrawText(txt.ptr, 0, 0, 10, c.WHITE);
+                c.DrawText(txt.ptr, screenWidth - 100, 0, 10, c.WHITE);
             }
+            gui.frame();
             t += 0.01;
         }
     }
