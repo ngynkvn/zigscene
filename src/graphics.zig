@@ -12,7 +12,7 @@ pub fn draw_line(center: c.Vector2, i: usize, v: f32) void {
     const y = (v * 60);
     // "plot" x and y
     const px = x;
-    const py = -y + center.y - 60;
+    const py = -y + center.y - 80;
     c.DrawRectangleRec(.{ .x = px, .y = py, .width = 1, .height = 2 }, c.RAYWHITE);
     c.DrawRectangleRec(.{ .x = px, .y = py + 12, .width = 2, .height = 1 }, c.GREEN);
 }
