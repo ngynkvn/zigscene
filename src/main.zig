@@ -3,12 +3,15 @@ const c = @cImport({
     @cInclude("raylib.h");
     @cInclude("rlgl.h");
 });
+const rl = @import("raylib.zig");
 const audio = @import("audio.zig");
 const graphics = @import("graphics.zig");
 
-const screenWidth = 800;
-const screenHeight = 600;
+pub const screenWidth = 1200;
+pub const screenHeight = 800;
 const APP_NAME = "zigscene";
+
+const projections = .{ c.CAMERA_PERSPECTIVE, c.CAMERA_ORTHOGRAPHIC };
 
 pub fn main() !void {
     var t: f32 = 0.0;
@@ -24,13 +27,14 @@ pub fn main() !void {
     var filename = std.mem.zeroes([64:0]u8);
     var clen: usize = 0;
     var txtbuffer = std.mem.zeroes([256:0]u8);
+    var rot_offset: f32 = 0.0;
     c.SetMasterVolume(0.10);
 
-    const camera3d: c.Camera3D = .{
-        .position = .{ .x = 0.0, .y = 3.0, .z = 10.0 }, // Camera position
+    var camera3d: c.Camera3D = .{
+        .position = .{ .x = 0.0, .y = 0.5, .z = 10.0 }, // Camera position
         .target = .{ .x = 0.0, .y = 0.0, .z = 0.0 }, // Camera looking at point
         .up = .{ .x = 0.0, .y = 1.0, .z = 0.0 }, // Camera up vector (rotation towards target)
-        .fovy = 45.0, // Camera field-of-view Y
+        .fovy = 85.0, // Camera field-of-view Y
         .projection = c.CAMERA_PERSPECTIVE, // Camera projection type
     };
     c.SetTargetFPS(60); // Set our game to run at 60 frames-per-second
@@ -50,6 +54,19 @@ pub fn main() !void {
         if (c.IsMusicStreamPlaying(music)) {
             c.UpdateMusicStream(music);
         }
+        if (rl.IsKeyPressed(.C)) {
+            camera3d.projection = switch (camera3d.projection) {
+                c.CAMERA_PERSPECTIVE => c.CAMERA_ORTHOGRAPHIC,
+                c.CAMERA_ORTHOGRAPHIC => c.CAMERA_PERSPECTIVE,
+                else => unreachable,
+            };
+        }
+        if (rl.IsKeyDown(.LEFT)) {
+            rot_offset -= 0.5;
+        }
+        if (rl.IsKeyDown(.RIGHT)) {
+            rot_offset += 0.5;
+        }
 
         c.BeginDrawing();
         defer c.EndDrawing();
@@ -62,14 +79,13 @@ pub fn main() !void {
             const txt = try std.fmt.bufPrint(&txtbuffer, "{s}\n{d:3.2} | {d:3.2}", .{ filename[0..clen], mtl, mtp });
             c.DrawText(txt.ptr, 0, 0, 10, c.WHITE);
         }
-        const center = c.GetWorldToScreen(.{ .x = 0, .y = 0 }, camera3d);
         for (audio.curr_buffer, 0..) |v, i| {
             graphics.draw_line(center, i, v);
             graphics.draw_bars(center, i, v);
             //graphics.draw_bubbles(center, i, v, t);
         }
         for (audio.curr_fft, 0..) |v, i| {
-            const SPACING = 6;
+            const SPACING = 5;
             const x = @as(f32, @floatFromInt(i)) * SPACING;
             const y = v.magnitude();
             // "plot" x and y
@@ -83,21 +99,30 @@ pub fn main() !void {
             c.BeginMode3D(camera3d);
             defer c.EndMode3D();
             c.DrawGrid(40.0, 2);
-            const R = 2;
-            const SCALE = 0.5;
-            const N_SLICES = 3;
+            const R = 4;
+            const SCALE = 1;
             c.rlPushMatrix();
-            c.rlRotatef(t * 100, 1, 1, 1);
-            const tsteps = std.math.pi * 2 / @as(f32, @floatFromInt(audio.curr_len));
-            for (0..N_SLICES) |j| {
+            c.rlRotatef(t * 32, 1, 1, 1);
+            const tsteps = 2 * std.math.pi / @as(f32, @floatFromInt(audio.curr_buffer.len));
+            for (audio.curr_buffer, 0..) |v, i| {
+                const r = R + (@abs(v) * SCALE);
+                const angle_rad = @as(f32, @floatFromInt(i)) * tsteps;
+                const x = @cos(angle_rad) * r;
+                const y = @sin(angle_rad) * r;
+                // _ = x;
+                // _ = y;
                 c.rlPushMatrix();
-                c.rlRotatef(@as(f32, @floatFromInt(j)) * 60, 1, 0, 0);
-                for (audio.curr_buffer[0..audio.curr_len], 0..) |v, i| {
-                    const r = R + (@abs(v) * SCALE);
-                    const x = (@cos(@as(f32, @floatFromInt(i)) * tsteps + t) * r);
-                    const y = (@sin(@as(f32, @floatFromInt(i)) * tsteps + t) * r);
-                    c.DrawCubeWires(.{ .x = x, .y = y, .z = 0 }, 0.05, 0.05, 0.05, c.ORANGE);
-                }
+                c.rlTranslatef(x, y, 0);
+                c.rlRotatef(90 + angle_rad * 180 / std.math.pi, 0, 0, 1);
+                c.DrawCubeWires(.{
+                    .x = 0,
+                    .y = 0,
+                }, 0.1, 0.1 + @abs(v) * 0.5, 0.1, c.ORANGE);
+                c.rlTranslatef(0.1, 0.1, 0);
+                c.DrawCubeWires(.{
+                    .x = 0,
+                    .y = 0,
+                }, 0.05, 0.05, 0.05, c.GREEN);
                 c.rlPopMatrix();
             }
             c.rlPopMatrix();

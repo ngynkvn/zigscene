@@ -3,10 +3,11 @@ const c = @cImport({
     @cInclude("raylib.h");
     @cInclude("rlgl.h");
 });
+const main = @import("main.zig");
 const audio = @import("audio.zig");
 
 pub fn draw_line(center: c.Vector2, i: usize, v: f32) void {
-    const SPACING = 4;
+    const SPACING = main.screenWidth / 200;
     const x = @as(f32, @floatFromInt(i)) * SPACING;
     const y = (v * 60);
     // "plot" x and y
@@ -17,7 +18,7 @@ pub fn draw_line(center: c.Vector2, i: usize, v: f32) void {
 }
 
 pub fn draw_bars(center: c.Vector2, i: usize, v: f32) void {
-    const SPACING = 4;
+    const SPACING = main.screenWidth / 200;
     const x = @as(f32, @floatFromInt(i)) * SPACING;
     const y = (v * 40);
     const base_h: f32 = 40;
