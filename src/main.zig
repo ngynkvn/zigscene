@@ -90,7 +90,7 @@ pub fn main() !void {
             }
             t += 0.01;
         }
-        gui.frame();
+        //gui.frame();
     }
 }
 
