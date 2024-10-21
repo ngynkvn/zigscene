@@ -10,14 +10,14 @@ pub fn handleFile() !void {
     const files = c.LoadDroppedFiles();
     defer c.UnloadDroppedFiles(files);
     const file = files.paths[0];
-    const cfilename = c.GetFileName(file);
-    const clen = std.mem.len(cfilename);
-    @memcpy(fnbuff[0..clen], cfilename[0..clen]);
-    filename = fnbuff[0..clen];
     try startMusic(file);
 }
 
 pub fn startMusic(path: [*c]const u8) !void {
+    const cfilename = c.GetFileName(path);
+    const clen = std.mem.len(cfilename);
+    @memcpy(fnbuff[0..clen], cfilename[0..clen]);
+    filename = fnbuff[0..clen];
     music = c.LoadMusicStream(path);
     if (music.stream.sampleSize != 32) return error.NoMusic;
     c.AttachAudioStreamProcessor(music.stream, audio.audioStreamCallback);

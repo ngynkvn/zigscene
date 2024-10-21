@@ -107,7 +107,7 @@ pub const Bubble = struct {
         color2 = c.ColorToHSV(c.ORANGE);
         color3 = c.ColorToHSV(c.GREEN);
     }
-    pub var R: f32 = 4;
+    pub var R: f32 = 3.5;
     pub var scale: f32 = 1;
     pub fn render(camera3d: c.Camera3D, rot_offset: f32, mtp: f32, t: f32) void {
         c.BeginMode3D(camera3d);
@@ -142,9 +142,9 @@ pub const Bubble = struct {
             col.x += t * 5 + audio.avg_intensity * 10 + r * 40;
             c.DrawCubeWires(.{}, 0.1, 0.1 + @abs(v) * 0.5, 0.1, fromHSV(col));
             c.rlTranslatef(-0.1, 0.1, 0);
-            inline for (0..3) |j| {
-                c.DrawCubeWires(.{ .z = 0.05 - 0.05 * @as(f32, @floatFromInt(j)) }, 0.03, 0.03, 0.03, fromHSV(color3));
-            }
+            col = color3;
+            col.x += t * 5 + audio.avg_intensity * 10 + r * 40;
+            c.DrawCubeWires(.{}, 0.03, 0.03, 0.03, fromHSV(color3));
 
             c.rlPopMatrix();
         }
