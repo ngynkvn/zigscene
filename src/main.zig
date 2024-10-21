@@ -5,6 +5,7 @@ const music = @import("music.zig");
 const audio = @import("audio.zig");
 const graphics = @import("graphics.zig");
 const gui = @import("gui.zig");
+const debug = @import("debug.zig");
 
 pub const screenWidth = 1200;
 pub const screenHeight = 800;
@@ -54,6 +55,9 @@ pub fn main() !void {
                 else => unreachable,
             };
         }
+        // Debug related controls
+        debug.input();
+
         if (rl.IsKeyDown(.LEFT)) {
             rot_offset -= 1;
         }
@@ -70,6 +74,9 @@ pub fn main() !void {
             c.BeginDrawing();
             defer c.EndDrawing();
             const center = c.GetWorldToScreen(.{ .x = 0, .y = 0 }, camera3d);
+
+            // TODO: toggle?
+            debug.render();
 
             c.ClearBackground(c.BLACK);
             // Drawing

@@ -6,10 +6,13 @@ const N = 256;
 const Cf32 = std.math.Complex(f32);
 var audio_buffer = std.mem.zeroes([N]f32);
 var fft_buffer = std.mem.zeroes([N]Cf32);
-pub var avg_intensity: f32 = 0;
 
 pub var curr_buffer: []f32 = &audio_buffer;
 pub var curr_fft: []Cf32 = &fft_buffer;
+
+// Root mean square of signal
+// TODO: rename
+pub var avg_intensity: f32 = 0;
 
 /// Accepts a buffer of the stream + the length of the buffer
 /// The buffer is composed of PCM samples from the audio stream
@@ -20,17 +23,18 @@ pub fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
     var l: f32 = 0;
     var r: f32 = 0;
     const curr_len = n / 2;
+    avg_intensity = 0;
     for (0..curr_len) |fi| {
         l = buffer[fi * 2 + 0];
         r = buffer[fi * 2 + 1];
         // Damping
         audio_buffer[fi] += (l + r) / 4;
-        audio_buffer[fi] *= 0.98;
+        audio_buffer[fi] *= 0.95;
         // No Damping
         fft_buffer[fi] = Cf32.init(l + r, 0);
-        avg_intensity += @abs(l + r) / asF32(curr_len);
-        avg_intensity *= 0.99;
+        avg_intensity += std.math.pow(f32, l + r, 2) / asF32(curr_len);
     }
+    avg_intensity = @sqrt(avg_intensity);
     fft(fft_buffer[0..curr_len]);
     curr_buffer = audio_buffer[0..curr_len];
     curr_fft = fft_buffer[0..curr_len];

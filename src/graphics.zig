@@ -54,7 +54,9 @@ pub const WaveFormBar = struct {
     var color2: c.Vector3 = undefined;
     fn init() void {
         color1 = c.ColorToHSV(c.BLUE);
-        color2 = c.ColorToHSV(c.BLUE);
+        color1.x += 20;
+        color2 = c.ColorToHSV(c.GREEN);
+        color2.x += 30;
     }
     pub var amplitude: f32 = 40;
     pub var base_h: f32 = 40;
@@ -89,8 +91,8 @@ pub const FFT = struct {
 
 pub const Bubble = struct {
     pub var Scalars = [_]Scalar{
-        .{ .name = "amplitude", .value = &R, .range = .{ 0, 100 } },
-        .{ .name = "base_h", .value = &scale, .range = .{ 0, 100 } },
+        .{ .name = "amplitude", .value = &R, .range = .{ 0, 6 } },
+        .{ .name = "scale", .value = &scale, .range = .{ 0, 2 } },
     };
     pub var Colors = [_]Color{
         .{ .name = "color1", .hue = &color1.x },
@@ -117,10 +119,14 @@ pub const Bubble = struct {
             c.DrawGrid(64, 16);
             c.rlPopMatrix();
         }
-        c.rlPushMatrix();
-        c.rlRotatef(t * 32, 1, 1, 1);
-        c.DrawSphereWires(.{}, 2 + audio.avg_intensity, 10, 10, fromHSV(color1));
-        c.rlPopMatrix();
+        {
+            c.rlPushMatrix();
+            c.rlRotatef(t * 32, 1, 1, 1);
+            var col = color1;
+            col.x += t * 10 + audio.avg_intensity * 45;
+            c.DrawSphereWires(.{}, 2 + audio.avg_intensity / 2, 10, 10, fromHSV(col));
+            c.rlPopMatrix();
+        }
         c.rlPushMatrix();
         c.rlRotatef(t * 32, 0.2, 0.2, 1);
         const tsteps = 2 * std.math.pi / @as(f32, @floatFromInt(audio.curr_buffer.len));
@@ -132,7 +138,9 @@ pub const Bubble = struct {
             c.rlPushMatrix();
             c.rlTranslatef(x, y, 0);
             c.rlRotatef(90 + angle_rad * 180 / std.math.pi, 0, 0, 1);
-            c.DrawCubeWires(.{}, 0.1, 0.1 + @abs(v) * 0.5, 0.1, fromHSV(color2));
+            var col = color2;
+            col.x += t * 5 + audio.avg_intensity * 10 + r * 40;
+            c.DrawCubeWires(.{}, 0.1, 0.1 + @abs(v) * 0.5, 0.1, fromHSV(col));
             c.rlTranslatef(-0.1, 0.1, 0);
             inline for (0..3) |j| {
                 c.DrawCubeWires(.{ .z = 0.05 - 0.05 * @as(f32, @floatFromInt(j)) }, 0.03, 0.03, 0.03, fromHSV(color3));
