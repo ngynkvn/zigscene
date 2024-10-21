@@ -56,6 +56,8 @@ pub fn linkWithEmscripten(
         "-sFULL-ES3=1",
         "-sUSE_GLFW=3",
         "-sASYNCIFY",
+        "-sASSERTIONS",
+        "-sINITIAL_MEMORY=81264640",
         "-O3",
         "--emrun",
     });
