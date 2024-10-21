@@ -23,6 +23,7 @@ pub fn main() !void {
 
     graphics.initColors();
 
+    c.GuiSetAlpha(0.5);
     c.GuiLoadStyleDark();
 
     var rot_offset: f32 = 0.0;
