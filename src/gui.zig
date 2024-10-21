@@ -3,6 +3,7 @@ const graphics = @import("graphics.zig");
 const rl = @import("raylib.zig");
 const cdef = rl.c;
 const music = @import("music.zig");
+const audio = @import("audio.zig");
 
 var buffer = std.mem.zeroes([1024]u8);
 var fba = std.heap.FixedBufferAllocator.init(&buffer);
@@ -48,8 +49,8 @@ pub fn frame() void {
     const mtp = music.GetMusicTimePlayed();
     const mtl = music.GetMusicTimeLength();
     if (music.IsMusicStreamPlaying()) {
-        const ftime = cdef.GetFPS();
-        const txt = std.fmt.bufPrintZ(&text_buffer, "#{}# {s} | {d:3.2} / {d:3.2} [FPS:{d}]", .{ cdef.ICON_PLAYER_PLAY, music.filename, mtp, mtl, ftime }) catch unreachable;
+        const fps = cdef.GetFPS();
+        const txt = std.fmt.bufPrintZ(&text_buffer, "#{}# {s} | {d:3.2} / {d:3.2} [FPS:{d}]", .{ cdef.ICON_PLAYER_PLAY, music.filename, mtp, mtl, fps }) catch unreachable;
         _ = cdef.GuiStatusBar(base.translate(base.width * 2 + 10, 0).resize(window_width - base.width * 2, 16).c(), txt.ptr);
     }
 

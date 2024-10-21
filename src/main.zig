@@ -81,9 +81,9 @@ pub fn main() !void {
                 graphics.FFT.render(center, i, fv.magnitude());
                 //graphics.draw_bubbles(center, i, v, t);
             }
-            gui.frame();
             t += 0.01;
         }
+        gui.frame();
     }
 }
 
