@@ -17,7 +17,6 @@ pub fn build(b: *std.Build) void {
     const raylib = b.dependency("raylib", .{
         .target = target,
         .optimize = optimize,
-        .linux_display_backend = .X11,
     });
     const libraylib = raylib.artifact("raylib");
     // SOURCE: https://github.com/Not-Nik/raylib-zig/blob/c191e12e7c50e5dc2b1addd1e5dbd16bd405d2b5/build.zig#L119
