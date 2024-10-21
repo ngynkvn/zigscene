@@ -92,7 +92,6 @@ pub const FFT = struct {
 pub const Bubble = struct {
     pub var Scalars = [_]Scalar{
         .{ .name = "amplitude", .value = &R, .range = .{ 0, 6 } },
-        .{ .name = "scale", .value = &scale, .range = .{ 0, 2 } },
     };
     pub var Colors = [_]Color{
         .{ .name = "color1", .hue = &color1.x },
@@ -104,11 +103,12 @@ pub const Bubble = struct {
     var color3: c.Vector3 = undefined;
     fn init() void {
         color1 = c.ColorToHSV(c.PURPLE);
+        color1.x -= 80;
         color2 = c.ColorToHSV(c.ORANGE);
+        color2.x += 80;
         color3 = c.ColorToHSV(c.GREEN);
     }
-    pub var R: f32 = 3.5;
-    pub var scale: f32 = 1;
+    pub var R: f32 = 3;
     pub fn render(camera3d: c.Camera3D, rot_offset: f32, mtp: f32, t: f32) void {
         c.BeginMode3D(camera3d);
         defer c.EndMode3D();
@@ -123,15 +123,15 @@ pub const Bubble = struct {
             c.rlPushMatrix();
             c.rlRotatef(t * 32, 1, 1, 1);
             var col = color1;
-            col.x += t * 10 + audio.avg_intensity * 45;
-            c.DrawSphereWires(.{}, 2 + audio.avg_intensity / 2, 10, 10, fromHSV(col));
+            col.x += audio.avg_intensity * 20;
+            c.DrawSphereWires(.{}, 2 + audio.avg_intensity * 0.5, 10, 10, fromHSV(col));
             c.rlPopMatrix();
         }
         c.rlPushMatrix();
         c.rlRotatef(t * 32, 0.2, 0.2, 1);
         const tsteps = 2 * std.math.pi / @as(f32, @floatFromInt(audio.curr_buffer.len));
         for (audio.curr_buffer, 0..) |v, i| {
-            const r = R + (@abs(v) * scale);
+            const r = R + 0.5 * audio.avg_intensity + @abs(v) * 0.5;
             const angle_rad = @as(f32, @floatFromInt(i)) * tsteps;
             const x = @cos(angle_rad) * r;
             const y = @sin(angle_rad) * r;
@@ -139,11 +139,11 @@ pub const Bubble = struct {
             c.rlTranslatef(x, y, 0);
             c.rlRotatef(90 + angle_rad * 180 / std.math.pi, 0, 0, 1);
             var col = color2;
-            col.x += t * 5 + audio.avg_intensity * 10 + r * 40;
-            c.DrawCubeWires(.{}, 0.1, 0.1 + @abs(v) * 0.5, 0.1, fromHSV(col));
+            col.x += audio.avg_intensity * 10 + r * 20;
+            c.DrawCubeWires(.{}, 0.1, 0.1 + @abs(v) * 0.5 + audio.avg_intensity * 0.2, 0.1, fromHSV(col));
             c.rlTranslatef(-0.1, 0.1, 0);
             col = color3;
-            col.x += t * 5 + audio.avg_intensity * 10 + r * 40;
+            col.x += audio.avg_intensity * 10 + r * 20;
             c.DrawCubeWires(.{}, 0.03, 0.03, 0.03, fromHSV(color3));
 
             c.rlPopMatrix();

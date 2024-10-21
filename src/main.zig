@@ -26,6 +26,7 @@ pub fn main() !void {
 
     c.GuiSetAlpha(0.5);
     c.GuiLoadStyleDark();
+    //try music.startMusic("./sounds/willix.mp3");
 
     var rot_offset: f32 = 0.0;
     c.SetMasterVolume(0.10);
