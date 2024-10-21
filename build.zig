@@ -49,13 +49,16 @@ pub fn build(b: *std.Build) !void {
             .target = target,
             .optimize = optimize,
         });
+        if (b.sysroot == null) {
+            @panic("Pass '--sysroot \"$EMSDK/upstream/emscripten\"'");
+        }
+        const cache_include = b.pathResolve(&.{ b.sysroot.?, "cache", "sysroot", "include" });
+        exe_lib.addIncludePath(.{ .cwd_relative = cache_include });
 
         // Note that raylib itself isn't actually added to the exe_lib
         // output file, so it also needs to be linked with emscripten.
         exe_lib.linkLibrary(libraylib);
         const link_step = try emcc.linkWithEmscripten(b, &[_]*std.Build.Step.Compile{ exe_lib, libraylib });
-        // link_step.addArg("--embed-file");
-        // link_step.addArg("resources/");
 
         const run_step = try emcc.emscriptenRunStep(b);
         run_step.step.dependOn(&link_step.step);
