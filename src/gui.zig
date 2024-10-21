@@ -34,9 +34,8 @@ var Options = .{
     graphics.WaveFormBar,
     graphics.Bubble,
 };
-var value_buffer = std.mem.zeroes([128]u8);
-
 const window_width = 400;
+var value_buffer = std.mem.zeroes([128]u8);
 var text_buffer = std.mem.zeroes([256:0]u8);
 //                          \__/ ⬋ please be nice to him
 var txt: []u8 = text_buffer[0..0]; //\\//\\//\\//\\//\\
