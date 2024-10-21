@@ -10,6 +10,7 @@ pub var avg_intensity: f32 = 0;
 
 pub var curr_buffer: []f32 = &audio_buffer;
 pub var curr_fft: []Cf32 = &fft_buffer;
+
 /// Accepts a buffer of the stream + the length of the buffer
 /// The buffer is composed of PCM samples from the audio stream
 /// passed to raylib / miniaudio.h

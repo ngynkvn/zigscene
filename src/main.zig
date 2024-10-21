@@ -1,6 +1,7 @@
 const std = @import("std");
 const rl = @import("raylib.zig");
 const c = rl.c;
+const music = @import("music.zig");
 const audio = @import("audio.zig");
 const graphics = @import("graphics.zig");
 const gui = @import("gui.zig");
@@ -9,10 +10,7 @@ pub const screenWidth = 1200;
 pub const screenHeight = 800;
 const APP_NAME = "zigscene";
 
-const projections = .{ c.CAMERA_PERSPECTIVE, c.CAMERA_ORTHOGRAPHIC };
-
-var filename_buffer = std.mem.zeroes([64:0]u8);
-var text_buffer = std.mem.zeroes([256:0]u8);
+var filename_buffer = std.mem.zeroes([128:0]u8);
 pub fn main() !void {
     var t: f32 = 0.0;
 
@@ -27,8 +25,6 @@ pub fn main() !void {
 
     c.GuiLoadStyleDark();
 
-    var music = c.Music{};
-    var filename: []const u8 = undefined;
     var rot_offset: f32 = 0.0;
     c.SetMasterVolume(0.10);
 
@@ -45,11 +41,10 @@ pub fn main() !void {
     // Detects window close button or ESC key
     while (!c.WindowShouldClose()) {
         if (c.IsFileDropped()) {
-            filename = try handleFile(&filename_buffer, &music);
-            @memset(&text_buffer, 0);
+            try music.handleFile();
         }
-        if (c.IsMusicStreamPlaying(music)) {
-            c.UpdateMusicStream(music);
+        if (music.IsMusicStreamPlaying()) {
+            music.UpdateMusicStream();
         }
         if (rl.IsKeyPressed(.C)) {
             camera3d.projection = switch (camera3d.projection) {
@@ -76,9 +71,8 @@ pub fn main() !void {
             const center = c.GetWorldToScreen(.{ .x = 0, .y = 0 }, camera3d);
 
             c.ClearBackground(c.BLACK);
-            const mtp = c.GetMusicTimePlayed(music);
-            const mtl = c.GetMusicTimeLength(music);
             // Drawing
+            const mtp = music.GetMusicTimePlayed();
             graphics.Bubble.render(camera3d, rot_offset, mtp, t);
             for (audio.curr_buffer, audio.curr_fft, 0..) |v, fv, i| {
                 graphics.WaveFormLine.render(.{ .y = center.y - 80 }, i, v);
@@ -87,34 +81,10 @@ pub fn main() !void {
                 graphics.FFT.render(center, i, fv.magnitude());
                 //graphics.draw_bubbles(center, i, v, t);
             }
-            var txt: ?[]const u8 = null;
-            if (c.IsMusicStreamPlaying(music)) {
-                const ftime = c.GetFrameTime();
-                txt = try std.fmt.bufPrint(&text_buffer, "#{}# {s} | {d:3.2} / {d:3.2} [T:{d:7.4}]", .{ c.ICON_PLAYER_PLAY, filename, mtp, mtl, ftime });
-            }
-            gui.frame(txt orelse "");
+            gui.frame();
             t += 0.01;
         }
     }
-}
-
-fn handleFile(buf: []u8, music: *c.Music) ![]const u8 {
-    const files = c.LoadDroppedFiles();
-    defer c.UnloadDroppedFiles(files);
-    const file = files.paths[0];
-    const cfilename = c.GetFileName(file);
-    const clen = std.mem.len(cfilename);
-    @memcpy(buf[0..clen], cfilename[0..clen]);
-    try startMusic(music, file);
-    return buf[0..clen];
-}
-
-fn startMusic(music: *c.Music, path: [*c]const u8) !void {
-    music.* = c.LoadMusicStream(path);
-    if (music.stream.sampleSize != 32) return error.NoMusic;
-    c.AttachAudioStreamProcessor(music.stream, audio.audioStreamCallback);
-    std.log.info("samplesize = {}, samplerate = {}\n", .{ music.stream.sampleSize, music.stream.sampleRate });
-    c.PlayMusicStream(music.*);
 }
 
 test "root" {

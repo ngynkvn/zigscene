@@ -2,6 +2,7 @@ const std = @import("std");
 const graphics = @import("graphics.zig");
 const rl = @import("raylib.zig");
 const cdef = rl.c;
+const music = @import("music.zig");
 
 var buffer = std.mem.zeroes([1024]u8);
 var fba = std.heap.FixedBufferAllocator.init(&buffer);
@@ -39,11 +40,18 @@ var Options = .{
 var value_buffer = std.mem.zeroes([128]u8);
 
 const window_width = 400;
-pub fn frame(status: []const u8) void {
+var text_buffer = std.mem.zeroes([256:0]u8);
+pub fn frame() void {
     const base = R(5, 5, 16, 16);
     _ = cdef.GuiToggle(base.translate(0, 0).c(), std.fmt.comptimePrint("#{}#", .{cdef.ICON_FX}), &active_menu.scalar);
     _ = cdef.GuiToggle(base.translate(21, 0).c(), std.fmt.comptimePrint("#{}#", .{cdef.ICON_COLOR_PICKER}), &active_menu.color);
-    _ = cdef.GuiStatusBar(base.translate(base.width * 2 + 10, 0).resize(window_width - base.width * 2, 16).c(), status.ptr);
+    const mtp = music.GetMusicTimePlayed();
+    const mtl = music.GetMusicTimeLength();
+    if (music.IsMusicStreamPlaying()) {
+        const ftime = cdef.GetFPS();
+        const txt = std.fmt.bufPrintZ(&text_buffer, "#{}# {s} | {d:3.2} / {d:3.2} [FPS:{d}]", .{ cdef.ICON_PLAYER_PLAY, music.filename, mtp, mtl, ftime }) catch unreachable;
+        _ = cdef.GuiStatusBar(base.translate(base.width * 2 + 10, 0).resize(window_width - base.width * 2, 16).c(), txt.ptr);
+    }
 
     if (active_menu.scalar) {
         const anchor = base.translate(2, 20).resize(window_width, 400);
