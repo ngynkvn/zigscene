@@ -23,7 +23,6 @@ pub fn main() !void {
 
     graphics.initColors();
 
-    c.GuiLoadStyleDark();
 
     var rot_offset: f32 = 0.0;
     c.SetMasterVolume(0.10);
@@ -83,7 +82,7 @@ pub fn main() !void {
             }
             t += 0.01;
         }
-        gui.frame();
+        //gui.frame();
     }
 }
 
