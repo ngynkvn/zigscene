@@ -5,10 +5,6 @@ const cdef = rl.c;
 const music = @import("music.zig");
 const audio = @import("audio.zig");
 
-var buffer = std.mem.zeroes([1024]u8);
-var fba = std.heap.FixedBufferAllocator.init(&buffer);
-const allocator = fba.allocator();
-
 pub const Rectangle = struct {
     x: f32,
     y: f32,
