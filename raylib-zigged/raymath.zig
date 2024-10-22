@@ -1,3 +1,9 @@
+const V = @import("V.zig");
+const Vector2 = V.Vector2;
+const Vector3 = V.Vector3;
+const Vector4 = V.Vector4;
+const Matrix = V.Matrix;
+const Quaternion = V.Quaternion;
 pub extern fn atan2f(f32, f32) f32;
 pub extern fn cosf(f32) f32;
 pub extern fn fabsf(f32) f32;
@@ -9,44 +15,6 @@ pub extern fn tan(f64) f64;
 pub extern fn sinf(f32) f32;
 pub extern fn acosf(f32) f32;
 pub extern fn asinf(f32) f32;
-pub const struct_Vector2 = extern struct {
-    x: f32 = @import("std").mem.zeroes(f32),
-    y: f32 = @import("std").mem.zeroes(f32),
-};
-pub const Vector2 = struct_Vector2;
-pub const struct_Vector3 = extern struct {
-    x: f32 = @import("std").mem.zeroes(f32),
-    y: f32 = @import("std").mem.zeroes(f32),
-    z: f32 = @import("std").mem.zeroes(f32),
-};
-pub const Vector3 = struct_Vector3;
-pub const struct_Vector4 = extern struct {
-    x: f32 = @import("std").mem.zeroes(f32),
-    y: f32 = @import("std").mem.zeroes(f32),
-    z: f32 = @import("std").mem.zeroes(f32),
-    w: f32 = @import("std").mem.zeroes(f32),
-};
-pub const Vector4 = struct_Vector4;
-pub const Quaternion = Vector4;
-pub const struct_Matrix = extern struct {
-    m0: f32 = @import("std").mem.zeroes(f32),
-    m4: f32 = @import("std").mem.zeroes(f32),
-    m8: f32 = @import("std").mem.zeroes(f32),
-    m12: f32 = @import("std").mem.zeroes(f32),
-    m1: f32 = @import("std").mem.zeroes(f32),
-    m5: f32 = @import("std").mem.zeroes(f32),
-    m9: f32 = @import("std").mem.zeroes(f32),
-    m13: f32 = @import("std").mem.zeroes(f32),
-    m2: f32 = @import("std").mem.zeroes(f32),
-    m6: f32 = @import("std").mem.zeroes(f32),
-    m10: f32 = @import("std").mem.zeroes(f32),
-    m14: f32 = @import("std").mem.zeroes(f32),
-    m3: f32 = @import("std").mem.zeroes(f32),
-    m7: f32 = @import("std").mem.zeroes(f32),
-    m11: f32 = @import("std").mem.zeroes(f32),
-    m15: f32 = @import("std").mem.zeroes(f32),
-};
-pub const Matrix = struct_Matrix;
 pub const struct_float3 = extern struct {
     v: [3]f32 = @import("std").mem.zeroes([3]f32),
 };

@@ -60,7 +60,7 @@ pub fn build(b: *std.Build) void {
 
     // Generate Zig from C
     const translate_c = b.addTranslateC(.{
-        .root_source_file = raylib.path("src/raymath.h"),
+        .root_source_file = raylib.path("src/raudio.c"),
         .target = target,
         .optimize = optimize,
     });
