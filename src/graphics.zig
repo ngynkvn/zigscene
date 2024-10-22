@@ -152,23 +152,6 @@ pub const Bubble = struct {
     }
 };
 
-// const bubbles = [_][2]f32{
-//     .{ 240, 60 },
-//     .{ 240, 40 },
-//     .{ 240, 20 },
-//     .{ 240, 10 },
-//     .{ 220, 10 },
-// };
-// pub fn draw_bubbles(center: c.Vector2, i: usize, v: f32, t: f32) void {
-//     const tsteps = std.math.pi * 2 / @as(f32, @floatFromInt(audio.curr_buffer.len));
-//     for (bubbles) |b| {
-//         const r = b[0] + (@abs(v) * b[1]);
-//         const x = (@cos(@as(f32, @floatFromInt(i)) * tsteps + t) * r) + center.x;
-//         const y = (@sin(@as(f32, @floatFromInt(i)) * tsteps + t) * r) + center.y;
-//         c.DrawRectangleRec(.{ .x = x, .y = y, .width = 2, .height = 2 }, c.ORANGE);
-//     }
-// }
-
 pub const Scalar = struct {
     name: []const u8,
     value: *f32,
