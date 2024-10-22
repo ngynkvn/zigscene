@@ -3,6 +3,7 @@ const c = @import("raylib.zig").c;
 const main = @import("main.zig");
 const audio = @import("audio.zig");
 const asF32 = @import("extras.zig").asF32;
+const fromHSV = @import("extras.zig").fromHSV;
 
 pub const WaveFormLine = struct {
     pub var Scalars = [_]Scalar{
@@ -125,10 +126,6 @@ pub const Bubble = struct {
         c.rlPopMatrix();
     }
 };
-
-fn fromHSV(col: c.Vector3) c.Color {
-    return c.ColorFromHSV(col.x, col.y, col.z);
-}
 
 // Configurables. These get set up in the UI
 pub const Scalar = struct {
