@@ -77,6 +77,7 @@ pub const Bubble = struct {
         .{ .name = "sphere radius", .value = &r_sphere, .range = .{ 0.1, 4 } },
         .{ .name = "volume effect", .value = &effect, .range = .{ 0.1, 1 } },
         .{ .name = "color scale", .value = &color_scale, .range = .{ 0.0, 100 } },
+        .{ .name = "bubble color fx", .value = &color_scale, .range = .{ 0.0, 100 } },
     };
     pub var Colors = [_]Color{
         .{ .name = "color1", .hue = &color1.x },
@@ -91,6 +92,7 @@ pub const Bubble = struct {
     pub var r_sphere: f32 = 2;
     pub var effect: f32 = 0.5;
     pub var color_scale: f32 = 45;
+    pub var bubble_color_scale: f32 = 30;
     pub fn render(camera3d: c.Camera3D, rot_offset: f32, mtp: f32, t: f32) void {
         c.BeginMode3D(camera3d);
         defer c.EndMode3D();
@@ -105,7 +107,7 @@ pub const Bubble = struct {
             c.rlPushMatrix();
             c.rlRotatef(t * 32, 1, 1, 1);
             var col = color1;
-            col.x += audio.avg_intensity * color_scale;
+            col.x += audio.avg_intensity * bubble_color_scale;
             c.DrawSphereWires(.{}, r_sphere + audio.avg_intensity * effect, 10, 10, fromHSV(col));
             c.rlPopMatrix();
         }

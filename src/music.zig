@@ -19,9 +19,8 @@ pub fn startMusic(path: [*c]const u8) !void {
     @memcpy(fnbuff[0..clen], cfilename[0..clen]);
     filename = fnbuff[0..clen];
     music = c.LoadMusicStream(path);
-    if (music.stream.sampleSize != 32) return error.NoMusic;
-    c.AttachAudioStreamProcessor(music.stream, audio.audioStreamCallback);
     std.log.info("samplesize = {}, samplerate = {}\n", .{ music.stream.sampleSize, music.stream.sampleRate });
+    c.AttachAudioStreamProcessor(music.stream, audio.audioStreamCallback);
     c.PlayMusicStream(music);
 }
 pub fn GetMusicTimePlayed() f32 {

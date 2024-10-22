@@ -19,6 +19,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     const libraylib = raylib.artifact("raylib");
+    libraylib.defineCMacro("SUPPORT_FILEFORMAT_FLAC", null);
     // SOURCE: https://github.com/Not-Nik/raylib-zig/blob/c191e12e7c50e5dc2b1addd1e5dbd16bd405d2b5/build.zig#L119
     // (Thank you!)
     const raygui = b.dependency("raygui", .{

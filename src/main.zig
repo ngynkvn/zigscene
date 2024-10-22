@@ -22,7 +22,7 @@ pub fn main() !void {
     c.InitAudioDevice();
     defer c.CloseAudioDevice();
 
-    c.GuiSetAlpha(0.5);
+    c.GuiSetAlpha(0.8);
     c.GuiLoadStyleDark();
     //try music.startMusic("./sounds/willix.mp3");
 

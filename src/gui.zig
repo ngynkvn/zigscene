@@ -42,6 +42,8 @@ var value_buffer = std.mem.zeroes([128]u8);
 
 const window_width = 400;
 var text_buffer = std.mem.zeroes([256:0]u8);
+//                          \__/ ⬋ please be nice to him
+var txt: []u8 = text_buffer[0..0]; //\\//\\//\\//\\//\\
 pub fn frame() void {
     const base = R(5, 5, 16, 16);
     _ = cdef.GuiToggle(base.translate(0, 0).c(), std.fmt.comptimePrint("#{}#", .{cdef.ICON_FX}), &active_menu.scalar);
@@ -50,9 +52,9 @@ pub fn frame() void {
     const mtl = music.GetMusicTimeLength();
     if (music.IsMusicStreamPlaying()) {
         const fps = cdef.GetFPS();
-        const txt = std.fmt.bufPrintZ(&text_buffer, "#{}# {s} | {d:3.2} / {d:3.2} [FPS:{d}]", .{ cdef.ICON_PLAYER_PLAY, music.filename, mtp, mtl, fps }) catch unreachable;
-        _ = cdef.GuiStatusBar(base.translate(base.width * 2 + 10, 0).resize(window_width - base.width * 2, 16).c(), txt.ptr);
+        txt = std.fmt.bufPrintZ(&text_buffer, "#{}# {s} | {d:4.1}s / {d:4.1}s [FPS:{d}]", .{ cdef.ICON_PLAYER_PLAY, music.filename, mtp, mtl, fps }) catch unreachable;
     }
+    _ = cdef.GuiStatusBar(base.translate(base.width * 2 + 10, 0).resize(window_width * 2, 16).c(), txt.ptr);
 
     if (active_menu.scalar) {
         const anchor = base.translate(2, 20).resize(window_width, 400);
@@ -99,4 +101,3 @@ pub fn frame() void {
         }
     }
 }
-var v: f32 = 0;
