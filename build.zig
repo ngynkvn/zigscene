@@ -27,10 +27,10 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    var gen = b.addWriteFiles();
-    libraylib.step.dependOn(&gen.step);
+    var genraygui = b.addWriteFiles();
+    libraylib.step.dependOn(&genraygui.step);
 
-    const raygui_c_path = gen.add("raygui.c",
+    const raygui_c_path = genraygui.add("raygui.c",
         \\#define RAYGUI_IMPLEMENTATION
         \\#include "raygui.h"
     );
@@ -57,6 +57,17 @@ pub fn build(b: *std.Build) void {
     }
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
+
+    // Generate Zig from C
+    const translate_c = b.addTranslateC(.{
+        .root_source_file = raylib.path("src/raymath.h"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const install_gen = b.addInstallFile(translate_c.getOutput(), "c.zig");
+    install_gen.step.dependOn(&translate_c.step);
+    const gen = b.step("genc", "generate zig code from c source code");
+    gen.dependOn(&install_gen.step);
 
     const exe_unit_tests = b.addTest(.{
         .root_source_file = b.path("src/main.zig"),
