@@ -7,6 +7,11 @@ pub const c = @cImport({
     @cInclude("raygui.h");
     @cInclude("style_dark.h");
 });
+const raymath = @import("raymath");
+comptime {
+    const ti = @typeInfo(raymath);
+    @compileLog(ti);
+}
 
 const Self = @This();
 
