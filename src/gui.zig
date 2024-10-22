@@ -69,7 +69,7 @@ pub fn frame() void {
                 const fname = optinfo.name;
                 const fval = optinfo.value;
                 const buf = std.fmt.bufPrintZ(value_buffer[i * 7 .. i * 7 + 7], "{d:6.2}", .{fval.*}) catch unreachable;
-                _ = cdef.GuiSlider(anchor.resize(100, 8).translate(80, 40 + yoff).c(), fname.ptr, buf.ptr, fval, optinfo.range[0], optinfo.range[1]);
+                _ = cdef.GuiSlider(anchor.resize(100, 8).translate(100, 32 + yoff).c(), fname.ptr, buf.ptr, fval, optinfo.range[0], optinfo.range[1]);
                 yoff += 20;
                 i += 1;
             }
