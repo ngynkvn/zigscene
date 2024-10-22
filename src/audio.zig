@@ -16,7 +16,7 @@ pub var avg_intensity: f32 = 0;
 
 /// Accepts a buffer of the stream + the length of the buffer
 /// The buffer is composed of PCM samples from the audio stream
-/// passed to raylib / miniaudio.h
+/// that were passed to raylib / miniaudio.h
 pub fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
     if (ptr == null) return;
     const buffer: []f32 = @as([*]f32, @ptrCast(@alignCast(ptr)))[0..n];

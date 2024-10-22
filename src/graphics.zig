@@ -4,16 +4,6 @@ const main = @import("main.zig");
 const audio = @import("audio.zig");
 const asF32 = @import("extras.zig").asF32;
 
-pub fn initColors() void {
-    WaveFormLine.init();
-    WaveFormBar.init();
-    Bubble.init();
-}
-
-fn fromHSV(col: c.Vector3) c.Color {
-    return c.ColorFromHSV(col.x, col.y, col.z);
-}
-
 pub const WaveFormLine = struct {
     pub var Scalars = [_]Scalar{
         .{ .name = "amplitude", .value = &amplitude, .range = .{ 0, 100 } },
@@ -23,12 +13,8 @@ pub const WaveFormLine = struct {
         .{ .name = "color2", .hue = &color2.x },
     };
     pub var amplitude: f32 = 60;
-    var color1: c.Vector3 = undefined;
-    var color2: c.Vector3 = undefined;
-    fn init() void {
-        color1 = c.ColorToHSV(c.RAYWHITE);
-        color2 = c.ColorToHSV(c.GREEN);
-    }
+    var color1 = c.Vector3{ .x = 0e0, .y = 0, .z = 0.96 };
+    var color2 = c.Vector3{ .x = 132, .y = 1, .z = 0.9 };
     pub fn render(center: c.Vector2, i: usize, v: f32) void {
         const SPACING = main.screenWidth / asF32(audio.curr_buffer.len);
         const x = @as(f32, @floatFromInt(i)) * SPACING;
@@ -44,22 +30,17 @@ pub const WaveFormLine = struct {
 pub const WaveFormBar = struct {
     pub var Scalars = [_]Scalar{
         .{ .name = "amplitude", .value = &amplitude, .range = .{ 0, 100 } },
-        .{ .name = "base_h", .value = &base_h, .range = .{ 0, 100 } },
+        .{ .name = "base height", .value = &base_h, .range = .{ 0, 100 } },
     };
     pub var Colors = [_]Color{
         .{ .name = "color1", .hue = &color1.x },
         .{ .name = "color2", .hue = &color2.x },
     };
-    var color1: c.Vector3 = undefined;
-    var color2: c.Vector3 = undefined;
-    fn init() void {
-        color1 = c.ColorToHSV(c.BLUE);
-        color1.x += 20;
-        color2 = c.ColorToHSV(c.GREEN);
-        color2.x += 30;
-    }
+    var color1 = c.Vector3{ .x = 229, .y = 1, .z = 0.94 };
+    var color2 = c.Vector3{ .x = 162, .y = 1, .z = 0.89 };
     pub var amplitude: f32 = 40;
     pub var base_h: f32 = 40;
+
     pub fn render(center: c.Vector2, i: usize, v: f32) void {
         const SPACING = main.screenWidth / asF32(audio.curr_buffer.len);
         const x = @as(f32, @floatFromInt(i)) * SPACING;
@@ -91,24 +72,17 @@ pub const FFT = struct {
 
 pub const Bubble = struct {
     pub var Scalars = [_]Scalar{
-        .{ .name = "amplitude", .value = &R, .range = .{ 0, 6 } },
+        .{ .name = "ring radius", .value = &BaseRadius, .range = .{ 0, 6 } },
     };
     pub var Colors = [_]Color{
         .{ .name = "color1", .hue = &color1.x },
         .{ .name = "color2", .hue = &color2.x },
         .{ .name = "color2", .hue = &color3.x },
     };
-    var color1: c.Vector3 = undefined;
-    var color2: c.Vector3 = undefined;
-    var color3: c.Vector3 = undefined;
-    fn init() void {
-        color1 = c.ColorToHSV(c.PURPLE);
-        color1.x -= 80;
-        color2 = c.ColorToHSV(c.ORANGE);
-        color2.x += 80;
-        color3 = c.ColorToHSV(c.GREEN);
-    }
-    pub var R: f32 = 3;
+    var color1 = c.Vector3{ .x = 195, .y = 0.5, .z = 1 };
+    var color2 = c.Vector3{ .x = 117, .y = 1, .z = 1 };
+    var color3 = c.Vector3{ .x = 132, .y = 1, .z = 0.9 };
+    pub var BaseRadius: f32 = 4;
     pub fn render(camera3d: c.Camera3D, rot_offset: f32, mtp: f32, t: f32) void {
         c.BeginMode3D(camera3d);
         defer c.EndMode3D();
@@ -131,7 +105,7 @@ pub const Bubble = struct {
         c.rlRotatef(t * 32, 0.2, 0.2, 1);
         const tsteps = 2 * std.math.pi / @as(f32, @floatFromInt(audio.curr_buffer.len));
         for (audio.curr_buffer, 0..) |v, i| {
-            const r = R + 0.5 * audio.avg_intensity + @abs(v) * 0.5;
+            const r = BaseRadius + 0.5 * audio.avg_intensity + @abs(v) * 0.5;
             const angle_rad = @as(f32, @floatFromInt(i)) * tsteps;
             const x = @cos(angle_rad) * r;
             const y = @sin(angle_rad) * r;
@@ -152,6 +126,11 @@ pub const Bubble = struct {
     }
 };
 
+fn fromHSV(col: c.Vector3) c.Color {
+    return c.ColorFromHSV(col.x, col.y, col.z);
+}
+
+// Configurables. These get set up in the UI
 pub const Scalar = struct {
     name: []const u8,
     value: *f32,
