@@ -82,3 +82,41 @@ pub fn emscriptenRunStep(b: *std.Build) !*std.Build.Step.Run {
     const run_cmd = b.addSystemCommand(&[_][]const u8{ emrun_run_arg, emccOutputDir ++ emccOutputFile });
     return run_cmd;
 }
+pub const Options = struct { lib: *std.Build.Step.Compile, target: std.Build.ResolvedTarget, optimize: std.builtin.Mode };
+
+pub fn addStepWeb(b: *std.Build, o: Options) !void {
+    const run_option = b.step("web", "Build and run for web");
+    if (o.target.result.os.tag != .emscripten) return;
+
+    const run_step = try emscriptenRunStep(b);
+    run_option.dependOn(&run_step.step);
+    const exe_lib = b.addStaticLibrary(.{
+        .name = "zigscene",
+        .root_source_file = b.path("src/main.zig"),
+        .target = o.target,
+        .optimize = o.optimize,
+    });
+
+    const cache_include = b.pathResolve(&.{ b.sysroot.?, "cache", "sysroot", "include" });
+    exe_lib.addIncludePath(.{ .cwd_relative = cache_include });
+
+    // Note that raylib itself isn't actually added to the exe_lib
+    // output file, so it also needs to be linked with emscripten.
+    exe_lib.linkLibrary(o.lib);
+    const link_step = try linkWithEmscripten(b, &[_]*std.Build.Step.Compile{ exe_lib, o.lib });
+
+    run_step.step.dependOn(&link_step.step);
+}
+
+pub fn hookSysrootIfNeeded(b: *std.Build, target: std.Build.ResolvedTarget) void {
+    if (target.result.os.tag != .emscripten) return;
+
+    b.sysroot = b.sysroot orelse r: {
+        if (std.c.getenv("EMSDK")) |sdkpath| {
+            const p = sdkpath[0..std.mem.len(sdkpath)];
+            const path = b.pathJoin(&.{ p, "/upstream/emscripten" });
+            break :r path;
+        }
+        @panic("Pass '--sysroot \"$EMSDK/upstream/emscripten\"' or set $EMSDK");
+    };
+}

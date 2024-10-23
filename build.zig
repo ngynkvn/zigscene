@@ -4,6 +4,7 @@ const emcc = @import("src/build/emcc.zig");
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+    emcc.hookSysrootIfNeeded(b, target);
 
     // Dependencies
     const raylib = b.dependency("raylib", .{
@@ -41,48 +42,28 @@ pub fn build(b: *std.Build) !void {
     libraylib.installHeader(raygui.path("src/raygui.h"), "raygui.h");
     libraylib.installHeader(raygui.path("styles/dark/style_dark.h"), "style_dark.h");
 
-    const check_step = b.step("check", "Check build");
-    if (target.query.os_tag == .emscripten) {
-        const exe_lib = b.addStaticLibrary(.{
-            .name = "zigscene",
-            .root_source_file = b.path("src/main.zig"),
-            .target = target,
-            .optimize = optimize,
-        });
-        if (b.sysroot == null) {
-            @panic("Pass '--sysroot \"$EMSDK/upstream/emscripten\"'");
-        }
-        const cache_include = b.pathResolve(&.{ b.sysroot.?, "cache", "sysroot", "include" });
-        exe_lib.addIncludePath(.{ .cwd_relative = cache_include });
+    try emcc.addStepWeb(b, .{
+        .lib = libraylib,
+        .target = target,
+        .optimize = optimize,
+    });
 
-        // Note that raylib itself isn't actually added to the exe_lib
-        // output file, so it also needs to be linked with emscripten.
-        exe_lib.linkLibrary(libraylib);
-        const link_step = try emcc.linkWithEmscripten(b, &[_]*std.Build.Step.Compile{ exe_lib, libraylib });
+    const exe = b.addExecutable(.{
+        .name = "zigscene",
+        .root_source_file = b.path("src/main.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
 
-        const run_step = try emcc.emscriptenRunStep(b);
-        run_step.step.dependOn(&link_step.step);
-        const run_option = b.step("run", "TODO");
-        run_option.dependOn(&run_step.step);
-    } else {
-        const exe = b.addExecutable(.{
-            .name = "zigscene",
-            .root_source_file = b.path("src/main.zig"),
-            .target = target,
-            .optimize = optimize,
-        });
-
-        b.installArtifact(exe);
-        exe.linkLibrary(libraylib);
-        const run_cmd = b.addRunArtifact(exe);
-        run_cmd.step.dependOn(b.getInstallStep());
-        if (b.args) |args| {
-            run_cmd.addArgs(args);
-        }
-        const run_step = b.step("run", "Run the app");
-        run_step.dependOn(&run_cmd.step);
-        check_step.dependOn(&exe.step);
+    b.installArtifact(exe);
+    exe.linkLibrary(libraylib);
+    const run_cmd = b.addRunArtifact(exe);
+    run_cmd.step.dependOn(b.getInstallStep());
+    if (b.args) |args| {
+        run_cmd.addArgs(args);
     }
+    const run_step = b.step("run", "Run the app");
+    run_step.dependOn(&run_cmd.step);
 
     const exe_unit_tests = b.addTest(.{
         .root_source_file = b.path("src/main.zig"),
@@ -94,5 +75,8 @@ pub fn build(b: *std.Build) !void {
 
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_exe_unit_tests.step);
+
+    const check_step = b.step("check", "Check build");
+    check_step.dependOn(&exe.step);
     check_step.dependOn(test_step);
 }
