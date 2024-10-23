@@ -18,6 +18,10 @@ pub fn input() void {
     }
     const mp = c.GetMousePosition();
     const delta = c.GetMouseDelta();
+    const pressed = c.IsMouseButtonPressed(c.MOUSE_LEFT_BUTTON);
+    if (pressed) {
+        std.log.info("click: {}", .{mp});
+    }
     const dragging = c.IsMouseButtonDown(c.MOUSE_LEFT_BUTTON) and
         (c.CheckCollisionPointRec(mp, pos) or c.CheckCollisionPointRec(.{ .x = mp.x - delta.x, .y = mp.y - delta.y }, pos));
     if (dragging) {
