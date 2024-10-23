@@ -5,10 +5,6 @@ const cdef = rl.c;
 const music = @import("music.zig");
 const audio = @import("audio.zig");
 
-var buffer = std.mem.zeroes([1024]u8);
-var fba = std.heap.FixedBufferAllocator.init(&buffer);
-const allocator = fba.allocator();
-
 pub const Rectangle = struct {
     x: f32,
     y: f32,
@@ -38,9 +34,8 @@ var Options = .{
     graphics.WaveFormBar,
     graphics.Bubble,
 };
-var value_buffer = std.mem.zeroes([128]u8);
-
 const window_width = 400;
+var value_buffer = std.mem.zeroes([128]u8);
 var text_buffer = std.mem.zeroes([256:0]u8);
 //                          \__/ ⬋ please be nice to him
 var txt: []u8 = text_buffer[0..0]; //\\//\\//\\//\\//\\
