@@ -1,11 +1,8 @@
 const std = @import("std");
-const ext = @import("raylib/ext.zig");
 const vector = @import("raylib/vector.zig");
-pub const c = ext.c;
+pub usingnamespace @import("raylib/ext.zig");
 
 const Self = @This();
-
-pub const Vector2 = vector.Vector2;
 
 // zig fmt: off
 pub const Key = enum(c_int) {
