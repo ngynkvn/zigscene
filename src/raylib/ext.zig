@@ -1,3 +1,4 @@
+const vector = @import("vector.zig");
 // TODO: remove this eventually so we can just use extern / wrapper
 pub const c = @cImport({
     @cInclude("stdlib.h");
@@ -14,10 +15,10 @@ pub const SaveFileDataCallback = ?*const fn ([*c]const u8, ?*anyopaque, c_int) c
 pub const LoadFileTextCallback = ?*const fn ([*c]const u8) callconv(.C) [*c]u8;
 pub const SaveFileTextCallback = ?*const fn ([*c]const u8, [*c]u8) callconv(.C) bool;
 pub const Camera = c.Camera;
-pub const Vector2 = c.Vector2;
-pub const Vector3 = c.Vector3;
-pub const Vector4 = c.Vector4;
-pub const Matrix = c.Matrix;
+pub const Vector2 = vector.Vector2;
+pub const Vector3 = vector.Vector3;
+pub const Vector4 = vector.Vector4;
+pub const Matrix = vector.Matrix;
 pub const Color = c.Color;
 pub const Rectangle = c.Rectangle;
 pub const Image = c.Image;
@@ -26,7 +27,13 @@ pub const Image = c.Image;
 pub const NPatchInfo = c.NPatchInfo;
 pub const GlyphInfo = c.GlyphInfo;
 pub const Font = c.Font;
-pub const Camera3D = c.Camera3D;
+pub const Camera3D = extern struct {
+    position: Vector3 = .{},
+    target: Vector3 = .{},
+    up: Vector3 = .{},
+    fovy: f32 = 0,
+    projection: c_int = 0,
+};
 pub const Camera2D = c.Camera2D;
 pub const Mesh = c.Mesh;
 pub const Shader = c.Shader;
@@ -105,9 +112,9 @@ pub extern fn IsCursorOnScreen() bool;
 // pub extern fn ClearBackground(color: Color) void;
 pub extern fn BeginDrawing() void;
 pub extern fn EndDrawing() void;
-// pub extern fn BeginMode2D(camera: Camera2D) void;
+pub extern fn BeginMode2D(camera: Camera2D) void;
 pub extern fn EndMode2D() void;
-// pub extern fn BeginMode3D(camera: Camera3D) void;
+pub extern fn BeginMode3D(camera: Camera3D) void;
 pub extern fn EndMode3D() void;
 // pub extern fn BeginTextureMode(target: RenderTexture2D) void;
 // pub extern fn EndTextureMode() void;
