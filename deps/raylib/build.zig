@@ -24,15 +24,7 @@ pub fn build(b: *std.Build) !void {
             \\#define RAYGUI_IMPLEMENTATION
             \\#include "raygui.h"
         );
-        libraylib.addCSourceFile(.{
-            .file = raygui_c_path,
-            .flags = &[_][]const u8{
-                "-std=gnu99",
-                "-D_GNU_SOURCE",
-                "-DGL_SILENCE_DEPRECATION=199309L",
-                "-fno-sanitize=undefined", // https://github.com/raysan5/raylib/issues/3674
-            },
-        });
+        libraylib.addCSourceFile(.{ .file = raygui_c_path });
         libraylib.addIncludePath(raylib.path("src"));
         libraylib.addIncludePath(raygui.path("src"));
     }

@@ -3,7 +3,7 @@ const rl = @import("raylib.zig");
 const audio = @import("audio.zig");
 
 pub var music = rl.Music{};
-var fnbuff = std.mem.zeroes([128]u8);
+var fnbuff = std.mem.zeroes([256]u8);
 pub var filename: []u8 = undefined;
 
 pub fn handleFile() !void {

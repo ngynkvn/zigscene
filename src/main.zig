@@ -15,7 +15,6 @@ pub var screenHeight: c_int = defaultScreenHeight;
 
 const APP_NAME = "zigscene";
 
-var filename_buffer = std.mem.zeroes([128:0]u8);
 pub fn main() !void {
     var t: f32 = 0.0;
 

@@ -9,7 +9,7 @@ var visible = false;
 pub fn render() void {
     if (!visible) return;
 
-    var txt = std.mem.zeroes([128]u8);
+    var txt = std.mem.zeroes([256]u8);
     const spacing = asF32(main.screenWidth) / asF32(audio.curr_buffer.len);
     const buf = std.fmt.bufPrintZ(txt[0..64], "{d}", .{spacing}) catch txt[0..0];
     rl.DrawText(buf.ptr, main.screenWidth - 100, 200, 24, rl.RAYWHITE);
