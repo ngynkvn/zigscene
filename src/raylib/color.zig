@@ -1,3 +1,5 @@
+const std = @import("std");
+
 pub const Color = extern struct {
     r: u8 = 0,
     g: u8 = 0,
@@ -13,19 +15,19 @@ pub const Color = extern struct {
         k = if (t < k) t else k;
         k = if (k < 1) k else 1;
         k = if (k > 0) k else 0;
-        color.r = @as(u8, @intFromFloat((value - ((value * saturation) * k)) * 255.0));
+        color.r = std.math.lossyCast(u8, (value - ((value * saturation) * k)) * 255.0);
         k = @mod(3.0 + (hue / 60.0), 6);
         t = 4.0 - k;
         k = if (t < k) t else k;
         k = if (k < 1) k else 1;
         k = if (k > 0) k else 0;
-        color.g = @as(u8, @intFromFloat((value - ((value * saturation) * k)) * 255.0));
+        color.g = std.math.lossyCast(u8, (value - ((value * saturation) * k)) * 255.0);
         k = @mod(1.0 + (hue / 60.0), 6);
         t = 4.0 - k;
         k = if (t < k) t else k;
         k = if (k < 1) k else 1;
         k = if (k > 0) k else 0;
-        color.b = @as(u8, @intFromFloat((value - ((value * saturation) * k)) * 255.0));
+        color.b = std.math.lossyCast(u8, (value - ((value * saturation) * k)) * 255.0);
         return color;
     }
 };
@@ -56,35 +58,37 @@ pub const BLANK: Color = .from(.{ 0, 0, 0, 0 });
 pub const MAGENTA: Color = .from(.{ 255, 0, 255, 255 });
 pub const RAYWHITE: Color = .from(.{ 245, 245, 245, 255 });
 
-fn _assertColorEqual(expected: Color, actual: Color) !void {
-    const assert = @import("std").testing.expectEqual;
-    try assert(expected.r, actual.r);
-    try assert(expected.g, actual.g);
-    try assert(expected.b, actual.b);
-    try assert(expected.a, actual.a);
-}
 test "fromHSV conversion" {
     // Red (hue = 0, saturation = 1, value = 1)
-    try _assertColorEqual(Color{ .r = 255, .g = 0, .b = 0, .a = 255 }, .fromHSV(0.0, 1.0, 1.0));
-
+    try std.testing.expectEqualDeep(Color{ .r = 255, .g = 0, .b = 0, .a = 255 }, Color.fromHSV(0.0, 1.0, 1.0));
     // Green (hue = 120, saturation = 1, value = 1)
-    try _assertColorEqual(Color{ .r = 0, .g = 255, .b = 0, .a = 255 }, .fromHSV(120.0, 1.0, 1.0));
-
+    try std.testing.expectEqualDeep(Color{ .r = 0, .g = 255, .b = 0, .a = 255 }, Color.fromHSV(120.0, 1.0, 1.0));
     // Blue (hue = 240, saturation = 1, value = 1)
-    try _assertColorEqual(Color{ .r = 0, .g = 0, .b = 255, .a = 255 }, .fromHSV(240.0, 1.0, 1.0));
-
+    try std.testing.expectEqualDeep(Color{ .r = 0, .g = 0, .b = 255, .a = 255 }, Color.fromHSV(240.0, 1.0, 1.0));
     // White (hue = any, saturation = 0, value = 1)
-    try _assertColorEqual(Color{ .r = 255, .g = 255, .b = 255, .a = 255 }, .fromHSV(0.0, 0.0, 1.0));
-
+    try std.testing.expectEqualDeep(Color{ .r = 255, .g = 255, .b = 255, .a = 255 }, Color.fromHSV(0.0, 0.0, 1.0));
     // Black (hue = any, saturation = any, value = 0)
-    try _assertColorEqual(Color{ .r = 0, .g = 0, .b = 0, .a = 255 }, .fromHSV(180.0, 0.5, 0.0));
-
+    try std.testing.expectEqualDeep(Color{ .r = 0, .g = 0, .b = 0, .a = 255 }, Color.fromHSV(180.0, 0.5, 0.0));
     // Gray (hue = any, saturation = 0, value = 0.5)
-    try _assertColorEqual(Color{ .r = 127, .g = 127, .b = 127, .a = 255 }, .fromHSV(300.0, 0.0, 0.5));
-
+    try std.testing.expectEqualDeep(Color{ .r = 127, .g = 127, .b = 127, .a = 255 }, Color.fromHSV(300.0, 0.0, 0.5));
     // Intermediate color (hue = 60, saturation = 1, value = 0.5)
-    try _assertColorEqual(Color{ .r = 127, .g = 127, .b = 0, .a = 255 }, .fromHSV(60.0, 1.0, 0.5));
-
+    try std.testing.expectEqualDeep(Color{ .r = 127, .g = 127, .b = 0, .a = 255 }, Color.fromHSV(60.0, 1.0, 0.5));
     // Hue wrapping around (hue = 360, saturation = 1, value = 1)
-    try _assertColorEqual(Color{ .r = 255, .g = 0, .b = 0, .a = 255 }, .fromHSV(360.0, 1.0, 1.0));
+    try std.testing.expectEqualDeep(Color{ .r = 255, .g = 0, .b = 0, .a = 255 }, Color.fromHSV(360.0, 1.0, 1.0));
+}
+
+test "fromHSV = HsvToColor" {
+    const ColorFromHSV = @import("ext.zig").c.ColorFromHSV;
+    for (0..36) |x| {
+        for (0..10) |y| {
+            for (0..10) |z| {
+                const h: f32 = @floatFromInt(x * 10);
+                const s: f32 = @floatFromInt(y);
+                const v: f32 = @floatFromInt(z);
+                const raylib_hsv = ColorFromHSV(h, s / 10, v / 10);
+                const color = Color.fromHSV(h, s / 10, v / 10);
+                std.testing.expectEqualDeep(raylib_hsv, color);
+            }
+        }
+    }
 }
