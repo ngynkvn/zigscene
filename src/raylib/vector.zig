@@ -586,21 +586,9 @@ pub const Vector3 = extern struct {
     }
     pub fn barycenter(p: Vector3, a: Vector3, b: Vector3, c: Vector3) Vector3 {
         var result: Vector3 = Vector3{ .x = 0, .y = 0, .z = 0 };
-        const v0: Vector3 = Vector3{
-            .x = b.x - a.x,
-            .y = b.y - a.y,
-            .z = b.z - a.z,
-        };
-        const v1: Vector3 = Vector3{
-            .x = c.x - a.x,
-            .y = c.y - a.y,
-            .z = c.z - a.z,
-        };
-        const v2: Vector3 = Vector3{
-            .x = p.x - a.x,
-            .y = p.y - a.y,
-            .z = p.z - a.z,
-        };
+        const v0: Vector3 = Vector3{ .x = b.x - a.x, .y = b.y - a.y, .z = b.z - a.z };
+        const v1: Vector3 = Vector3{ .x = c.x - a.x, .y = c.y - a.y, .z = c.z - a.z };
+        const v2: Vector3 = Vector3{ .x = p.x - a.x, .y = p.y - a.y, .z = p.z - a.z };
         const d00: f32 = ((v0.x * v0.x) + (v0.y * v0.y)) + (v0.z * v0.z);
         const d01: f32 = ((v0.x * v1.x) + (v0.y * v1.y)) + (v0.z * v1.z);
         const d11: f32 = ((v1.x * v1.x) + (v1.y * v1.y)) + (v1.z * v1.z);

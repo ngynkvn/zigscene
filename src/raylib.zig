@@ -1,6 +1,7 @@
 const std = @import("std");
 const vector = @import("raylib/vector.zig");
 pub usingnamespace @import("raylib/ext.zig");
+pub usingnamespace @import("raylib/rlgl.zig");
 
 const Self = @This();
 
