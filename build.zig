@@ -6,47 +6,16 @@ pub fn build(b: *std.Build) !void {
     const optimize = b.standardOptimizeOption(.{});
     emcc.hookSysrootIfNeeded(b, target);
 
-    // Dependencies
     const raylib = b.dependency("raylib", .{
         .target = target,
         .optimize = optimize,
     });
-    const libraylib = raylib.artifact("raylib");
-    libraylib.root_module.addCMacro("SUPPORT_FILEFORMAT_FLAC", "1");
-    // SOURCE: https://github.com/Not-Nik/raylib-zig/blob/c191e12e7c50e5dc2b1addd1e5dbd16bd405d2b5/build.zig#L119
-    // (Thank you!)
-    const raygui = b.dependency("raygui", .{
-        .target = target,
-        .optimize = optimize,
-    });
 
-    var gen = b.addWriteFiles();
-    libraylib.step.dependOn(&gen.step);
-
-    const raygui_c_path = gen.add("raygui.c",
-        \\#define RAYGUI_IMPLEMENTATION
-        \\#include "raygui.h"
-    );
-    libraylib.addCSourceFile(.{
-        .file = raygui_c_path,
-        .flags = &[_][]const u8{
-            "-std=gnu99",
-            "-D_GNU_SOURCE",
-            "-DGL_SILENCE_DEPRECATION=199309L",
-            "-fno-sanitize=undefined", // https://github.com/raysan5/raylib/issues/3674
-        },
-    });
-    libraylib.addIncludePath(raylib.path("src"));
-    libraylib.addIncludePath(raygui.path("src"));
-    libraylib.addIncludePath(raygui.path("styles/dark"));
-    libraylib.installHeader(raygui.path("src/raygui.h"), "raygui.h");
-    libraylib.installHeader(raygui.path("styles/dark/style_dark.h"), "style_dark.h");
-
-    try emcc.addStepWeb(b, .{
-        .lib = libraylib,
-        .target = target,
-        .optimize = optimize,
-    });
+    // try emcc.addStepWeb(b, .{
+    //     .lib = libraylib,
+    //     .target = target,
+    //     .optimize = optimize,
+    // });
 
     const exe = b.addExecutable(.{
         .name = "zigscene",
@@ -56,7 +25,7 @@ pub fn build(b: *std.Build) !void {
     });
 
     b.installArtifact(exe);
-    exe.linkLibrary(libraylib);
+    exe.root_module.addImport("raylib", raylib.module("raylib"));
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
     if (b.args) |args| {
@@ -70,7 +39,7 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
-    exe_unit_tests.linkLibrary(libraylib);
+    exe_unit_tests.root_module.addImport("raylib", raylib.module("raylib"));
     const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
 
     const test_step = b.step("test", "Run unit tests");

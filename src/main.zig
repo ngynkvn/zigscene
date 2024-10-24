@@ -1,6 +1,5 @@
 const std = @import("std");
 const rl = @import("raylib.zig");
-const c = rl.c;
 const music = @import("music.zig");
 const audio = @import("audio.zig");
 const graphics = @import("graphics.zig");
@@ -20,88 +19,88 @@ var filename_buffer = std.mem.zeroes([128:0]u8);
 pub fn main() !void {
     var t: f32 = 0.0;
 
-    c.SetConfigFlags(c.FLAG_WINDOW_RESIZABLE);
+    rl.SetConfigFlags(rl.FLAG_WINDOW_RESIZABLE);
 
     // Setup
-    c.InitWindow(screenWidth, screenHeight, APP_NAME);
-    defer c.CloseWindow(); // Close window and OpenGL context
+    rl.InitWindow(screenWidth, screenHeight, APP_NAME);
+    defer rl.CloseWindow(); // Close window and OpenGL context
 
-    c.InitAudioDevice();
-    defer c.CloseAudioDevice();
+    rl.InitAudioDevice();
+    defer rl.CloseAudioDevice();
 
-    c.GuiSetAlpha(0.8);
-    c.GuiLoadStyleDark();
+    // c.GuiSetAlpha(0.8);
+    // c.GuiLoadStyleDark();
     //try music.startMusic("./sounds/willix.mp3");
 
     var rot_offset: f32 = 0.0;
-    c.SetMasterVolume(0.10);
+    rl.SetMasterVolume(0.10);
 
-    var camera3d: c.Camera3D = .{
+    var camera3d: rl.Camera3D = .{
         .position = .{ .x = 0.0, .y = 0, .z = 10.0 }, // Camera position
         .target = .{ .x = 0.0, .y = 0.0, .z = 0.0 }, // Camera looking at point
         .up = .{ .x = 0.0, .y = 1.0, .z = 0.0 }, // Camera up vector (rotation towards target)
         .fovy = 65.0, // Camera field-of-view Y
-        .projection = c.CAMERA_PERSPECTIVE, // Camera projection type
+        .projection = rl.CAMERA_PERSPECTIVE, // Camera projection type
     };
-    c.SetTargetFPS(60); // Set our game to run at 60 frames-per-second
+    rl.SetTargetFPS(60); // Set our game to run at 60 frames-per-second
 
     // Main game loop
     // Detects window close button or ESC key
-    while (!c.WindowShouldClose()) {
-        if (c.IsFileDropped()) {
+    while (!rl.WindowShouldClose()) {
+        if (rl.IsFileDropped()) {
             try music.handleFile();
         }
         if (music.IsMusicStreamPlaying()) {
             music.UpdateMusicStream();
         }
-        if (rl.IsKeyPressed(.C)) {
+        if (rl.isKeyPressed(.C)) {
             camera3d.projection = switch (camera3d.projection) {
-                c.CAMERA_PERSPECTIVE => c.CAMERA_ORTHOGRAPHIC,
-                c.CAMERA_ORTHOGRAPHIC => c.CAMERA_PERSPECTIVE,
+                rl.CAMERA_PERSPECTIVE => rl.CAMERA_ORTHOGRAPHIC,
+                rl.CAMERA_ORTHOGRAPHIC => rl.CAMERA_PERSPECTIVE,
                 else => unreachable,
             };
         }
-        if (rl.IsKeyPressed(.F)) {
-            if (c.IsWindowState(c.FLAG_BORDERLESS_WINDOWED_MODE)) {
+        if (rl.isKeyPressed(.F)) {
+            if (rl.IsWindowState(rl.FLAG_BORDERLESS_WINDOWED_MODE)) {
                 screenWidth = defaultScreenWidth;
                 screenHeight = defaultScreenHeight;
             } else {
-                const display = c.GetCurrentMonitor();
-                screenWidth = c.GetMonitorWidth(display);
-                screenHeight = c.GetMonitorHeight(display);
-                c.SetWindowPosition(0, 0);
+                const display = rl.GetCurrentMonitor();
+                screenWidth = rl.GetMonitorWidth(display);
+                screenHeight = rl.GetMonitorHeight(display);
+                rl.SetWindowPosition(0, 0);
             }
-            c.SetWindowSize(screenWidth, screenHeight);
-            c.ToggleBorderlessWindowed();
+            rl.SetWindowSize(screenWidth, screenHeight);
+            rl.ToggleBorderlessWindowed();
         }
-        if (c.IsWindowResized()) {
-            const display = c.GetCurrentMonitor();
-            screenWidth = c.GetMonitorWidth(display);
-            screenHeight = c.GetMonitorHeight(display);
+        if (rl.IsWindowResized()) {
+            const display = rl.GetCurrentMonitor();
+            screenWidth = rl.GetMonitorWidth(display);
+            screenHeight = rl.GetMonitorHeight(display);
         }
         // Debug related controls
         debug.input();
 
-        if (rl.IsKeyDown(.LEFT)) {
+        if (rl.isKeyDown(.LEFT)) {
             rot_offset -= 1;
         }
-        if (rl.IsKeyDown(.RIGHT)) {
+        if (rl.isKeyDown(.RIGHT)) {
             rot_offset += 1;
         }
-        const wheelMove = c.GetMouseWheelMoveV();
+        const wheelMove = rl.GetMouseWheelMoveV();
         if (@abs(wheelMove.x) > @abs(wheelMove.y)) {
             rot_offset += wheelMove.x;
         } else {
             camera3d.position.z += wheelMove.y;
         }
         {
-            c.BeginDrawing();
-            defer c.EndDrawing();
-            const center = c.GetWorldToScreen(.{ .x = 0, .y = 0 }, camera3d);
+            rl.BeginDrawing();
+            defer rl.EndDrawing();
+            const center = rl.GetWorldToScreen(.{ .x = 0, .y = 0 }, camera3d);
 
             debug.render();
 
-            c.ClearBackground(c.BLACK);
+            rl.ClearBackground(rl.BLACK);
             // Drawing
             const mtp = music.GetMusicTimePlayed();
             graphics.Bubble.render(camera3d, rot_offset, mtp, t);
@@ -114,7 +113,7 @@ pub fn main() !void {
             }
             t += 0.01;
         }
-        gui.frame();
+        //        gui.frame();
     }
 }
 

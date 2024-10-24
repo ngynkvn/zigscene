@@ -1,6 +1,6 @@
 const std = @import("std");
 const rl = @import("raylib.zig");
-const c = rl.c;
+const c = rl;
 const audio = @import("audio.zig");
 const main = @import("main.zig");
 const asF32 = @import("extras.zig").asF32;
@@ -19,7 +19,7 @@ pub fn render() void {
 }
 
 pub fn input() void {
-    if (rl.IsKeyPressed(.D)) {
+    if (rl.isKeyPressed(.D)) {
         visible = !visible;
     }
     const mp = c.GetMousePosition();

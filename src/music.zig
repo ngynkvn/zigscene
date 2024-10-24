@@ -1,5 +1,5 @@
 const std = @import("std");
-const c = @import("raylib.zig").c;
+const c = @import("raylib.zig");
 const audio = @import("audio.zig");
 
 pub var music = c.Music{};

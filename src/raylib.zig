@@ -1,13 +1,5 @@
 const std = @import("std");
-pub const c = @cImport({
-    @cInclude("stdlib.h");
-    @cInclude("memory.h");
-    @cInclude("raylib.h");
-    @cInclude("raymath.h");
-    @cInclude("rlgl.h");
-    @cInclude("raygui.h");
-    @cInclude("style_dark.h");
-});
+pub usingnamespace @import("raylib");
 
 const Self = @This();
 
@@ -128,9 +120,9 @@ pub const Key = enum(c_int) {
     }
 };
 
-pub fn IsKeyPressed(k: Key) bool {
-    return c.IsKeyPressed(k.c());
+pub fn isKeyPressed(k: Key) bool {
+    return @This().IsKeyPressed(k.c());
 }
-pub fn IsKeyDown(k: Key) bool {
-    return c.IsKeyDown(k.c());
+pub fn isKeyDown(k: Key) bool {
+    return @This().IsKeyDown(k.c());
 }
