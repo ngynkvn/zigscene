@@ -6,6 +6,42 @@ pub const Color = extern struct {
     pub fn from(arr: [4]u8) Color {
         return .{ .r = arr[0], .g = arr[1], .b = arr[2], .a = arr[3] };
     }
+    pub fn ColorFromHSV(arg_hue: f32, arg_saturation: f32, arg_value: f32) Color {
+        var hue = arg_hue;
+        _ = &hue;
+        var saturation = arg_saturation;
+        _ = &saturation;
+        var value = arg_value;
+        _ = &value;
+        var color: Color = Color{
+            .r = @as(u8, @bitCast(@as(i8, @truncate(@as(c_int, 0))))),
+            .g = @as(u8, @bitCast(@as(i8, @truncate(@as(c_int, 0))))),
+            .b = @as(u8, @bitCast(@as(i8, @truncate(@as(c_int, 0))))),
+            .a = @as(u8, @bitCast(@as(i8, @truncate(@as(c_int, 255))))),
+        };
+        _ = &color;
+        var k: f32 = @mod(5.0 + (hue / 60.0), @as(f32, @floatFromInt(@as(c_int, 6))));
+        _ = &k;
+        var t: f32 = 4.0 - k;
+        _ = &t;
+        k = if (t < k) t else k;
+        k = if (k < @as(f32, @floatFromInt(@as(c_int, 1)))) k else @as(f32, @floatFromInt(@as(c_int, 1)));
+        k = if (k > @as(f32, @floatFromInt(@as(c_int, 0)))) k else @as(f32, @floatFromInt(@as(c_int, 0)));
+        color.r = @as(u8, @intFromFloat((value - ((value * saturation) * k)) * 255.0));
+        k = @mod(3.0 + (hue / 60.0), @as(f32, @floatFromInt(@as(c_int, 6))));
+        t = 4.0 - k;
+        k = if (t < k) t else k;
+        k = if (k < @as(f32, @floatFromInt(@as(c_int, 1)))) k else @as(f32, @floatFromInt(@as(c_int, 1)));
+        k = if (k > @as(f32, @floatFromInt(@as(c_int, 0)))) k else @as(f32, @floatFromInt(@as(c_int, 0)));
+        color.g = @as(u8, @intFromFloat((value - ((value * saturation) * k)) * 255.0));
+        k = @mod(1.0 + (hue / 60.0), @as(f32, @floatFromInt(@as(c_int, 6))));
+        t = 4.0 - k;
+        k = if (t < k) t else k;
+        k = if (k < @as(f32, @floatFromInt(@as(c_int, 1)))) k else @as(f32, @floatFromInt(@as(c_int, 1)));
+        k = if (k > @as(f32, @floatFromInt(@as(c_int, 0)))) k else @as(f32, @floatFromInt(@as(c_int, 0)));
+        color.b = @as(u8, @intFromFloat((value - ((value * saturation) * k)) * 255.0));
+        return color;
+    }
 };
 pub const LIGHTGRAY: Color = .from(.{ 200, 200, 200, 255 });
 pub const GRAY: Color = .from(.{ 130, 130, 130, 255 });
