@@ -28,8 +28,8 @@ pub fn main() !void {
     rl.InitAudioDevice();
     defer rl.CloseAudioDevice();
 
-    // c.GuiSetAlpha(0.8);
-    // c.GuiLoadStyleDark();
+    rl.GuiSetAlpha(0.8);
+    rl.GuiLoadStyleDark();
     //try music.startMusic("./sounds/willix.mp3");
 
     var rot_offset: f32 = 0.0;
@@ -113,7 +113,7 @@ pub fn main() !void {
             }
             t += 0.01;
         }
-        //        gui.frame();
+        gui.frame();
     }
 }
 

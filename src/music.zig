@@ -1,37 +1,37 @@
 const std = @import("std");
-const c = @import("raylib.zig");
+const rl = @import("raylib.zig");
 const audio = @import("audio.zig");
 
-pub var music = c.Music{};
+pub var music = rl.Music{};
 var fnbuff = std.mem.zeroes([128]u8);
 pub var filename: []u8 = undefined;
 
 pub fn handleFile() !void {
-    const files = c.LoadDroppedFiles();
-    defer c.UnloadDroppedFiles(files);
+    const files = rl.LoadDroppedFiles();
+    defer rl.UnloadDroppedFiles(files);
     const file = files.paths[0];
     try startMusic(file);
 }
 
 pub fn startMusic(path: [*c]const u8) !void {
-    const cfilename = c.GetFileName(path);
+    const cfilename = rl.GetFileName(path);
     const clen = std.mem.len(cfilename);
     @memcpy(fnbuff[0..clen], cfilename[0..clen]);
     filename = fnbuff[0..clen];
-    music = c.LoadMusicStream(path);
+    music = rl.LoadMusicStream(path);
     std.log.info("samplesize = {}, samplerate = {}\n", .{ music.stream.sampleSize, music.stream.sampleRate });
-    c.AttachAudioStreamProcessor(music.stream, audio.audioStreamCallback);
-    c.PlayMusicStream(music);
+    rl.AttachAudioStreamProcessor(music.stream, audio.audioStreamCallback);
+    rl.PlayMusicStream(music);
 }
 pub fn GetMusicTimePlayed() f32 {
-    return c.GetMusicTimePlayed(music);
+    return rl.GetMusicTimePlayed(music);
 }
 pub fn GetMusicTimeLength() f32 {
-    return c.GetMusicTimeLength(music);
+    return rl.GetMusicTimeLength(music);
 }
 pub fn IsMusicStreamPlaying() bool {
-    return c.IsMusicStreamPlaying(music);
+    return rl.IsMusicStreamPlaying(music);
 }
 pub fn UpdateMusicStream() void {
-    c.UpdateMusicStream(music);
+    rl.UpdateMusicStream(music);
 }

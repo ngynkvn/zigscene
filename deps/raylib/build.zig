@@ -35,21 +35,22 @@ pub fn build(b: *std.Build) !void {
         });
         libraylib.addIncludePath(raylib.path("src"));
         libraylib.addIncludePath(raygui.path("src"));
-        libraylib.addIncludePath(raygui.path("styles/dark"));
-        libraylib.installHeader(raygui.path("src/raygui.h"), "raygui.h");
-        libraylib.installHeader(raygui.path("styles/dark/style_dark.h"), "style_dark.h");
     }
 
     {
         var gen = b.addWriteFiles();
-        const path = gen.addCopyDirectory(raylib.path("src"), ".", .{ .include_extensions = &.{ "c", "h" } });
+        const path = gen.addCopyDirectory(raylib.path("src"), ".", .{ .include_extensions = &.{"h"} });
         _ = gen.addCopyFile(raygui.path("src/raygui.h"), "raygui.h");
+        _ = gen.addCopyFile(raygui.path("styles/dark/style_dark.h"), "style_dark.h");
 
         const raylib_c = gen.add("raylib.c",
+            \\#include <stdlib.h> 
+            \\#include <memory.h> 
             \\#include "raylib.h"
             \\#include "raygui.h"
             \\#include "raymath.h"
             \\#include "rlgl.h"
+            \\#include "style_dark.h"
         );
         const translate_c = b.addTranslateC(.{
             .root_source_file = raylib_c,

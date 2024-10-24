@@ -1,7 +1,7 @@
 const std = @import("std");
 const graphics = @import("graphics.zig");
 const rl = @import("raylib.zig");
-const cdef = rl.c;
+const cdef = rl;
 const music = @import("music.zig");
 const audio = @import("audio.zig");
 
