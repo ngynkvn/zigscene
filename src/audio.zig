@@ -29,7 +29,7 @@ pub fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
         r = buffer[fi * 2 + 1];
         // Damping
         audio_buffer[fi] += (l + r) / 4;
-        audio_buffer[fi] *= 0.95;
+        audio_buffer[fi] *= 0.97;
         // No Damping
         fft_buffer[fi] = Cf32.init(l + r, 0);
         avg_intensity += std.math.pow(f32, l + r, 2) / asF32(curr_len);

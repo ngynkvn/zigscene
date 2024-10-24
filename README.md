@@ -2,7 +2,8 @@
 
 Audio visualization experiment using zig and raylib.
 
-Built against `0.14.0-dev.1949+fffbb511d`
+Built against `0.14.0-dev.1983+6bf52b050
+`
 
 ## Usage
 
