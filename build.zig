@@ -15,6 +15,9 @@ pub fn build(b: *std.Build) !void {
     libraylib.root_module.addCMacro("SUPPORT_FILEFORMAT_FLAC", "1");
     libraylib.addIncludePath(raylib.path("src"));
 
+    const cimgui = b.dependency("cimgui", .{});
+    const cimgui_lib = cimgui.module("cimgui");
+
     try emcc.addStepWeb(b, .{
         .lib = libraylib,
         .target = target,
@@ -29,6 +32,7 @@ pub fn build(b: *std.Build) !void {
     });
 
     b.installArtifact(exe);
+    exe.root_module.addImport("cimgui", cimgui_lib);
     exe.linkLibrary(libraylib);
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
@@ -43,6 +47,7 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
+    exe_unit_tests.root_module.addImport("cimgui", cimgui_lib);
     exe_unit_tests.linkLibrary(libraylib);
     const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
 

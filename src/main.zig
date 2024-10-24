@@ -6,6 +6,7 @@ const audio = @import("audio.zig");
 const graphics = @import("graphics.zig");
 const gui = @import("gui.zig");
 const debug = @import("debug.zig");
+const imgui = @import("cimgui");
 
 pub const defaultScreenWidth = 1200;
 pub const defaultScreenHeight = 800;
@@ -29,7 +30,7 @@ pub fn main() !void {
     c.InitAudioDevice();
     defer c.CloseAudioDevice();
 
-    //try music.startMusic("./sounds/willix.mp3");
+    _ = imgui.igCreateContext(0);
 
     var rot_offset: f32 = 0.0;
     c.SetMasterVolume(0.10);
