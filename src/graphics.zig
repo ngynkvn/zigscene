@@ -1,9 +1,12 @@
 const std = @import("std");
+
 const rl = @import("raylib.zig");
 const main = @import("main.zig");
 const audio = @import("audio.zig");
-const asF32 = @import("extras.zig").asF32;
+
+const Vector2 = rl.Vector2;
 const fromHSV = @import("extras.zig").fromHSV;
+const asF32 = @import("extras.zig").asF32;
 
 pub const WaveFormLine = struct {
     pub var Scalars = [_]Scalar{

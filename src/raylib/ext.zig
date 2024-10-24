@@ -1,4 +1,6 @@
+const color = @import("color.zig");
 const vector = @import("vector.zig");
+
 // TODO: remove this eventually so we can just use extern / wrapper
 pub const c = @cImport({
     @cInclude("stdlib.h");
@@ -14,13 +16,21 @@ pub const LoadFileDataCallback = ?*const fn ([*c]const u8, [*c]c_int) callconv(.
 pub const SaveFileDataCallback = ?*const fn ([*c]const u8, ?*anyopaque, c_int) callconv(.C) bool;
 pub const LoadFileTextCallback = ?*const fn ([*c]const u8) callconv(.C) [*c]u8;
 pub const SaveFileTextCallback = ?*const fn ([*c]const u8, [*c]u8) callconv(.C) bool;
-pub const Camera = c.Camera;
+pub const Camera = Camera3D;
 pub const Vector2 = vector.Vector2;
 pub const Vector3 = vector.Vector3;
 pub const Vector4 = vector.Vector4;
 pub const Matrix = vector.Matrix;
-pub const Color = c.Color;
-pub const Rectangle = c.Rectangle;
+pub const Color = color.Color;
+pub const RAYWHITE = color.RAYWHITE;
+pub const RED = color.RED;
+pub const BLACK = color.BLACK;
+pub const Rectangle = extern struct {
+    x: f32 = 0,
+    y: f32 = 0,
+    width: f32 = 0,
+    height: f32 = 0,
+};
 pub const Image = c.Image;
 // pub const Texture = c.Texture;
 // pub const RenderTexture = c.RenderTexture;
