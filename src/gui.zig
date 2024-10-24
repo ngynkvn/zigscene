@@ -40,6 +40,7 @@ var text_buffer = std.mem.zeroes([256:0]u8);
 //                          \__/ ⬋ please be nice to him
 var txt: []u8 = text_buffer[0..0]; //\\//\\//\\//\\//\\
 pub fn frame() void {
+    if (true) return;
     const base = R(5, 5, 16, 16);
     _ = cdef.GuiToggle(base.translate(0, 0).c(), std.fmt.comptimePrint("#{}#", .{cdef.ICON_FX}), &active_menu.scalar);
     _ = cdef.GuiToggle(base.translate(21, 0).c(), std.fmt.comptimePrint("#{}#", .{cdef.ICON_COLOR_PICKER}), &active_menu.color);
