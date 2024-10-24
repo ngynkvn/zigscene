@@ -25,6 +25,9 @@ pub fn build(b: *std.Build) !void {
     });
 
     b.installArtifact(exe);
+    const styles = raylib.namedLazyPath("styles");
+    const dark_style = b.addInstallFile(styles.path(raylib.builder, "dark/style_dark.rgs"), "styles/style_dark.rgs");
+    exe.step.dependOn(&dark_style.step);
     exe.root_module.addImport("raylib", raylib.module("raylib"));
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());

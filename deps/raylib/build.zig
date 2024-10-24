@@ -15,6 +15,7 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
+    b.addNamedLazyPath("styles", raygui.path("styles"));
 
     {
         var gen = b.addWriteFiles();
@@ -41,16 +42,12 @@ pub fn build(b: *std.Build) !void {
         var gen = b.addWriteFiles();
         const path = gen.addCopyDirectory(raylib.path("src"), ".", .{ .include_extensions = &.{"h"} });
         _ = gen.addCopyFile(raygui.path("src/raygui.h"), "raygui.h");
-        _ = gen.addCopyFile(raygui.path("styles/dark/style_dark.h"), "style_dark.h");
 
         const raylib_c = gen.add("raylib.c",
-            \\#include <stdlib.h> 
-            \\#include <memory.h> 
             \\#include "raylib.h"
-            \\#include "raygui.h"
             \\#include "raymath.h"
             \\#include "rlgl.h"
-            \\#include "style_dark.h"
+            \\#include "raygui.h"
         );
         const translate_c = b.addTranslateC(.{
             .root_source_file = raylib_c,

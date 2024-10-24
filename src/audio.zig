@@ -1,5 +1,4 @@
 const std = @import("std");
-const rl = @import("raylib.zig").c;
 const asF32 = @import("extras.zig").asF32;
 
 const N = 256;
