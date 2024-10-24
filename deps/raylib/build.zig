@@ -49,6 +49,14 @@ pub fn build(b: *std.Build) !void {
             .target = target,
             .optimize = optimize,
         });
+        if (target.result.isWasm()) {
+            if (std.c.getenv("EMSDK")) |sdkpath| {
+                const p = sdkpath[0..std.mem.len(sdkpath)];
+                const emsdkpath = b.pathJoin(&.{ p, "/upstream/emscripten/cache/sysroot/include" });
+                translate_c.addIncludePath(.{ .cwd_relative = emsdkpath });
+                libraylib.addIncludePath(.{ .cwd_relative = emsdkpath });
+            }
+        }
         translate_c.addIncludePath(path);
         const entrypoint = translate_c.getOutput();
         const module = b.addModule("raylib", .{

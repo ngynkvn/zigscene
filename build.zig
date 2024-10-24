@@ -11,11 +11,11 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
-    // try emcc.addStepWeb(b, .{
-    //     .lib = libraylib,
-    //     .target = target,
-    //     .optimize = optimize,
-    // });
+    try emcc.addStepWeb(b, .{
+        .lib = raylib.module("raylib"),
+        .target = target,
+        .optimize = optimize,
+    });
 
     const exe = b.addExecutable(.{
         .name = "zigscene",
