@@ -55,6 +55,7 @@ pub fn build(b: *std.Build) !void {
             .root_source_file = entrypoint,
             .target = target,
             .optimize = optimize,
+            .link_libc = true,
         });
         module.linkLibrary(libraylib);
     }
