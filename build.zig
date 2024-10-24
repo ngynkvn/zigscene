@@ -12,7 +12,6 @@ pub fn build(b: *std.Build) !void {
     });
 
     try emcc.addStepWeb(b, .{
-        .lib = raylib.module("raylib"),
         .target = target,
         .optimize = optimize,
     });
