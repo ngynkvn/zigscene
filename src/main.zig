@@ -5,6 +5,7 @@ const audio = @import("audio.zig");
 const graphics = @import("graphics.zig");
 const gui = @import("gui.zig");
 const debug = @import("debug.zig");
+const tracy = @import("tracy");
 
 pub const defaultScreenWidth = 1200;
 pub const defaultScreenHeight = 800;
@@ -43,9 +44,10 @@ pub fn main() !void {
     };
     rl.SetTargetFPS(90);
 
-    // Main game loop
+    // Main loop
     // Detects window close button or ESC key
     while (!rl.WindowShouldClose()) {
+        tracy.frameMarkNamed("render");
         if (rl.IsFileDropped()) {
             try music.handleFile();
         }
@@ -101,14 +103,12 @@ pub fn main() !void {
 
             rl.ClearBackground(rl.BLACK);
             // Drawing
-            const mtp = music.GetMusicTimePlayed();
-            graphics.Bubble.render(camera3d, rot_offset, mtp, t);
+            graphics.Bubble.render(camera3d, rot_offset, t);
             for (audio.curr_buffer, audio.curr_fft, 0..) |v, fv, i| {
                 graphics.WaveFormLine.render(.{ .y = center.y - 80 }, i, v);
                 graphics.WaveFormBar.render(center, i, v);
                 graphics.WaveFormLine.render(.{ .y = center.y * 2 }, i, fv.magnitude() * 0.15);
                 graphics.FFT.render(center, i, fv.magnitude());
-                //graphics.draw_bubbles(center, i, v, t);
             }
             t += rl.GetFrameTime();
         }
