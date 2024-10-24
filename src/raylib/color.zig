@@ -6,39 +6,25 @@ pub const Color = extern struct {
     pub fn from(arr: [4]u8) Color {
         return .{ .r = arr[0], .g = arr[1], .b = arr[2], .a = arr[3] };
     }
-    pub fn ColorFromHSV(arg_hue: f32, arg_saturation: f32, arg_value: f32) Color {
-        var hue = arg_hue;
-        _ = &hue;
-        var saturation = arg_saturation;
-        _ = &saturation;
-        var value = arg_value;
-        _ = &value;
-        var color: Color = Color{
-            .r = @as(u8, @bitCast(@as(i8, @truncate(@as(c_int, 0))))),
-            .g = @as(u8, @bitCast(@as(i8, @truncate(@as(c_int, 0))))),
-            .b = @as(u8, @bitCast(@as(i8, @truncate(@as(c_int, 0))))),
-            .a = @as(u8, @bitCast(@as(i8, @truncate(@as(c_int, 255))))),
-        };
-        _ = &color;
-        var k: f32 = @mod(5.0 + (hue / 60.0), @as(f32, @floatFromInt(@as(c_int, 6))));
-        _ = &k;
+    pub fn fromHSV(hue: f32, saturation: f32, value: f32) Color {
+        var color: Color = Color{ .r = 0, .g = 0, .b = 0, .a = 255 };
+        var k: f32 = @mod(5.0 + (hue / 60.0), 6);
         var t: f32 = 4.0 - k;
-        _ = &t;
         k = if (t < k) t else k;
-        k = if (k < @as(f32, @floatFromInt(@as(c_int, 1)))) k else @as(f32, @floatFromInt(@as(c_int, 1)));
-        k = if (k > @as(f32, @floatFromInt(@as(c_int, 0)))) k else @as(f32, @floatFromInt(@as(c_int, 0)));
+        k = if (k < 1) k else 1;
+        k = if (k > 0) k else 0;
         color.r = @as(u8, @intFromFloat((value - ((value * saturation) * k)) * 255.0));
-        k = @mod(3.0 + (hue / 60.0), @as(f32, @floatFromInt(@as(c_int, 6))));
+        k = @mod(3.0 + (hue / 60.0), 6);
         t = 4.0 - k;
         k = if (t < k) t else k;
-        k = if (k < @as(f32, @floatFromInt(@as(c_int, 1)))) k else @as(f32, @floatFromInt(@as(c_int, 1)));
-        k = if (k > @as(f32, @floatFromInt(@as(c_int, 0)))) k else @as(f32, @floatFromInt(@as(c_int, 0)));
+        k = if (k < 1) k else 1;
+        k = if (k > 0) k else 0;
         color.g = @as(u8, @intFromFloat((value - ((value * saturation) * k)) * 255.0));
-        k = @mod(1.0 + (hue / 60.0), @as(f32, @floatFromInt(@as(c_int, 6))));
+        k = @mod(1.0 + (hue / 60.0), 6);
         t = 4.0 - k;
         k = if (t < k) t else k;
-        k = if (k < @as(f32, @floatFromInt(@as(c_int, 1)))) k else @as(f32, @floatFromInt(@as(c_int, 1)));
-        k = if (k > @as(f32, @floatFromInt(@as(c_int, 0)))) k else @as(f32, @floatFromInt(@as(c_int, 0)));
+        k = if (k < 1) k else 1;
+        k = if (k > 0) k else 0;
         color.b = @as(u8, @intFromFloat((value - ((value * saturation) * k)) * 255.0));
         return color;
     }
@@ -69,3 +55,36 @@ pub const BLACK: Color = .from(.{ 0, 0, 0, 255 });
 pub const BLANK: Color = .from(.{ 0, 0, 0, 0 });
 pub const MAGENTA: Color = .from(.{ 255, 0, 255, 255 });
 pub const RAYWHITE: Color = .from(.{ 245, 245, 245, 255 });
+
+fn _assertColorEqual(expected: Color, actual: Color) !void {
+    const assert = @import("std").testing.expectEqual;
+    try assert(expected.r, actual.r);
+    try assert(expected.g, actual.g);
+    try assert(expected.b, actual.b);
+    try assert(expected.a, actual.a);
+}
+test "fromHSV conversion" {
+    // Red (hue = 0, saturation = 1, value = 1)
+    try _assertColorEqual(Color{ .r = 255, .g = 0, .b = 0, .a = 255 }, .fromHSV(0.0, 1.0, 1.0));
+
+    // Green (hue = 120, saturation = 1, value = 1)
+    try _assertColorEqual(Color{ .r = 0, .g = 255, .b = 0, .a = 255 }, .fromHSV(120.0, 1.0, 1.0));
+
+    // Blue (hue = 240, saturation = 1, value = 1)
+    try _assertColorEqual(Color{ .r = 0, .g = 0, .b = 255, .a = 255 }, .fromHSV(240.0, 1.0, 1.0));
+
+    // White (hue = any, saturation = 0, value = 1)
+    try _assertColorEqual(Color{ .r = 255, .g = 255, .b = 255, .a = 255 }, .fromHSV(0.0, 0.0, 1.0));
+
+    // Black (hue = any, saturation = any, value = 0)
+    try _assertColorEqual(Color{ .r = 0, .g = 0, .b = 0, .a = 255 }, .fromHSV(180.0, 0.5, 0.0));
+
+    // Gray (hue = any, saturation = 0, value = 0.5)
+    try _assertColorEqual(Color{ .r = 127, .g = 127, .b = 127, .a = 255 }, .fromHSV(300.0, 0.0, 0.5));
+
+    // Intermediate color (hue = 60, saturation = 1, value = 0.5)
+    try _assertColorEqual(Color{ .r = 127, .g = 127, .b = 0, .a = 255 }, .fromHSV(60.0, 1.0, 0.5));
+
+    // Hue wrapping around (hue = 360, saturation = 1, value = 1)
+    try _assertColorEqual(Color{ .r = 255, .g = 0, .b = 0, .a = 255 }, .fromHSV(360.0, 1.0, 1.0));
+}
