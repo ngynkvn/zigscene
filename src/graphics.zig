@@ -17,7 +17,7 @@ pub const WaveFormLine = struct {
     var color1 = c.Vector3{ .x = 0e0, .y = 0, .z = 0.96 };
     var color2 = c.Vector3{ .x = 132, .y = 1, .z = 0.9 };
     pub fn render(center: c.Vector2, i: usize, v: f32) void {
-        const SPACING = main.screenWidth / asF32(audio.curr_buffer.len);
+        const SPACING = asF32(main.screenWidth) / asF32(audio.curr_buffer.len);
         const x = @as(f32, @floatFromInt(i)) * SPACING;
         const y = -(v * amplitude);
         // "plot" x and y
@@ -43,7 +43,7 @@ pub const WaveFormBar = struct {
     pub var base_h: f32 = 40;
 
     pub fn render(center: c.Vector2, i: usize, v: f32) void {
-        const SPACING = main.screenWidth / asF32(audio.curr_buffer.len);
+        const SPACING = asF32(main.screenWidth) / asF32(audio.curr_buffer.len);
         const x = @as(f32, @floatFromInt(i)) * SPACING;
         const y = (v * amplitude);
         const px = x;
@@ -60,7 +60,7 @@ pub const WaveFormBar = struct {
 
 pub const FFT = struct {
     pub fn render(center: c.Vector2, i: usize, v: f32) void {
-        const SPACING = main.screenWidth / asF32(audio.curr_buffer.len);
+        const SPACING = asF32(main.screenWidth) / asF32(audio.curr_buffer.len);
         const x = @as(f32, @floatFromInt(i)) * SPACING;
         const y = v;
         // "plot" x and y
@@ -77,7 +77,7 @@ pub const Bubble = struct {
         .{ .name = "sphere radius", .value = &r_sphere, .range = .{ 0.1, 4 } },
         .{ .name = "volume effect", .value = &effect, .range = .{ 0.1, 1 } },
         .{ .name = "color scale", .value = &color_scale, .range = .{ 0.0, 100 } },
-        .{ .name = "bubble color fx", .value = &color_scale, .range = .{ 0.0, 100 } },
+        .{ .name = "bubble color fx", .value = &bubble_color_scale, .range = .{ 0.0, 100 } },
     };
     pub var Colors = [_]Color{
         .{ .name = "color1", .hue = &color1.x },
@@ -89,7 +89,7 @@ pub const Bubble = struct {
     var color3 = c.Vector3{ .x = 132, .y = 1, .z = 0.9 };
     // Radii
     pub var r_ring: f32 = 4;
-    pub var r_sphere: f32 = 2;
+    pub var r_sphere: f32 = 3;
     pub var effect: f32 = 0.5;
     pub var color_scale: f32 = 45;
     pub var bubble_color_scale: f32 = 30;

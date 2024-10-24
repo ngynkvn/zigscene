@@ -7,13 +7,20 @@ const graphics = @import("graphics.zig");
 const gui = @import("gui.zig");
 const debug = @import("debug.zig");
 
-pub const screenWidth = 1200;
-pub const screenHeight = 800;
+pub const defaultScreenWidth = 1200;
+pub const defaultScreenHeight = 800;
+
+pub var isFullScreen = false;
+pub var screenWidth: c_int = defaultScreenWidth;
+pub var screenHeight: c_int = defaultScreenHeight;
+
 const APP_NAME = "zigscene";
 
 var filename_buffer = std.mem.zeroes([128:0]u8);
 pub fn main() !void {
     var t: f32 = 0.0;
+
+    c.SetConfigFlags(c.FLAG_WINDOW_RESIZABLE);
 
     // Setup
     c.InitWindow(screenWidth, screenHeight, APP_NAME);
@@ -54,6 +61,24 @@ pub fn main() !void {
                 else => unreachable,
             };
         }
+        if (rl.IsKeyPressed(.F)) {
+            if (c.IsWindowState(c.FLAG_BORDERLESS_WINDOWED_MODE)) {
+                screenWidth = defaultScreenWidth;
+                screenHeight = defaultScreenHeight;
+            } else {
+                const display = c.GetCurrentMonitor();
+                screenWidth = c.GetMonitorWidth(display);
+                screenHeight = c.GetMonitorHeight(display);
+                c.SetWindowPosition(0, 0);
+            }
+            c.SetWindowSize(screenWidth, screenHeight);
+            c.ToggleBorderlessWindowed();
+        }
+        if (c.IsWindowResized()) {
+            const display = c.GetCurrentMonitor();
+            screenWidth = c.GetMonitorWidth(display);
+            screenHeight = c.GetMonitorHeight(display);
+        }
         // Debug related controls
         debug.input();
 
@@ -74,7 +99,6 @@ pub fn main() !void {
             defer c.EndDrawing();
             const center = c.GetWorldToScreen(.{ .x = 0, .y = 0 }, camera3d);
 
-            // TODO: toggle?
             debug.render();
 
             c.ClearBackground(c.BLACK);
