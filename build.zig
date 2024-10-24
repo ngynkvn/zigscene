@@ -6,6 +6,26 @@ pub fn build(b: *std.Build) !void {
     const optimize = b.standardOptimizeOption(.{});
     emcc.hookSysrootIfNeeded(b, target);
 
+    const enable = b.option(bool, "tracy", "Enable Tracy integration. Supply path to Tracy source") orelse false;
+    const enable_callstack = b.option(
+        bool,
+        "tracy_callstack",
+        "Include callstack information with Tracy data. Does nothing if -Dtracy is not provided",
+    ) orelse enable;
+    const enable_allocation = b.option(
+        bool,
+        "tracy_allocation",
+        "Include allocation information with Tracy data. Does nothing if -Dtracy is not provided",
+    ) orelse enable;
+
+    const tracy = b.dependency("tracy", .{
+        .target = target,
+        .optimize = optimize,
+        .enable = enable,
+        .tracy_callstack = enable_callstack,
+        .tracy_allocation = enable_allocation,
+    });
+
     const raylib = b.dependency("raylib", .{
         .target = target,
         .optimize = optimize,
@@ -25,6 +45,7 @@ pub fn build(b: *std.Build) !void {
 
     b.installArtifact(exe);
     exe.root_module.addImport("raylib", raylib.module("raylib"));
+    exe.root_module.addImport("tracy", tracy.module("tracy"));
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
     if (b.args) |args| {
@@ -39,6 +60,7 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
     exe_unit_tests.root_module.addImport("raylib", raylib.module("raylib"));
+    exe_unit_tests.root_module.addImport("tracy", tracy.module("tracy"));
     const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
 
     const test_step = b.step("test", "Run unit tests");
