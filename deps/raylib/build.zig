@@ -9,6 +9,7 @@ pub fn build(b: *std.Build) !void {
     });
     const libraylib = raylib.artifact("raylib");
     libraylib.root_module.addCMacro("SUPPORT_FILEFORMAT_FLAC", "1");
+    b.installArtifact(libraylib);
     // SOURCE: https://github.com/Not-Nik/raylib-zig/blob/c191e12e7c50e5dc2b1addd1e5dbd16bd405d2b5/build.zig#L119
     // (Thank you!)
     const raygui = b.dependency("raygui", .{
@@ -46,17 +47,9 @@ pub fn build(b: *std.Build) !void {
         );
         const translate_c = b.addTranslateC(.{
             .root_source_file = raylib_c,
-            .target = target,
+            .target = b.graph.host,
             .optimize = optimize,
         });
-        if (target.result.isWasm()) {
-            if (std.c.getenv("EMSDK")) |sdkpath| {
-                const p = sdkpath[0..std.mem.len(sdkpath)];
-                const emsdkpath = b.pathJoin(&.{ p, "/upstream/emscripten/cache/sysroot/include" });
-                translate_c.addIncludePath(.{ .cwd_relative = emsdkpath });
-                libraylib.addIncludePath(.{ .cwd_relative = emsdkpath });
-            }
-        }
         translate_c.addIncludePath(path);
         const entrypoint = translate_c.getOutput();
         const module = b.addModule("raylib", .{
