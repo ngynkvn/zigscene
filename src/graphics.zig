@@ -78,6 +78,7 @@ pub const Bubble = struct {
         .{ .name = "volume effect", .value = &effect, .range = .{ 0.1, 1 } },
         .{ .name = "color scale", .value = &color_scale, .range = .{ 0.0, 100 } },
         .{ .name = "bubble color fx", .value = &bubble_color_scale, .range = .{ 0.0, 100 } },
+        .{ .name = "ring height", .value = &height_ring, .range = .{ 0.0, 1 } },
     };
     pub var Colors = [_]Color{
         .{ .name = "color1", .hue = &color1.x },
@@ -90,19 +91,14 @@ pub const Bubble = struct {
     // Radii
     pub var r_ring: f32 = 4;
     pub var r_sphere: f32 = 3;
+    pub var height_ring: f32 = 0.1;
     pub var effect: f32 = 0.5;
     pub var color_scale: f32 = 45;
     pub var bubble_color_scale: f32 = 30;
-    pub fn render(camera3d: rl.Camera3D, rot_offset: f32, mtp: f32, t: f32) void {
+    pub fn render(camera3d: rl.Camera3D, rot_offset: f32, t: f32) void {
         rl.BeginMode3D(camera3d);
         defer rl.EndMode3D();
         rl.rlRotatef(rot_offset, 0, 1, 0);
-        if (false) {
-            rl.rlPushMatrix();
-            rl.rlTranslatef(0, -5, mtp * 0.4);
-            rl.DrawGrid(64, 16);
-            rl.rlPopMatrix();
-        }
         {
             rl.rlPushMatrix();
             rl.rlRotatef(t * 32, 1, 1, 1);
@@ -129,7 +125,7 @@ pub const Bubble = struct {
 
             var col = color2;
             col.x += audio.avg_intensity * color_scale + @abs(v) * 30;
-            rl.DrawCubeWires(.{}, 0.1, 0.1 + @abs(v) * effect + audio.avg_intensity * 0.2, 0.1, fromHSV(col));
+            rl.DrawCubeWires(.{}, 0.1, height_ring + @abs(v) * effect + audio.avg_intensity * 0.3, 0.1, fromHSV(col));
 
             rl.rlTranslatef(-0.1, 0.1, 0);
             col = color3;
