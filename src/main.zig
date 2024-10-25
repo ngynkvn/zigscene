@@ -103,13 +103,22 @@ pub fn main() !void {
             // Drawing
             const mtp = music.GetMusicTimePlayed();
             graphics.Bubble.render(camera3d, rot_offset, mtp, t);
-            for (audio.curr_buffer, audio.curr_fft, 0..) |v, fv, i| {
-                graphics.WaveFormLine.render(.{ .y = center.y - 80 }, i, v);
-                graphics.WaveFormBar.render(center, i, v);
-                graphics.WaveFormLine.render(.{ .y = center.y * 2 }, i, fv.magnitude() * 0.15);
-                graphics.FFT.render(center, i, fv.magnitude());
-                //graphics.draw_bubbles(center, i, v, t);
+            var it = std.mem.window(f32, audio.curr_buffer, 128, 8);
+            var x: usize = 0;
+            while (it.next()) |win| {
+                for (win, 0..) |v, i| {
+                    graphics.WaveFormLine.render(.{ .y = center.y - 80 }, i + x, v);
+                    graphics.WaveFormBar.render(center, i + x, v);
+                }
+                x += it.advance;
             }
+            // for (audio.curr_buffer, audio.curr_fft, 0..) |v, fv, i| {
+            //     graphics.WaveFormLine.render(.{ .y = center.y - 80 }, i, v);
+            //     graphics.WaveFormBar.render(center, i, v);
+            //     graphics.WaveFormLine.render(.{ .y = center.y * 2 }, i, fv.magnitude() * 0.15);
+            //     graphics.FFT.render(center, i, fv.magnitude());
+            //     //graphics.draw_bubbles(center, i, v, t);
+            // }
             t += rl.GetFrameTime();
         }
         gui.frame();

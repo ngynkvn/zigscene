@@ -7,13 +7,13 @@ const fromHSV = @import("extras.zig").fromHSV;
 
 pub const WaveFormLine = struct {
     pub var Scalars = [_]Scalar{
-        .{ .name = "amplitude", .value = &amplitude, .range = .{ 0, 100 } },
+        .{ .name = "amplitude", .value = &amplitude, .range = .{ 0, 200 } },
     };
     pub var Colors = [_]Color{
         .{ .name = "color1", .hue = &color1.x },
         .{ .name = "color2", .hue = &color2.x },
     };
-    pub var amplitude: f32 = 60;
+    pub var amplitude: f32 = 100;
     var color1 = rl.Vector3{ .x = 0e0, .y = 0, .z = 0.96 };
     var color2 = rl.Vector3{ .x = 132, .y = 1, .z = 0.9 };
     pub fn render(center: rl.Vector2, i: usize, v: f32) void {
@@ -30,7 +30,7 @@ pub const WaveFormLine = struct {
 
 pub const WaveFormBar = struct {
     pub var Scalars = [_]Scalar{
-        .{ .name = "amplitude", .value = &amplitude, .range = .{ 0, 100 } },
+        .{ .name = "amplitude", .value = &amplitude, .range = .{ 0, 200 } },
         .{ .name = "base height", .value = &base_h, .range = .{ 0, 100 } },
     };
     pub var Colors = [_]Color{
@@ -39,7 +39,7 @@ pub const WaveFormBar = struct {
     };
     var color1 = rl.Vector3{ .x = 229, .y = 1, .z = 0.94 };
     var color2 = rl.Vector3{ .x = 162, .y = 1, .z = 0.89 };
-    pub var amplitude: f32 = 40;
+    pub var amplitude: f32 = 80;
     pub var base_h: f32 = 40;
 
     pub fn render(center: rl.Vector2, i: usize, v: f32) void {
