@@ -6,6 +6,7 @@ pub fn build(b: *std.Build) !void {
     const optimize = b.standardOptimizeOption(.{});
     emcc.hookSysrootIfNeeded(b, target);
 
+    const opts = b.addOptions();
     const enable = b.option(bool, "tracy", "Enable Tracy integration. Supply path to Tracy source") orelse false;
     const enable_callstack = b.option(
         bool,
@@ -17,6 +18,13 @@ pub fn build(b: *std.Build) !void {
         "tracy_allocation",
         "Include allocation information with Tracy data. Does nothing if -Dtracy is not provided",
     ) orelse enable;
+
+    const enable_ttyz = b.option(
+        bool,
+        "enable_ttyz",
+        "Hook into console for debug information.",
+    ) orelse true;
+    opts.addOption(bool, "enable_ttyz", enable_ttyz);
 
     const tracy = b.dependency("tracy", .{
         .target = target,
@@ -42,6 +50,15 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
+    exe.root_module.addOptions("options", opts);
+    if (enable_ttyz) {
+        const ttyz = b.dependency("ttyz", .{
+            .target = target,
+            .optimize = optimize,
+        });
+
+        exe.root_module.addImport("ttyz", ttyz.module("ttyz"));
+    }
 
     b.installArtifact(exe);
     exe.root_module.addImport("raylib", raylib.module("raylib"));
@@ -61,6 +78,7 @@ pub fn build(b: *std.Build) !void {
     });
     exe_unit_tests.root_module.addImport("raylib", raylib.module("raylib"));
     exe_unit_tests.root_module.addImport("tracy", tracy.module("tracy"));
+    exe_unit_tests.root_module.addOptions("options", opts);
     const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
 
     const test_step = b.step("test", "Run unit tests");
