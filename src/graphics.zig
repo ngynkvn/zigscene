@@ -13,9 +13,9 @@ pub const WaveFormLine = struct {
         .{ .name = "color1", .hue = &color1.x },
         .{ .name = "color2", .hue = &color2.x },
     };
-    pub var amplitude: f32 = 60;
-    var color1 = rl.Vector3{ .x = 0e0, .y = 0, .z = 0.96 };
-    var color2 = rl.Vector3{ .x = 132, .y = 1, .z = 0.9 };
+    pub var amplitude: f32 = 80;
+    var color1 = rl.Vector3{ .x = 0, .y = 0, .z = 0.96 };
+    var color2 = rl.Vector3{ .x = 100, .y = 1, .z = 0.9 };
     pub fn render(center: rl.Vector2, i: usize, v: f32) void {
         const SPACING = asF32(main.screenWidth) / asF32(audio.curr_buffer.len);
         const x = @as(f32, @floatFromInt(i)) * SPACING;
@@ -39,7 +39,7 @@ pub const WaveFormBar = struct {
     };
     var color1 = rl.Vector3{ .x = 229, .y = 1, .z = 0.94 };
     var color2 = rl.Vector3{ .x = 162, .y = 1, .z = 0.89 };
-    pub var amplitude: f32 = 40;
+    pub var amplitude: f32 = 80;
     pub var base_h: f32 = 40;
 
     pub fn render(center: rl.Vector2, i: usize, v: f32) void {

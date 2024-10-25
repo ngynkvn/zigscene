@@ -10,7 +10,7 @@ var fft_buffer = std.mem.zeroes([N]Cf32);
 pub var curr_buffer: []f32 = &audio_buffer;
 pub var curr_fft: []Cf32 = &fft_buffer;
 
-pub const multiple = 3;
+pub const multiple = 4;
 pub const RB_LEN = N * multiple;
 pub var ringbuffer = std.mem.zeroes([RB_LEN]f32);
 pub var bi: usize = 0;
