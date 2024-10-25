@@ -113,6 +113,11 @@ pub fn addStepWeb(b: *std.Build, o: Options) !void {
     // Note that raylib itself isn't actually added to the exe_lib
     // output file, so it also needs to be linked with emscripten.
     exe_lib.root_module.addImport("raylib", raylib.module("raylib"));
+
+    // TODO:
+    const opts = b.addOptions();
+    opts.addOption(bool, "enable_ttyz", false);
+    exe_lib.root_module.addOptions("options", opts);
     const link_step = try linkWithEmscripten(b, &[_]*std.Build.Step.Compile{ exe_lib, libraylib });
 
     run_step.step.dependOn(&link_step.step);

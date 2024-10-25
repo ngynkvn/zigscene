@@ -5,7 +5,8 @@ const audio = @import("audio.zig");
 const graphics = @import("graphics.zig");
 const gui = @import("gui.zig");
 const debug = @import("debug.zig");
-const tracy = @import("tracy");
+const options = @import("options");
+//const tracy = @import("tracy");
 
 pub const defaultScreenWidth = 1200;
 pub const defaultScreenHeight = 800;
@@ -43,12 +44,15 @@ pub fn main() !void {
         .projection = rl.CAMERA_PERSPECTIVE, // Camera projection type
     };
     rl.SetTargetFPS(60);
-    _ = try std.Thread.spawn(.{}, debug.debug_thread, .{});
+
+    if (options.enable_ttyz) {
+        _ = try std.Thread.spawn(.{}, debug.debug_thread, .{});
+    }
 
     // Main loop
     // Detects window close button or ESC key
     while (!rl.WindowShouldClose()) {
-        tracy.frameMarkNamed("main_loop");
+        // tracy.frameMarkNamed("main_loop");
         if (rl.IsFileDropped()) {
             try music.handleFile();
         }

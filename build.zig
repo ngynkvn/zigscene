@@ -62,7 +62,6 @@ pub fn build(b: *std.Build) !void {
 
     b.installArtifact(exe);
     exe.root_module.addImport("raylib", raylib.module("raylib"));
-    exe.root_module.addImport("tracy", tracy.module("tracy"));
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
     if (b.args) |args| {

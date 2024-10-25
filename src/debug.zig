@@ -11,8 +11,8 @@ pub fn render() void {
     if (!visible) return;
 
     var txt = std.mem.zeroes([256]u8);
-    const spacing = asF32(main.screenWidth) / asF32(audio.curr_buffer.len);
-    const buf = std.fmt.bufPrintZ(txt[0..64], "{d}", .{spacing}) catch txt[0..0];
+    const pressed = rl.IsMouseButtonPressed(rl.MOUSE_LEFT_BUTTON);
+    const buf = std.fmt.bufPrintZ(txt[0..64], "{}", .{pressed}) catch txt[0..0];
     rl.DrawText(buf.ptr, main.screenWidth - 100, 200, 24, rl.RAYWHITE);
     pos.height = 10 + 100 * audio.rms_energy;
     rl.DrawRectangleRec(pos, rl.RED);
@@ -34,19 +34,19 @@ pub fn input() void {
 
 pub fn debug_thread() !void {
     if (!options.enable_ttyz) return;
-    var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
-    const allocator = gpa.allocator();
-    const ttyz = @import("ttyz");
-    var tty = ttyz.Terminal.init(allocator, .{ .ISIG = true }) catch |e| std.debug.panic("cannot init: {}", .{e});
-    defer tty.deinit();
-    while (!rl.WindowShouldClose()) {
-        std.Thread.sleep(std.time.ns_per_s);
-        _ = try tty.clear();
-        try tty.goto(0, 0);
-        const mp = rl.GetMousePosition();
-        const delta = rl.GetMouseDelta();
-        const pressed = rl.IsMouseButtonPressed(rl.MOUSE_LEFT_BUTTON);
-        try tty.print("{} | {} | {}", .{ mp, delta, pressed });
-        try tty.flush();
-    }
+    // var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
+    // const allocator = gpa.allocator();
+    // const ttyz = @import("ttyz");
+    // var tty = ttyz.Terminal.init(allocator, .{ .ISIG = true }) catch |e| std.debug.panic("cannot init: {}", .{e});
+    // defer tty.deinit();
+    // while (!rl.WindowShouldClose()) {
+    //     std.Thread.sleep(std.time.ns_per_s);
+    //     _ = try tty.clear();
+    //     try tty.goto(0, 0);
+    //     const mp = rl.GetMousePosition();
+    //     const delta = rl.GetMouseDelta();
+    //     const pressed = rl.IsMouseButtonPressed(rl.MOUSE_LEFT_BUTTON);
+    //     try tty.print("{} | {} | {}", .{ mp, delta, pressed });
+    //     try tty.flush();
+    // }
 }
