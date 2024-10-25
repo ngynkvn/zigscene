@@ -9,6 +9,7 @@ var fft_buffer = std.mem.zeroes([N]Cf32);
 
 pub var curr_buffer: []f32 = &audio_buffer;
 pub var curr_fft: []Cf32 = &fft_buffer;
+// NOTE: this is frame times w.r.t the callback frame
 
 // Root mean square of signal
 // TODO: rename

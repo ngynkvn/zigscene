@@ -41,7 +41,7 @@ pub fn main() !void {
         .fovy = 65.0, // Camera field-of-view Y
         .projection = rl.CAMERA_PERSPECTIVE, // Camera projection type
     };
-    rl.SetTargetFPS(60); // Set our game to run at 60 frames-per-second
+    rl.SetTargetFPS(90);
 
     // Main game loop
     // Detects window close button or ESC key
@@ -110,7 +110,7 @@ pub fn main() !void {
                 graphics.FFT.render(center, i, fv.magnitude());
                 //graphics.draw_bubbles(center, i, v, t);
             }
-            t += 0.01;
+            t += rl.GetFrameTime();
         }
         gui.frame();
     }
