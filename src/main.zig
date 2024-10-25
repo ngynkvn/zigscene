@@ -41,7 +41,7 @@ pub fn main() !void {
         .fovy = 65.0, // Camera field-of-view Y
         .projection = rl.CAMERA_PERSPECTIVE, // Camera projection type
     };
-    rl.SetTargetFPS(90);
+    rl.SetTargetFPS(60);
 
     // Main game loop
     // Detects window close button or ESC key
@@ -103,11 +103,13 @@ pub fn main() !void {
             // Drawing
             const mtp = music.GetMusicTimePlayed();
             graphics.Bubble.render(camera3d, rot_offset, mtp, t);
-            for (audio.curr_buffer, audio.curr_fft, 0..) |v, fv, i| {
+            for (0..audio.ringbuffer.len) |bi| {
+                const i = bi % audio.RB_LEN;
+                const v = audio.ringbuffer[i];
                 graphics.WaveFormLine.render(.{ .y = center.y - 80 }, i, v);
                 graphics.WaveFormBar.render(center, i, v);
-                graphics.WaveFormLine.render(.{ .y = center.y * 2 }, i, fv.magnitude() * 0.15);
-                graphics.FFT.render(center, i, fv.magnitude());
+                //graphics.WaveFormLine.render(.{ .y = center.y * 2 }, i, fv.magnitude() * 0.15);
+                //graphics.FFT.render(center, i, fv.magnitude());
                 //graphics.draw_bubbles(center, i, v, t);
             }
             t += rl.GetFrameTime();

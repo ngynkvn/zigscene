@@ -9,7 +9,11 @@ var fft_buffer = std.mem.zeroes([N]Cf32);
 
 pub var curr_buffer: []f32 = &audio_buffer;
 pub var curr_fft: []Cf32 = &fft_buffer;
-// NOTE: this is frame times w.r.t the callback frame
+
+pub const multiple = 3;
+pub const RB_LEN = N * multiple;
+pub var ringbuffer = std.mem.zeroes([RB_LEN]f32);
+pub var bi: usize = 0;
 
 // Root mean square of signal
 // TODO: rename
@@ -31,6 +35,8 @@ pub fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
         // Damping
         audio_buffer[fi] += (l + r) / 4;
         audio_buffer[fi] *= 0.97;
+        ringbuffer[bi % (N * multiple)] = r * 0.5 + l * 0.5;
+        bi += 1;
         // No Damping
         fft_buffer[fi] = Cf32.init(l + r, 0);
         avg_intensity += std.math.pow(f32, l + r, 2) / asF32(curr_len);
