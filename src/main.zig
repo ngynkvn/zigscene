@@ -42,12 +42,13 @@ pub fn main() !void {
         .fovy = 65.0, // Camera field-of-view Y
         .projection = rl.CAMERA_PERSPECTIVE, // Camera projection type
     };
-    rl.SetTargetFPS(90);
+    rl.SetTargetFPS(60);
+    _ = try std.Thread.spawn(.{}, debug.debug_thread, .{});
 
     // Main loop
     // Detects window close button or ESC key
     while (!rl.WindowShouldClose()) {
-        tracy.frameMarkNamed("render");
+        tracy.frameMarkNamed("main_loop");
         if (rl.IsFileDropped()) {
             try music.handleFile();
         }

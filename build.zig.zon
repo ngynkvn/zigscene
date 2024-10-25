@@ -29,6 +29,9 @@
         .tracy = .{
             .path = "./deps/tracy/",
         },
+        .ttyz = .{
+            .path = "../ttyz/",
+        },
     },
     .paths = .{
         "build.zig",
