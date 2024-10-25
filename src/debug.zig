@@ -13,7 +13,7 @@ pub fn render() void {
     const spacing = asF32(main.screenWidth) / asF32(audio.curr_buffer.len);
     const buf = std.fmt.bufPrintZ(txt[0..64], "{d}", .{spacing}) catch txt[0..0];
     rl.DrawText(buf.ptr, main.screenWidth - 100, 200, 24, rl.RAYWHITE);
-    pos.height = 10 + 100 * audio.avg_intensity;
+    pos.height = 10 + 100 * audio.rms_energy;
     rl.DrawRectangleRec(pos, rl.RED);
 }
 

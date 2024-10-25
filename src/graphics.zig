@@ -2,14 +2,15 @@ const std = @import("std");
 const rl = @import("raylib.zig");
 const main = @import("main.zig");
 const audio = @import("audio.zig");
+const controls = @import("gui/controls.zig");
 const asF32 = @import("extras.zig").asF32;
 const fromHSV = @import("extras.zig").fromHSV;
 
 pub const WaveFormLine = struct {
-    pub var Scalars = [_]Scalar{
+    pub var Scalars = [_]controls.Scalar{
         .{ .name = "amplitude", .value = &amplitude, .range = .{ 0, 100 } },
     };
-    pub var Colors = [_]Color{
+    pub var Colors = [_]controls.Color{
         .{ .name = "color1", .hue = &color1.x },
         .{ .name = "color2", .hue = &color2.x },
     };
@@ -29,11 +30,11 @@ pub const WaveFormLine = struct {
 };
 
 pub const WaveFormBar = struct {
-    pub var Scalars = [_]Scalar{
+    pub var Scalars = [_]controls.Scalar{
         .{ .name = "amplitude", .value = &amplitude, .range = .{ 0, 100 } },
         .{ .name = "base height", .value = &base_h, .range = .{ 0, 100 } },
     };
-    pub var Colors = [_]Color{
+    pub var Colors = [_]controls.Color{
         .{ .name = "color1", .hue = &color1.x },
         .{ .name = "color2", .hue = &color2.x },
     };
@@ -72,14 +73,14 @@ pub const FFT = struct {
 };
 
 pub const Bubble = struct {
-    pub var Scalars = [_]Scalar{
+    pub var Scalars = [_]controls.Scalar{
         .{ .name = "ring radius", .value = &r_ring, .range = .{ 0.1, 8 } },
         .{ .name = "sphere radius", .value = &r_sphere, .range = .{ 0.1, 4 } },
         .{ .name = "volume effect", .value = &effect, .range = .{ 0.1, 1 } },
         .{ .name = "color scale", .value = &color_scale, .range = .{ 0.0, 100 } },
         .{ .name = "bubble color fx", .value = &bubble_color_scale, .range = .{ 0.0, 100 } },
     };
-    pub var Colors = [_]Color{
+    pub var Colors = [_]controls.Color{
         .{ .name = "color1", .hue = &color1.x },
         .{ .name = "color2", .hue = &color2.x },
         .{ .name = "color2", .hue = &color3.x },
@@ -107,8 +108,8 @@ pub const Bubble = struct {
             rl.rlPushMatrix();
             rl.rlRotatef(t * 32, 1, 1, 1);
             var col = color1;
-            col.x += audio.avg_intensity * bubble_color_scale;
-            rl.DrawSphereWires(.{}, r_sphere + audio.avg_intensity * effect, 10, 10, fromHSV(col));
+            col.x += audio.rms_energy * bubble_color_scale;
+            rl.DrawSphereWires(.{}, r_sphere + audio.rms_energy * effect, 10, 10, fromHSV(col));
             rl.rlPopMatrix();
         }
         rl.rlPushMatrix();
@@ -116,7 +117,7 @@ pub const Bubble = struct {
         const tsteps = 2 * std.math.pi / @as(f32, @floatFromInt(audio.curr_buffer.len));
         for (audio.curr_buffer, 0..) |v, i| {
             const r = r_ring +
-                (effect * audio.avg_intensity) +
+                (effect * audio.rms_energy) +
                 (@abs(v) * effect);
 
             const angle_rad = @as(f32, @floatFromInt(i)) * tsteps;
@@ -128,27 +129,16 @@ pub const Bubble = struct {
             rl.rlRotatef(90 + (angle_rad * 180 / std.math.pi), 0, 0, 1);
 
             var col = color2;
-            col.x += audio.avg_intensity * color_scale + @abs(v) * 30;
-            rl.DrawCubeWires(.{}, 0.1, 0.1 + @abs(v) * effect + audio.avg_intensity * 0.2, 0.1, fromHSV(col));
+            col.x += audio.rms_energy * color_scale + @abs(v) * 30;
+            rl.DrawCubeWires(.{}, 0.1, 0.1 + @abs(v) * effect + audio.rms_energy * 0.2, 0.1, fromHSV(col));
 
             rl.rlTranslatef(-0.1, 0.1, 0);
             col = color3;
-            col.x += audio.avg_intensity * 10 + @abs(v) * 20;
+            col.x += audio.rms_energy * 10 + @abs(v) * 20;
             rl.DrawCubeWires(.{}, 0.03, 0.03, 0.03, fromHSV(col));
 
             rl.rlPopMatrix();
         }
         rl.rlPopMatrix();
     }
-};
-
-// Configurables. These get set up in the UI
-pub const Scalar = struct {
-    name: []const u8,
-    value: *f32,
-    range: struct { f32, f32 },
-};
-pub const Color = struct {
-    name: []const u8,
-    hue: *f32,
 };

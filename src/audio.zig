@@ -3,17 +3,20 @@ const rl = @import("raylib.zig").c;
 const asF32 = @import("extras.zig").asF32;
 
 const N = 256;
-const Cf32 = std.math.Complex(f32);
+const Alpha = 0.97;
+const ComplexF32 = std.math.Complex(f32);
 var audio_buffer = std.mem.zeroes([N]f32);
-var fft_buffer = std.mem.zeroes([N]Cf32);
+var fft_buffer = std.mem.zeroes([N]ComplexF32);
+pub var rms_energy: f32 = 0;
+
+comptime {
+    @setFloatMode(.optimized);
+}
 
 pub var curr_buffer: []f32 = &audio_buffer;
-pub var curr_fft: []Cf32 = &fft_buffer;
-// NOTE: this is frame times w.r.t the callback frame
+pub var curr_fft: []ComplexF32 = &fft_buffer;
 
 // Root mean square of signal
-// TODO: rename
-pub var avg_intensity: f32 = 0;
 
 /// Accepts a buffer of the stream + the length of the buffer
 /// The buffer is composed of PCM samples from the audio stream
@@ -23,29 +26,29 @@ pub fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
     const buffer: []f32 = @as([*]f32, @ptrCast(@alignCast(ptr)))[0..n];
     var l: f32 = 0;
     var r: f32 = 0;
+    var rms: f32 = 0;
     const curr_len = n / 2;
-    avg_intensity = 0;
     for (0..curr_len) |fi| {
         l = buffer[fi * 2 + 0];
         r = buffer[fi * 2 + 1];
         // Damping
-        audio_buffer[fi] += (l + r) / 4;
-        audio_buffer[fi] *= 0.97;
+        audio_buffer[fi] = 0.97 * audio_buffer[fi] + (1 - Alpha) * (l + r) * 0.5;
+        audio_buffer[fi] += (l + r) / 2;
         // No Damping
-        fft_buffer[fi] = Cf32.init(l + r, 0);
-        avg_intensity += std.math.pow(f32, l + r, 2) / asF32(curr_len);
+        fft_buffer[fi] = ComplexF32.init(l + r, 0);
+        rms += std.math.pow(f32, (l + r) / 2, 2) / asF32(curr_len);
     }
-    avg_intensity = @sqrt(avg_intensity);
+    rms_energy = 0.95 * rms_energy + 0.05 * @sqrt(rms);
     fft(fft_buffer[0..curr_len]);
     curr_buffer = audio_buffer[0..curr_len];
     curr_fft = fft_buffer[0..curr_len];
 }
 
 /// https://en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm
-fn fft(values: []Cf32) void {
+fn fft(values: []ComplexF32) void {
     const len = values.len;
     if (len <= 1) return;
-    var parts = std.mem.zeroes([2][N / 2]Cf32);
+    var parts = std.mem.zeroes([2][N / 2]ComplexF32);
     var pi: [2]usize = .{ 0, 0 };
     for (values, 0..) |v, i| {
         parts[i % 2][pi[i % 2]] = v;
@@ -56,7 +59,7 @@ fn fft(values: []Cf32) void {
     fft(evens);
     fft(odds);
     for (0..len / 2) |i| {
-        const index = Cf32.init(
+        const index = ComplexF32.init(
             @cos(-2 * std.math.pi * @as(f32, @floatFromInt(i)) / @as(f32, @floatFromInt(len))),
             @sin(-2 * std.math.pi * @as(f32, @floatFromInt(i)) / @as(f32, @floatFromInt(len))),
         ).mul(odds[i]);
@@ -65,17 +68,17 @@ fn fft(values: []Cf32) void {
     }
 }
 
-fn cf32(comptime raw: []const [2]f32) [raw.len]Cf32 {
+fn cf32(comptime raw: []const [2]f32) [raw.len]ComplexF32 {
     comptime {
-        var out = std.mem.zeroes([raw.len]Cf32);
+        var out = std.mem.zeroes([raw.len]ComplexF32);
         for (0..raw.len) |i| {
-            out[i] = Cf32.init(raw[i][0], raw[i][1]);
+            out[i] = ComplexF32.init(raw[i][0], raw[i][1]);
         }
         return out;
     }
 }
 test "fft" {
-    const TC_DATA = comptime [_][2][]const Cf32{
+    const TC_DATA = comptime [_][2][]const ComplexF32{
         .{
             &cf32(&.{ .{ 0, 7 }, .{ 1, 6 }, .{ 2, 5 }, .{ 3, 4 }, .{ 4, 3 }, .{ 5, 2 }, .{ 6, 1 }, .{ 7, 0 } }),
             &cf32(&.{ .{ 28, 28 }, .{ 5.656, 13.656 }, .{ 0, 8 }, .{ -2.343, 5.656 }, .{ -4, 4 }, .{ -5.656, 2.343 }, .{ -8, 0 }, .{ -13.656, -5.656 } }),
@@ -97,7 +100,7 @@ test "fft" {
         },
     };
 
-    var input: [16]Cf32 = undefined;
+    var input: [16]ComplexF32 = undefined;
     for (TC_DATA) |t| {
         const len = t[0].len;
         @memcpy(input[0..len], t[0]);
