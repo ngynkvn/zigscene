@@ -6,7 +6,7 @@ const graphics = @import("graphics.zig");
 const gui = @import("gui.zig");
 const debug = @import("debug.zig");
 const options = @import("options");
-//const tracy = @import("tracy");
+const tracy = @import("tracy");
 
 pub const defaultScreenWidth = 1200;
 pub const defaultScreenHeight = 800;
@@ -43,16 +43,12 @@ pub fn main() !void {
         .fovy = 65.0, // Camera field-of-view Y
         .projection = rl.CAMERA_PERSPECTIVE, // Camera projection type
     };
-    rl.SetTargetFPS(60);
-
-    if (options.enable_ttyz) {
-        _ = try std.Thread.spawn(.{}, debug.debug_thread, .{});
-    }
+    rl.SetTargetFPS(90);
 
     // Main loop
     // Detects window close button or ESC key
     while (!rl.WindowShouldClose()) {
-        // tracy.frameMarkNamed("main_loop");
+        tracy.frameMarkNamed("main_loop");
         if (rl.IsFileDropped()) {
             try music.handleFile();
         }
@@ -100,6 +96,8 @@ pub fn main() !void {
             camera3d.position.z += wheelMove.y;
         }
         {
+            const ctx = tracy.traceNamed(@src(), "renders");
+            defer ctx.end();
             rl.BeginDrawing();
             defer rl.EndDrawing();
             const center = rl.GetWorldToScreen(.{ .x = 0, .y = 0 }, camera3d);
@@ -115,9 +113,9 @@ pub fn main() !void {
                 graphics.WaveFormLine.render(.{ .y = center.y * 2 }, i, fv.magnitude() * 0.15);
                 graphics.FFT.render(center, i, fv.magnitude());
             }
+            gui.frame();
             t += rl.GetFrameTime();
         }
-        gui.frame();
     }
 }
 

@@ -19,12 +19,12 @@ pub fn build(b: *std.Build) !void {
         "Include allocation information with Tracy data. Does nothing if -Dtracy is not provided",
     ) orelse enable;
 
-    const enable_ttyz = b.option(
-        bool,
-        "enable_ttyz",
-        "Hook into console for debug information.",
-    ) orelse true;
-    opts.addOption(bool, "enable_ttyz", enable_ttyz);
+    // const enable_ttyz = b.option(
+    //     bool,
+    //     "enable_ttyz",
+    //     "Hook into console for debug information.",
+    // ) orelse true;
+    // opts.addOption(bool, "enable_ttyz", enable_ttyz);
 
     const tracy = b.dependency("tracy", .{
         .target = target,
@@ -39,10 +39,11 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
-    try emcc.addStepWeb(b, .{
-        .target = target,
-        .optimize = optimize,
-    });
+    const run_option = b.step("web", "Build and run for web");
+    if (target.result.os.tag == .emscripten) {
+        const run_step = try emcc.emscriptenRunStep(b);
+        run_option.dependOn(&run_step.step);
+    }
 
     const exe = b.addExecutable(.{
         .name = "zigscene",
@@ -51,17 +52,18 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
     exe.root_module.addOptions("options", opts);
-    if (enable_ttyz) {
-        const ttyz = b.dependency("ttyz", .{
-            .target = target,
-            .optimize = optimize,
-        });
-
-        exe.root_module.addImport("ttyz", ttyz.module("ttyz"));
-    }
+    // if (enable_ttyz) {
+    //     const ttyz = b.dependency("ttyz", .{
+    //         .target = target,
+    //         .optimize = optimize,
+    //     });
+    //
+    //     exe.root_module.addImport("ttyz", ttyz.module("ttyz"));
+    // }
 
     b.installArtifact(exe);
     exe.root_module.addImport("raylib", raylib.module("raylib"));
+    exe.root_module.addImport("tracy", tracy.module("tracy"));
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
     if (b.args) |args| {

@@ -7,8 +7,6 @@ const tracy = @import("tracy");
 const asF32 = @import("extras.zig").asF32;
 const fromHSV = @import("extras.zig").fromHSV;
 
-// const tracy = @import("tracy");
-
 pub const WaveFormLine = struct {
     pub var Scalars = [_]controls.Scalar{
         .{ .name = "amplitude", .value = &amplitude, .range = .{ 0, 100 } },
@@ -48,7 +46,7 @@ pub const WaveFormBar = struct {
     pub var base_h: f32 = 40;
 
     pub fn render(center: rl.Vector2, i: usize, v: f32) void {
-        // tracy.frameMarkNamed("render_wf_bar");
+        //tracy.frameMarkNamed("render_wf_bar");
         const SPACING = asF32(main.screenWidth) / asF32(audio.curr_buffer.len);
         const x = @as(f32, @floatFromInt(i)) * SPACING;
         const y = (v * amplitude);
