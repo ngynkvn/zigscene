@@ -25,9 +25,8 @@ pub var curr_fft: []ComplexF32 = &fft_buffer;
 /// that were passed to raylib / miniaudio.h
 pub fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
     if (ptr == null) return;
-    // const ctx = tracy.traceNamed(@src(), "audio_stream");
-    // defer ctx.end();
-    tracy.frameMarkNamed("audio_callback");
+    const ctx = tracy.traceNamed(@src(), "audio_stream");
+    defer ctx.end();
     const buffer: []f32 = @as([*]f32, @ptrCast(@alignCast(ptr)))[0..n];
     var l: f32 = 0;
     var r: f32 = 0;

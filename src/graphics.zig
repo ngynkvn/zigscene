@@ -19,7 +19,6 @@ pub const WaveFormLine = struct {
     var color1 = rl.Vector3{ .x = 0, .y = 0, .z = 0.96 };
     var color2 = rl.Vector3{ .x = 100, .y = 1, .z = 0.9 };
     pub fn render(center: rl.Vector2, i: usize, v: f32) void {
-        // tracy.frameMarkNamed("render_wf_line");
         const SPACING = asF32(main.screenWidth) / asF32(audio.curr_buffer.len);
         const x = @as(f32, @floatFromInt(i)) * SPACING;
         const y = -(v * amplitude);
@@ -46,7 +45,6 @@ pub const WaveFormBar = struct {
     pub var base_h: f32 = 40;
 
     pub fn render(center: rl.Vector2, i: usize, v: f32) void {
-        //tracy.frameMarkNamed("render_wf_bar");
         const SPACING = asF32(main.screenWidth) / asF32(audio.curr_buffer.len);
         const x = @as(f32, @floatFromInt(i)) * SPACING;
         const y = (v * amplitude);
@@ -100,7 +98,6 @@ pub const Bubble = struct {
     pub var color_scale: f32 = 45;
     pub var bubble_color_scale: f32 = 30;
     pub fn render(camera3d: rl.Camera3D, rot_offset: f32, t: f32) void {
-        // tracy.frameMarkNamed("render_bubble");
         rl.BeginMode3D(camera3d);
         defer rl.EndMode3D();
         rl.rlRotatef(rot_offset, 0, 1, 0);

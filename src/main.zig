@@ -48,7 +48,7 @@ pub fn main() !void {
     // Main loop
     // Detects window close button or ESC key
     while (!rl.WindowShouldClose()) {
-        tracy.frameMarkNamed("main_loop");
+        defer tracy.frameMarkNamed("zigscene");
         if (rl.IsFileDropped()) {
             try music.handleFile();
         }
@@ -96,23 +96,25 @@ pub fn main() !void {
             camera3d.position.z += wheelMove.y;
         }
         {
-            const ctx = tracy.traceNamed(@src(), "renders");
-            defer ctx.end();
             rl.BeginDrawing();
             defer rl.EndDrawing();
-            const center = rl.GetWorldToScreen(.{ .x = 0, .y = 0 }, camera3d);
+            const ctx = tracy.traceNamed(@src(), "Renders");
+            defer ctx.end();
 
+            const center = rl.GetWorldToScreen(.{ .x = 0, .y = 0 }, camera3d);
             debug.render();
 
             rl.ClearBackground(rl.BLACK);
             // Drawing
             graphics.Bubble.render(camera3d, rot_offset, t);
+            const ctx_2d = tracy.traceNamed(@src(), "2d");
             for (audio.curr_buffer, audio.curr_fft, 0..) |v, fv, i| {
                 graphics.WaveFormLine.render(.{ .y = center.y - 80 }, i, v);
                 graphics.WaveFormBar.render(center, i, v);
                 graphics.WaveFormLine.render(.{ .y = center.y * 2 }, i, fv.magnitude() * 0.15);
                 graphics.FFT.render(center, i, fv.magnitude());
             }
+            ctx_2d.end();
             gui.frame();
             t += rl.GetFrameTime();
         }
