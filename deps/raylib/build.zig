@@ -18,14 +18,13 @@ pub fn build(b: *std.Build) !void {
     });
 
     {
-        var gen = b.addWriteFiles();
-        libraylib.step.dependOn(&gen.step);
-
-        const raygui_c_path = gen.add("raygui.c",
+        var gen = b.addWriteFile("raygui.c",
             \\#define RAYGUI_IMPLEMENTATION
             \\#include "raygui.h"
         );
-        libraylib.addCSourceFile(.{ .file = raygui_c_path });
+        libraylib.step.dependOn(&gen.step);
+
+        libraylib.addCSourceFile(.{ .file = gen.getDirectory().path(b, "raygui.c") });
         libraylib.addIncludePath(raylib.path("src"));
         libraylib.addIncludePath(raygui.path("src"));
     }
