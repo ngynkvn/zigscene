@@ -40,7 +40,7 @@ pub fn build(b: *std.Build) !void {
 
     const file = b.addWriteFile("raylib.gen.c",
         \\#include "raylib.h"
-        \\//#include "raymath.h"
+        \\#include "raymath.h"
         \\#include "rlgl.h"
         \\#include "raygui.h"
         \\void RayguiDark(void);

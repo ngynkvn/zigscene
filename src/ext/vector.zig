@@ -1,20 +1,21 @@
+const rl = @import("../raylib.zig");
 const std = @import("std");
-const math = std.math;
 
-// TODO: replace aliases
-const atan2f = math.atan2;
-const sqrtf = math.sqrt;
-pub extern fn fmaxf(f32, f32) f32;
-pub extern fn fminf(f32, f32) f32;
-pub const fabsf = @import("std").zig.c_builtins.__builtin_fabsf;
-pub const sinf = math.sin;
-pub const cosf = math.cos;
+const math = std.math;
+const atan2 = math.atan2;
+fn feql(x: f32, y: f32) bool {
+    return @abs(x - x) <= @max(1, @abs(x), @abs(x)) and
+        @abs(y - y) <= @max(1, @abs(y), @abs(y));
+}
 
 pub const Vector2 = extern struct {
     x: f32 = 0,
     y: f32 = 0,
-    pub fn fromC(c: anytype) Vector2 {
-        return .{ .x = c.x, .y = c.y };
+    pub fn from(t: anytype) Vector2 {
+        return .{ .x = t.x, .y = t.y };
+    }
+    pub fn c(self: Vector2) rl.Vector2 {
+        return @bitCast(self);
     }
     pub fn zero() Vector2 {
         return .{ .x = 0.0, .y = 0.0 };
@@ -26,7 +27,7 @@ pub const Vector2 = extern struct {
         return .{ .x = v1.x - v2.x, .y = v1.y - v2.y };
     }
     pub fn length(v: Vector2) f32 {
-        return sqrtf((v.x * v.x) + (v.y * v.y));
+        return @sqrt((v.x * v.x) + (v.y * v.y));
     }
     pub fn dotProduct(v1: Vector2, v2: Vector2) f32 {
         return (v1.x * v2.x) + (v1.y * v2.y);
@@ -35,7 +36,7 @@ pub const Vector2 = extern struct {
         return ((v1.x - v2.x) * (v1.x - v2.x)) + ((v1.y - v2.y) * (v1.y - v2.y));
     }
     pub fn lineAngle(start: Vector2, end: Vector2) f32 {
-        return -atan2f(end.y - start.y, end.x - start.x);
+        return -atan2(end.y - start.y, end.x - start.x);
     }
     pub fn multiply(v1: Vector2, v2: Vector2) Vector2 {
         return .{ .x = v1.x * v2.x, .y = v1.y * v2.y };
@@ -61,8 +62,8 @@ pub const Vector2 = extern struct {
     }
     pub fn max(v1: Vector2, v2: Vector2) Vector2 {
         return .{
-            .x = fmaxf(v1.x, v2.x),
-            .y = fmaxf(v1.y, v2.y),
+            .x = @max(v1.x, v2.x),
+            .y = @max(v1.y, v2.y),
         };
     }
     pub fn moveTowards(v: Vector2, target: Vector2, maxDistance: f32) Vector2 {
@@ -73,20 +74,20 @@ pub const Vector2 = extern struct {
         if ((value == 0) or
             ((maxDistance >= 0) and (value <= (maxDistance * maxDistance))))
             return target;
-        const dist: f32 = sqrtf(value);
+        const dist: f32 = @sqrt(value);
         result.x = v.x + ((dx / dist) * maxDistance);
         result.y = v.y + ((dy / dist) * maxDistance);
         return result;
     }
     pub fn clamp(v: Vector2, min_v: Vector2, max_v: Vector2) Vector2 {
         return .{
-            .x = fminf(max_v.x, fmaxf(min_v.x, v.x)),
-            .y = fminf(max_v.y, fmaxf(min_v.y, v.y)),
+            .x = @min(max_v.x, @max(min_v.x, v.x)),
+            .y = @min(max_v.y, @max(min_v.y, v.y)),
         };
     }
-    pub fn equals(p: Vector2, q: Vector2) c_int {
-        const result: c_int = @intFromBool((fabsf(p.x - q.x) <= (0.0000009999999974752427 * fmaxf(1.0, fmaxf(fabsf(p.x), fabsf(q.x))))) and (fabsf(p.y - q.y) <= (0.0000009999999974752427 * fmaxf(1.0, fmaxf(fabsf(p.y), fabsf(q.y))))));
-        return result;
+    pub fn equals(p: Vector2, q: Vector2) bool {
+        return feql(p.x, q.x) and
+            feql(p.y, q.y);
     }
     pub fn one() Vector2 {
         return .{ .x = 1.0, .y = 1.0 };
@@ -101,12 +102,12 @@ pub const Vector2 = extern struct {
         return (v.x * v.x) + (v.y * v.y);
     }
     pub fn distance(v1: Vector2, v2: Vector2) f32 {
-        return sqrtf(((v1.x - v2.x) * (v1.x - v2.x)) + ((v1.y - v2.y) * (v1.y - v2.y)));
+        return @sqrt(((v1.x - v2.x) * (v1.x - v2.x)) + ((v1.y - v2.y) * (v1.y - v2.y)));
     }
     pub fn angle(v1: Vector2, v2: Vector2) f32 {
         const dot: f32 = (v1.x * v2.x) + (v1.y * v2.y);
         const det: f32 = (v1.x * v2.y) - (v1.y * v2.x);
-        return atan2f(det, dot);
+        return atan2(det, dot);
     }
     pub fn scale(v: Vector2, scale_v: f32) Vector2 {
         return .{ .x = v.x * scale_v, .y = v.y * scale_v };
@@ -119,7 +120,7 @@ pub const Vector2 = extern struct {
             .x = 0,
             .y = 0,
         };
-        const length_v: f32 = sqrtf((v.x * v.x) + (v.y * v.y));
+        const length_v: f32 = @sqrt((v.x * v.x) + (v.y * v.y));
         if (length_v > 0) {
             const ilength: f32 = 1.0 / length_v;
             result.x = v.x * ilength;
@@ -135,13 +136,13 @@ pub const Vector2 = extern struct {
     }
     pub fn min(v1: Vector2, v2: Vector2) Vector2 {
         return .{
-            .x = fminf(v1.x, v2.x),
-            .y = fminf(v1.y, v2.y),
+            .x = @min(v1.x, v2.x),
+            .y = @min(v1.y, v2.y),
         };
     }
     pub fn rotate(v: Vector2, angle_v: f32) Vector2 {
-        const cosres: f32 = cosf(angle_v);
-        const sinres: f32 = sinf(angle_v);
+        const cosres: f32 = @cos(angle_v);
+        const sinres: f32 = @sin(angle_v);
         return .{
             .x = (v.x * cosres) - (v.y * sinres),
             .y = (v.x * sinres) + (v.y * cosres),
@@ -154,7 +155,7 @@ pub const Vector2 = extern struct {
         var result: Vector2 = v;
         var length_v: f32 = (v.x * v.x) + (v.y * v.y);
         if (length_v > 0.0) {
-            length_v = sqrtf(length_v);
+            length_v = @sqrt(length_v);
             var scale_v: f32 = 1;
             if (length_v < min_v) {
                 scale_v = min_v / length_v;
@@ -171,7 +172,7 @@ pub const Vector2 = extern struct {
         const dot: f32 = (v.x * n.x) + (v.y * n.y);
         var d: f32 = 1.0 - ((r * r) * (1.0 - (dot * dot)));
         if (d >= 0.0) {
-            d = sqrtf(d);
+            d = @sqrt(d);
             v.x = (r * v.x) - (((r * dot) + d) * n.x);
             v.y = (r * v.y) - (((r * dot) + d) * n.y);
             result = v;
@@ -202,7 +203,7 @@ pub const Vector3 = extern struct {
         return .{ .x = (v1.y * v2.z) - (v1.z * v2.y), .y = (v1.z * v2.x) - (v1.x * v2.z), .z = (v1.x * v2.y) - (v1.y * v2.x) };
     }
     pub fn length(v: Vector3) f32 {
-        const result: f32 = sqrtf(((v.x * v.x) + (v.y * v.y)) + (v.z * v.z));
+        const result: f32 = @sqrt(((v.x * v.x) + (v.y * v.y)) + (v.z * v.z));
         return result;
     }
     pub fn dotProduct(v1: Vector3, v2: Vector3) f32 {
@@ -222,7 +223,7 @@ pub const Vector3 = extern struct {
     }
     pub fn normalize(v: Vector3) Vector3 {
         var result: Vector3 = v;
-        const length_v: f32 = sqrtf(((v.x * v.x) + (v.y * v.y)) + (v.z * v.z));
+        const length_v: f32 = @sqrt(((v.x * v.x) + (v.y * v.y)) + (v.z * v.z));
         if (length_v != 0.0) {
             const ilength: f32 = 1.0 / length_v;
             result.x *= ilength;
@@ -253,7 +254,7 @@ pub const Vector3 = extern struct {
     }
     pub fn rotateByAxisAngle(v: Vector3, axis: Vector3, angle_v: f32) Vector3 {
         var result: Vector3 = v;
-        var length_v: f32 = sqrtf(((axis.x * axis.x) + (axis.y * axis.y)) + (axis.z * axis.z));
+        var length_v: f32 = @sqrt(((axis.x * axis.x) + (axis.y * axis.y)) + (axis.z * axis.z));
         if (length_v == 0.0) {
             length_v = 1.0;
         }
@@ -262,11 +263,11 @@ pub const Vector3 = extern struct {
         axis.y *= ilength;
         axis.z *= ilength;
         angle_v /= 2.0;
-        var a: f32 = sinf(angle_v);
+        var a: f32 = @sin(angle_v);
         const b: f32 = axis.x * a;
         const c: f32 = axis.y * a;
         const d: f32 = axis.z * a;
-        a = cosf(angle_v);
+        a = @cos(angle_v);
         const w: Vector3 = Vector3{
             .x = b,
             .y = c,
@@ -314,9 +315,9 @@ pub const Vector3 = extern struct {
     }
     pub fn max(v1: Vector3, v2: Vector3) Vector3 {
         var result: Vector3 = Vector3{ .x = 0, .y = 0, .z = 0 };
-        result.x = fmaxf(v1.x, v2.x);
-        result.y = fmaxf(v1.y, v2.y);
-        result.z = fmaxf(v1.z, v2.z);
+        result.x = @max(v1.x, v2.x);
+        result.y = @max(v1.y, v2.y);
+        result.z = @max(v1.z, v2.z);
         return result;
     }
     pub fn unproject(source: Vector3, projection: Matrix, view: Matrix) Vector3 {
@@ -410,7 +411,7 @@ pub const Vector3 = extern struct {
         var result: Vector3 = v;
         var length_v: f32 = ((v.x * v.x) + (v.y * v.y)) + (v.z * v.z);
         if (length_v > 0.0) {
-            length_v = sqrtf(length_v);
+            length_v = @sqrt(length_v);
             var scale_v: f32 = 1;
             if (length_v < min_v) {
                 scale_v = min_v / length_v;
@@ -428,7 +429,7 @@ pub const Vector3 = extern struct {
         const dot: f32 = ((v.x * n.x) + (v.y * n.y)) + (v.z * n.z);
         var d: f32 = 1.0 - ((r * r) * (1.0 - (dot * dot)));
         if (d >= 0.0) {
-            d = sqrtf(d);
+            d = @sqrt(d);
             v.x = (r * v.x) - (((r * dot) + d) * n.x);
             v.y = (r * v.y) - (((r * dot) + d) * n.y);
             v.z = (r * v.z) - (((r * dot) + d) * n.z);
@@ -450,14 +451,14 @@ pub const Vector3 = extern struct {
     }
     pub fn perpendicular(v: Vector3) Vector3 {
         var result: Vector3 = Vector3{ .x = 0, .y = 0, .z = 0 };
-        var min_v: f32 = fabsf(v.x);
+        var min_v: f32 = @abs(v.x);
         var cardinalAxis: Vector3 = Vector3{
             .x = 1.0,
             .y = 0.0,
             .z = 0.0,
         };
-        if (fabsf(v.y) < min_v) {
-            min_v = fabsf(v.y);
+        if (@abs(v.y) < min_v) {
+            min_v = @abs(v.y);
             const tmp: Vector3 = Vector3{
                 .x = 0.0,
                 .y = 1.0,
@@ -465,7 +466,7 @@ pub const Vector3 = extern struct {
             };
             cardinalAxis = tmp;
         }
-        if (fabsf(v.z) < min_v) {
+        if (@abs(v.z) < min_v) {
             const tmp: Vector3 = Vector3{
                 .x = 0.0,
                 .y = 0.0,
@@ -487,7 +488,7 @@ pub const Vector3 = extern struct {
         const dx: f32 = v2.x - v1.x;
         const dy: f32 = v2.y - v1.y;
         const dz: f32 = v2.z - v1.z;
-        result = sqrtf(((dx * dx) + (dy * dy)) + (dz * dz));
+        result = @sqrt(((dx * dx) + (dy * dy)) + (dz * dz));
         return result;
     }
     pub fn angle(v1: Vector3, v2: Vector3) f32 {
@@ -497,9 +498,9 @@ pub const Vector3 = extern struct {
             .y = (v1.z * v2.x) - (v1.x * v2.z),
             .z = (v1.x * v2.y) - (v1.y * v2.x),
         };
-        const len: f32 = sqrtf(((cross.x * cross.x) + (cross.y * cross.y)) + (cross.z * cross.z));
+        const len: f32 = @sqrt(((cross.x * cross.x) + (cross.y * cross.y)) + (cross.z * cross.z));
         const dot: f32 = ((v1.x * v2.x) + (v1.y * v2.y)) + (v1.z * v2.z);
-        result = atan2f(len, dot);
+        result = atan2(len, dot);
         return result;
     }
     pub fn divide(v1: Vector3, v2: Vector3) Vector3 {
@@ -519,7 +520,7 @@ pub const Vector3 = extern struct {
         var length_v: f32 = 0.0;
         var ilength: f32 = 0.0;
         var v: Vector3 = v1.*;
-        length_v = sqrtf(((v.x * v.x) + (v.y * v.y)) + (v.z * v.z));
+        length_v = @sqrt(((v.x * v.x) + (v.y * v.y)) + (v.z * v.z));
         if (length_v == 0.0) {
             length_v = 1.0;
         }
@@ -533,7 +534,7 @@ pub const Vector3 = extern struct {
             .z = (v1.*.x * v2.*.y) - (v1.*.y * v2.*.x),
         };
         v = vn1;
-        length_v = sqrtf(((v.x * v.x) + (v.y * v.y)) + (v.z * v.z));
+        length_v = @sqrt(((v.x * v.x) + (v.y * v.y)) + (v.z * v.z));
         if (length_v == 0.0) {
             length_v = 1.0;
         }
@@ -562,7 +563,7 @@ pub const Vector3 = extern struct {
         const dz: f32 = target.z - v.z;
         const value: f32 = ((dx * dx) + (dy * dy)) + (dz * dz);
         if ((value == 0) or ((maxDistance >= 0) and (value <= (maxDistance * maxDistance)))) return target;
-        const dist: f32 = sqrtf(value);
+        const dist: f32 = @sqrt(value);
         result.x = v.x + ((dx / dist) * maxDistance);
         result.y = v.y + ((dy / dist) * maxDistance);
         result.z = v.z + ((dz / dist) * maxDistance);
@@ -579,9 +580,9 @@ pub const Vector3 = extern struct {
     }
     pub fn min(v1: Vector3, v2: Vector3) Vector3 {
         var result: Vector3 = Vector3{ .x = 0, .y = 0, .z = 0 };
-        result.x = fminf(v1.x, v2.x);
-        result.y = fminf(v1.y, v2.y);
-        result.z = fminf(v1.z, v2.z);
+        result.x = @min(v1.x, v2.x);
+        result.y = @min(v1.y, v2.y);
+        result.z = @min(v1.z, v2.z);
         return result;
     }
     pub fn barycenter(p: Vector3, a: Vector3, b: Vector3, c: Vector3) Vector3 {
@@ -606,21 +607,22 @@ pub const Vector3 = extern struct {
                 0,
             } ++ [1]f32{0} ** 2,
         };
-        buffer.v[@as(c_uint, @intCast(@as(c_int, 0)))] = v.x;
-        buffer.v[@as(c_uint, @intCast(@as(c_int, 1)))] = v.y;
-        buffer.v[@as(c_uint, @intCast(@as(c_int, 2)))] = v.z;
+        buffer.v[0] = v.x;
+        buffer.v[1] = v.y;
+        buffer.v[2] = v.z;
         return buffer;
     }
     pub fn clamp(v: Vector3, min_v: Vector3, max_v: Vector3) Vector3 {
         var result: Vector3 = Vector3{ .x = 0, .y = 0, .z = 0 };
-        result.x = fminf(max_v.x, fmaxf(min_v.x, v.x));
-        result.y = fminf(max_v.y, fmaxf(min_v.y, v.y));
-        result.z = fminf(max_v.z, fmaxf(min_v.z, v.z));
+        result.x = @min(max_v.x, @max(min_v.x, v.x));
+        result.y = @min(max_v.y, @max(min_v.y, v.y));
+        result.z = @min(max_v.z, @max(min_v.z, v.z));
         return result;
     }
     pub fn equals(p: Vector3, q: Vector3) c_int {
-        const result: c_int = @intFromBool(((fabsf(p.x - q.x) <= (0.0000009999999974752427 * fmaxf(1.0, fmaxf(fabsf(p.x), fabsf(q.x))))) and (fabsf(p.y - q.y) <= (0.0000009999999974752427 * fmaxf(1.0, fmaxf(fabsf(p.y), fabsf(q.y)))))) and (fabsf(p.z - q.z) <= (0.0000009999999974752427 * fmaxf(1.0, fmaxf(fabsf(p.z), fabsf(q.z))))));
-        return result;
+        return feql(p.x, q.x) and
+            feql(p.y, q.y) and
+            feql(p.z, q.z);
     }
 };
 
@@ -646,7 +648,7 @@ pub const Vector4 = extern struct {
         return result;
     }
     pub fn distance(v1: Vector4, v2: Vector4) f32 {
-        const result: f32 = sqrtf(((((v1.x - v2.x) * (v1.x - v2.x)) + ((v1.y - v2.y) * (v1.y - v2.y))) + ((v1.z - v2.z) * (v1.z - v2.z))) + ((v1.w - v2.w) * (v1.w - v2.w)));
+        const result: f32 = @sqrt(((((v1.x - v2.x) * (v1.x - v2.x)) + ((v1.y - v2.y) * (v1.y - v2.y))) + ((v1.z - v2.z) * (v1.z - v2.z))) + ((v1.w - v2.w) * (v1.w - v2.w)));
         return result;
     }
     pub fn scale(v: Vector4, scale_v: f32) Vector4 {
@@ -657,7 +659,7 @@ pub const Vector4 = extern struct {
     }
     pub fn normalize(v: Vector4) Vector4 {
         var result: Vector4 = Vector4{ .x = 0, .y = 0, .z = 0, .w = 0 };
-        const length_v: f32 = sqrtf((((v.x * v.x) + (v.y * v.y)) + (v.z * v.z)) + (v.w * v.w));
+        const length_v: f32 = @sqrt((((v.x * v.x) + (v.y * v.y)) + (v.z * v.z)) + (v.w * v.w));
         if (length_v > 0) {
             const ilength: f32 = 1.0 / length_v;
             result.x = v.x * ilength;
@@ -669,10 +671,10 @@ pub const Vector4 = extern struct {
     }
     pub fn max(v1: Vector4, v2: Vector4) Vector4 {
         var result: Vector4 = Vector4{ .x = 0, .y = 0, .z = 0, .w = 0 };
-        result.x = fmaxf(v1.x, v2.x);
-        result.y = fmaxf(v1.y, v2.y);
-        result.z = fmaxf(v1.z, v2.z);
-        result.w = fmaxf(v1.w, v2.w);
+        result.x = @max(v1.x, v2.x);
+        result.y = @max(v1.y, v2.y);
+        result.z = @max(v1.z, v2.z);
+        result.w = @max(v1.w, v2.w);
         return result;
     }
     pub fn add(v1: Vector4, v2: Vector4) Vector4 {
@@ -682,7 +684,7 @@ pub const Vector4 = extern struct {
         return .{ .x = v1.x - v2.x, .y = v1.y - v2.y, .z = v1.z - v2.z, .w = v1.w - v2.w };
     }
     pub fn length(v: Vector4) f32 {
-        const result: f32 = sqrtf((((v.x * v.x) + (v.y * v.y)) + (v.z * v.z)) + (v.w * v.w));
+        const result: f32 = @sqrt((((v.x * v.x) + (v.y * v.y)) + (v.z * v.z)) + (v.w * v.w));
         return result;
     }
     pub fn dotProduct(v1: Vector4, v2: Vector4) f32 {
@@ -701,10 +703,10 @@ pub const Vector4 = extern struct {
     }
     pub fn min(v1: Vector4, v2: Vector4) Vector4 {
         var result: Vector4 = Vector4{ .x = 0, .y = 0, .z = 0, .w = 0 };
-        result.x = fminf(v1.x, v2.x);
-        result.y = fminf(v1.y, v2.y);
-        result.z = fminf(v1.z, v2.z);
-        result.w = fminf(v1.w, v2.w);
+        result.x = @min(v1.x, v2.x);
+        result.y = @min(v1.y, v2.y);
+        result.z = @min(v1.z, v2.z);
+        result.w = @min(v1.w, v2.w);
         return result;
     }
     pub fn lerp(v1: Vector4, v2: Vector4, amount: f32) Vector4 {
@@ -719,8 +721,10 @@ pub const Vector4 = extern struct {
         return .{ .x = 1.0 / v.x, .y = 1.0 / v.y, .z = 1.0 / v.z, .w = 1.0 / v.w };
     }
     pub fn equals(p: Vector4, q: Vector4) c_int {
-        const result: c_int = @intFromBool((((fabsf(p.x - q.x) <= (0.0000009999999974752427 * fmaxf(1.0, fmaxf(fabsf(p.x), fabsf(q.x))))) and (fabsf(p.y - q.y) <= (0.0000009999999974752427 * fmaxf(1.0, fmaxf(fabsf(p.y), fabsf(q.y)))))) and (fabsf(p.z - q.z) <= (0.0000009999999974752427 * fmaxf(1.0, fmaxf(fabsf(p.z), fabsf(q.z)))))) and (fabsf(p.w - q.w) <= (0.0000009999999974752427 * fmaxf(1.0, fmaxf(fabsf(p.w), fabsf(q.w))))));
-        return result;
+        return feql(p.x, q.x) and
+            feql(p.y, q.y) and
+            feql(p.z, q.z) and
+            feql(p.w, q.w);
     }
     pub fn moveTowards(v: Vector4, target: Vector4, maxDistance: f32) Vector4 {
         var result: Vector4 = Vector4{ .x = 0, .y = 0, .z = 0, .w = 0 };
@@ -730,7 +734,7 @@ pub const Vector4 = extern struct {
         const dw: f32 = target.w - v.w;
         const value: f32 = (((dx * dx) + (dy * dy)) + (dz * dz)) + (dw * dw);
         if ((value == 0) or ((maxDistance >= 0) and (value <= (maxDistance * maxDistance)))) return target;
-        const dist: f32 = sqrtf(value);
+        const dist: f32 = @sqrt(value);
         result.x = v.x + ((dx / dist) * maxDistance);
         result.y = v.y + ((dy / dist) * maxDistance);
         result.z = v.z + ((dz / dist) * maxDistance);
