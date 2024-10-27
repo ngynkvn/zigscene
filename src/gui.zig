@@ -16,7 +16,6 @@ var Options = .{
     graphics.Bubble,
     audio.Controls,
 };
-const window_width = 400;
 var value_buffer = std.mem.zeroes([256]u8);
 var text_buffer = std.mem.zeroes([256:0]u8);
 //                          \__/ ⬋ please be nice to him
@@ -37,31 +36,31 @@ pub fn frame() void {
         const fps = rl.GetFPS();
         txt = std.fmt.bufPrintZ(&text_buffer, "#{}# {s} | {d:4.1}s / {d:4.1}s [FPS:{d}]", .{ rl.ICON_PLAYER_PLAY, music.filename, mtp, mtl, fps }) catch unreachable;
     }
-    _ = rl.GuiStatusBar(base.translate(base.width * 2 + 5, 0).resize(window_width * 2, base.height).c(), txt.ptr);
+    _ = rl.GuiStatusBar(base.translate(base.width * 2 + 5, 0).resize(800, base.height).c(), txt.ptr);
 
     if (active_menu.scalar) {
-        const anchor = base.translate(2, 20).resize(window_width, 300);
+        const anchor = base.translate(2, 20).resize(300, 700);
         _ = rl.GuiPanel(anchor.c(), "Scalars");
 
         comptime var buf_i: usize = 0;
-        inline for (&Options, 0..) |info, y| {
+        comptime var y = 40;
+        inline for (Options) |info| {
             if (!@hasDecl(info, "Scalars")) continue;
 
-            var yoff: f32 = y * 20;
-            _ = rl.GuiLabel(anchor.resize(200, 8).translate(5, 40 + yoff).c(), @typeName(info));
             const cfg = @field(info, "Scalars");
-            inline for (cfg) |optinfo| {
+            const offset = 24;
+            _ = rl.GuiLabel(anchor.resize(200, 8).translate(5, y).c(), @typeName(info));
+            inline for (cfg, 0..) |optinfo, y2| {
                 const fname = optinfo.name;
                 const fval = optinfo.value;
                 const buf = std.fmt.bufPrintZ(value_buffer[buf_i * 7 .. buf_i * 7 + 7], "{d:6.2}", .{fval.*}) catch unreachable;
-                _ = rl.GuiSlider(anchor.resize(100, 8).translate(100, 32 + yoff).c(), fname.ptr, buf.ptr, fval, optinfo.range[0], optinfo.range[1]);
-                yoff += 20;
+                _ = rl.GuiSlider(anchor.resize(150, 16).translate(90, y + y2 * offset + offset / 2).c(), fname.ptr, buf.ptr, fval, optinfo.range[0], optinfo.range[1]);
                 buf_i += 1;
             }
-            yoff += 20;
+            y += cfg.len * offset + offset;
         }
     } else if (active_menu.color) {
-        const anchor = base.translate(2, 20).resize(window_width / 2, 400);
+        const anchor = base.translate(2, 20).resize(200, 700);
         const panel_size = 90;
         const panel_spacing = 40;
         const panel = anchor.resize(16, panel_size);
