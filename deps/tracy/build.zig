@@ -46,4 +46,7 @@ pub fn build(b: *std.Build) !void {
     });
     tracy_mod.addImport("tracy-c", tracy_c_mod);
     tracy_mod.addImport("options", tracy_options.createModule());
+
+    const tracy_stub = b.addModule("tracy-stub", .{ .root_source_file = b.path("src/tracy-stub.zig") });
+    tracy_stub.addImport("options", tracy_options.createModule());
 }

@@ -4,7 +4,6 @@ const emcc = @import("deps/build/emcc.zig");
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    emcc.hookSysrootIfNeeded(b, target);
 
     const opts = b.addOptions();
     const tracy_enable = b.option(bool, "tracy_enable", "Enable Tracy integration. Supply path to Tracy source") orelse false;
@@ -18,13 +17,6 @@ pub fn build(b: *std.Build) !void {
         "tracy_allocation",
         "Include allocation information with Tracy data. Does nothing if -Dtracy is not provided",
     ) orelse tracy_enable;
-
-    // const enable_ttyz = b.option(
-    //     bool,
-    //     "enable_ttyz",
-    //     "Hook into console for debug information.",
-    // ) orelse true;
-    // opts.addOption(bool, "enable_ttyz", enable_ttyz);
 
     const tracy = b.dependency("tracy", .{
         .target = target,
@@ -43,6 +35,19 @@ pub fn build(b: *std.Build) !void {
     if (target.result.os.tag == .emscripten) {
         const run_step = try emcc.emscriptenRunStep(b);
         run_option.dependOn(&run_step.step);
+
+        const exe_lib = b.addStaticLibrary(.{
+            .name = "zigscene",
+            .root_source_file = b.path("src/main.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+        const cache_include = b.pathResolve(&.{ b.sysroot.?, "cache", "sysroot", "include" });
+        exe_lib.addIncludePath(.{ .cwd_relative = cache_include });
+        exe_lib.root_module.addImport("raylib", raylib.module("raylib"));
+        exe_lib.root_module.addImport("tracy", tracy.module("tracy-stub"));
+        const link_step = try emcc.linkWithEmscripten(b, &[_]*std.Build.Step.Compile{ exe_lib, raylib.artifact("raylib") });
+        run_step.step.dependOn(&link_step.step);
     }
 
     const exe = b.addExecutable(.{
@@ -52,14 +57,6 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
     exe.root_module.addOptions("options", opts);
-    // if (enable_ttyz) {
-    //     const ttyz = b.dependency("ttyz", .{
-    //         .target = target,
-    //         .optimize = optimize,
-    //     });
-    //
-    //     exe.root_module.addImport("ttyz", ttyz.module("ttyz"));
-    // }
 
     b.installArtifact(exe);
     exe.root_module.addImport("raylib", raylib.module("raylib"));

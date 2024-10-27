@@ -18,3 +18,5 @@ tasks:
     cmds:
       - zig build --release=fast -Dtarget=x86_64-windows --prefix release/windows
       - zip release/win32.zip release/windows/bin/*
+  web-build:
+    cmd: zig build web -Dtarget=wasm32-emscripten --sysroot "$EMSDK/upstream/emscripten" --verbose --release=fast
