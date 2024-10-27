@@ -1,8 +1,10 @@
 const std = @import("std");
-const colorPicker = @import("gui/color_picker.zig");
-pub usingnamespace @import("raylib");
-
 pub usingnamespace struct {
+    // NOTE: eventually, the plan is completely get rid of raylib
+    // exporting out all of it's functions
+    pub usingnamespace @import("raylib");
+
+    const colorPicker = @import("gui/color_picker.zig");
     pub const GuiColorBarHueH = colorPicker.GuiColorBarHueH;
 };
 
