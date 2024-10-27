@@ -33,8 +33,6 @@ pub fn frame() void {
     const base = Layout.Base;
     const grouptxt = std.fmt.comptimePrint("#{}#;#{}#", .{ rl.ICON_FX, rl.ICON_COLOR_PICKER });
     _ = rl.GuiToggleGroup(base.c(), grouptxt, @ptrCast(&active_tab));
-    // _ = rl.GuiToggle(base.translate(0, 0).into(), std.fmt.comptimePrint("#{}#", .{rl.ICON_FX}), &active_menu.scalar);
-    // _ = rl.GuiToggle(base.translate(base.width, 0).into(), std.fmt.comptimePrint("#{}#", .{rl.ICON_COLOR_PICKER}), &active_menu.color);
     const mtp = music.GetMusicTimePlayed();
     const mtl = music.GetMusicTimeLength();
     if (music.IsMusicStreamPlaying()) {
@@ -51,20 +49,32 @@ pub fn frame() void {
         const offset = 24;
         const panel = anchor.resize(slider_w, 16);
         _ = rl.GuiPanel(anchor.c(), "Colors");
+    switch (active_tab) {
+        .scalar => {
+            Layout.Scalars.draw();
+        },
+        .color => {
+            const anchor = base.translate(2, 20).resize(200, 700);
+            const slider_w = 120;
+            const offset = 24;
+            const panel = anchor.resize(slider_w, 16);
+            _ = rl.GuiPanel(anchor.c(), "Colors");
 
         comptime var yoff: f32 = 32;
         inline for (&Tuners) |info| {
             if (!@hasDecl(info, "Colors")) continue;
 
-            const cfg = @field(info, "Colors");
-            comptime var i: usize = 0;
-            _ = rl.GuiLabel(anchor.resize(200, 8).translate(5, yoff).c(), @typeName(info));
-            inline for (cfg) |optinfo| {
-                const fname = optinfo.name;
-                const fval: *f32 = optinfo.hue;
-                _ = rl.GuiColorBarHueH(panel.translate(40, offset + yoff).c(), fname.ptr, fval);
+                const cfg = @field(info, "Colors");
+                comptime var i: usize = 0;
+                _ = rl.GuiLabel(anchor.resize(200, 8).translate(5, yoff).c(), @typeName(info));
+                inline for (cfg) |optinfo| {
+                    const fname = optinfo.name;
+                    const fval: *f32 = optinfo.hue;
+                    _ = rl.GuiColorBarHueH(panel.translate(40, offset + yoff).c(), fname.ptr, fval);
+                    yoff += offset;
+                    i += 1;
+                }
                 yoff += offset;
-                i += 1;
             }
             yoff += panel_spacing;
         }
