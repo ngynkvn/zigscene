@@ -9,7 +9,6 @@ pub const Controls = struct {
         .{ .name = "Attack", .value = &Attack, .range = .{ 0.0, 1 } },
         .{ .name = "Release", .value = &Release, .range = .{ 0.0, 1 } },
     };
-    pub const Colors = [0]controls.Color{};
 };
 
 const N = 256;
