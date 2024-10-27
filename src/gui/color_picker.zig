@@ -40,27 +40,18 @@ const BORDER_WIDTH = rl.BORDER_WIDTH;
 // const BORDER= rl.BORDER;
 const BORDER: c_int = 0;
 
-pub fn GuiColorBarHueH(arg_bounds: Rectangle, arg_text: [*c]const u8, arg_hue: [*c]f32) c_int {
-    var bounds = arg_bounds;
-    _ = &bounds;
-    var text = arg_text;
-    _ = &text;
-    var hue = arg_hue;
-    _ = &hue;
-    var result: c_int = 0;
-    _ = &result;
+pub fn GuiColorBarHueH(bounds: Rectangle, text: [*c]const u8, hue: [*c]f32) c_int {
+    _ = text; // autofix
+    const result: c_int = 0;
     var state: c_uint = @intCast(GuiGetState());
-    _ = &state;
-    var selector: Rectangle = Rectangle{
+    const selector: Rectangle = Rectangle{
         .x = (bounds.x + ((hue.* / 360.0) * bounds.width)) - @as(f32, @floatFromInt(@divTrunc(GuiGetStyle(COLORPICKER, HUEBAR_SELECTOR_HEIGHT), @as(c_int, 2)))),
         .y = bounds.y - @as(f32, @floatFromInt(GuiGetStyle(COLORPICKER, HUEBAR_SELECTOR_OVERFLOW))),
         .width = @as(f32, @floatFromInt(GuiGetStyle(COLORPICKER, HUEBAR_SELECTOR_HEIGHT))),
         .height = bounds.height + @as(f32, @floatFromInt(GuiGetStyle(COLORPICKER, HUEBAR_SELECTOR_OVERFLOW) * @as(c_int, 2))),
     };
-    _ = &selector;
     if ((state != @as(c_uint, @bitCast(STATE_DISABLED))) and !GuiIsLocked()) {
-        var mousePoint: Vector2 = GetMousePosition();
-        _ = &mousePoint;
+        const mousePoint: Vector2 = GetMousePosition();
         if (guiControlExclusiveMode) {
             if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
                 if ((((bounds.x == guiControlExclusiveRec.x) and (bounds.y == guiControlExclusiveRec.y)) and (bounds.width == guiControlExclusiveRec.width)) and (bounds.height == guiControlExclusiveRec.height)) {
@@ -183,15 +174,7 @@ pub fn GuiColorBarHueH(arg_bounds: Rectangle, arg_text: [*c]const u8, arg_hue: [
     }, GetColor(@as(c_uint, @bitCast(GuiGetStyle(COLORPICKER, @as(c_int, @bitCast(@as(c_uint, @bitCast(BORDER)) +% (state *% @as(c_uint, @bitCast(@as(c_int, 3)))))))))));
     return result;
 }
-pub fn GuiDrawRectangle(arg_rec: Rectangle, arg_borderWidth: c_int, arg_borderColor: Color, arg_color: Color) callconv(.c) void {
-    var rec = arg_rec;
-    _ = &rec;
-    var borderWidth = arg_borderWidth;
-    _ = &borderWidth;
-    var borderColor = arg_borderColor;
-    _ = &borderColor;
-    var color = arg_color;
-    _ = &color;
+pub fn GuiDrawRectangle(rec: Rectangle, borderWidth: c_int, borderColor: Color, color: Color) callconv(.c) void {
     if (@as(c_int, @bitCast(@as(c_uint, color.a))) > @as(c_int, 0)) {
         DrawRectangle(@as(c_int, @intFromFloat(rec.x)), @as(c_int, @intFromFloat(rec.y)), @as(c_int, @intFromFloat(rec.width)), @as(c_int, @intFromFloat(rec.height)), GuiFade(color, guiAlpha));
     }
@@ -202,22 +185,13 @@ pub fn GuiDrawRectangle(arg_rec: Rectangle, arg_borderWidth: c_int, arg_borderCo
         DrawRectangle(@as(c_int, @intFromFloat(rec.x)), (@as(c_int, @intFromFloat(rec.y)) + @as(c_int, @intFromFloat(rec.height))) - borderWidth, @as(c_int, @intFromFloat(rec.width)), borderWidth, GuiFade(borderColor, guiAlpha));
     }
 }
-pub fn GuiFade(arg_color: Color, arg_alpha: f32) callconv(.c) Color {
-    var color = arg_color;
-    _ = &color;
-    var alpha = arg_alpha;
-    _ = &alpha;
-    if (alpha < 0.0) {
-        alpha = 0.0;
-    } else if (alpha > 1.0) {
-        alpha = 1.0;
-    }
-    var result: Color = Color{
+pub fn GuiFade(color: Color, alpha: f32) callconv(.c) Color {
+    const a = std.math.clamp(alpha, 0, 1);
+    const result: Color = Color{
         .r = color.r,
         .g = color.g,
         .b = color.b,
-        .a = @as(u8, @intFromFloat(@as(f32, @floatFromInt(@as(c_int, @bitCast(@as(c_uint, color.a))))) * alpha)),
+        .a = @as(u8, @intFromFloat(@as(f32, @floatFromInt(@as(c_int, @bitCast(@as(c_uint, color.a))))) * a)),
     };
-    _ = &result;
     return result;
 }
