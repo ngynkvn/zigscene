@@ -4,7 +4,10 @@ const main = @import("main.zig");
 const audio = @import("audio.zig");
 const controls = @import("gui/controls.zig");
 const tracy = @import("tracy");
-const asF32 = @import("extras.zig").asF32;
+const cnv = @import("ext/convert.zig");
+const ffi = cnv.ffi;
+const iff = cnv.iff;
+
 const fromHSV = @import("extras.zig").fromHSV;
 
 pub const WaveFormLine = struct {
@@ -19,8 +22,8 @@ pub const WaveFormLine = struct {
     var color1 = rl.Vector3{ .x = 0, .y = 0, .z = 0.96 };
     var color2 = rl.Vector3{ .x = 100, .y = 1, .z = 0.9 };
     pub fn render(center: rl.Vector2, i: usize, v: f32) void {
-        const SPACING = asF32(main.screenWidth) / asF32(audio.curr_buffer.len);
-        const x = @as(f32, @floatFromInt(i)) * SPACING;
+        const SPACING = ffi(f32, main.screenWidth) / ffi(f32, audio.curr_buffer.len);
+        const x = ffi(f32, i) * SPACING;
         const y = -(v * amplitude);
         // "plot" x and y
         const px = x + center.x;
@@ -45,8 +48,8 @@ pub const WaveFormBar = struct {
     pub var base_h: f32 = 40;
 
     pub fn render(center: rl.Vector2, i: usize, v: f32) void {
-        const SPACING = asF32(main.screenWidth) / asF32(audio.curr_buffer.len);
-        const x = @as(f32, @floatFromInt(i)) * SPACING;
+        const SPACING = ffi(f32, main.screenWidth) / ffi(f32, audio.curr_buffer.len);
+        const x = ffi(f32, i) * SPACING;
         const y = (v * amplitude);
         const px = x;
         const c1 = fromHSV(color1);
@@ -62,8 +65,8 @@ pub const WaveFormBar = struct {
 
 pub const FFT = struct {
     pub fn render(center: rl.Vector2, i: usize, v: f32) void {
-        const SPACING = asF32(main.screenWidth) / asF32(audio.curr_buffer.len);
-        const x = @as(f32, @floatFromInt(i)) * SPACING;
+        const SPACING = ffi(f32, main.screenWidth) / ffi(f32, audio.curr_buffer.len);
+        const x = ffi(f32, i) * SPACING;
         const y = v;
         // "plot" x and y
         const px = x;
@@ -119,7 +122,7 @@ pub const Bubble = struct {
                 (effect * audio.rms_energy) +
                 (@abs(v) * effect);
 
-            const angle_rad = @as(f32, @floatFromInt(i)) * tsteps;
+            const angle_rad = ffi(f32, i) * tsteps;
             const x = @cos(angle_rad) * r;
             const y = @sin(angle_rad) * r;
 

@@ -1,8 +1,10 @@
 const std = @import("std");
 const tracy = @import("tracy");
-
 const controls = @import("gui/controls.zig");
-const asF32 = @import("extras.zig").asF32;
+
+const cnv = @import("ext/convert.zig");
+const ffi = cnv.ffi;
+const iff = cnv.iff;
 
 pub const Controls = struct {
     pub const Scalars = [_]controls.Scalar{
@@ -40,7 +42,7 @@ pub fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
     var r: f32 = 0;
     var rms: f32 = 0;
     const curr_len = n / 2;
-    const ool: f32 = 1 / @as(f32, @floatFromInt(curr_len));
+    const ool: f32 = 1 / ffi(f32, curr_len);
     for (0..curr_len) |fi| {
         l = buffer[fi * 2 + 0];
         r = buffer[fi * 2 + 1];
@@ -74,8 +76,8 @@ fn fft(values: []ComplexF32) void {
     fft(odds);
     for (0..len / 2) |i| {
         const index = ComplexF32.init(
-            @cos(-2 * std.math.pi * @as(f32, @floatFromInt(i)) / @as(f32, @floatFromInt(len))),
-            @sin(-2 * std.math.pi * @as(f32, @floatFromInt(i)) / @as(f32, @floatFromInt(len))),
+            @cos(-2 * std.math.pi * ffi(f32, i) / ffi(f32, len)),
+            @sin(-2 * std.math.pi * ffi(f32, i) / ffi(f32, len)),
         ).mul(odds[i]);
         values[i] = evens[i].add(index);
         values[i + len / 2] = evens[i].sub(index);
