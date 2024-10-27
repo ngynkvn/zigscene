@@ -8,12 +8,12 @@ const asF32 = @import("extras.zig").asF32;
 const fromHSV = @import("extras.zig").fromHSV;
 
 pub const WaveFormLine = struct {
-    pub var Scalars = [_]controls.Scalar{
-        .{ .name = "amplitude", .value = &amplitude, .range = .{ 0, 100 } },
+    pub const Scalars = [_]controls.Scalar{
+        .{ "amplitude", &amplitude, .{ 0, 100 } },
     };
-    pub var Colors = [_]controls.Color{
-        .{ .name = "color1", .hue = &color1.x },
-        .{ .name = "color2", .hue = &color2.x },
+    pub const Colors = [_]controls.Color{
+        .{ "color1", &color1.x },
+        .{ "color2", &color2.x },
     };
     pub var amplitude: f32 = 60;
     var color1 = rl.Vector3{ .x = 0, .y = 0, .z = 0.96 };
@@ -31,13 +31,13 @@ pub const WaveFormLine = struct {
 };
 
 pub const WaveFormBar = struct {
-    pub var Scalars = [_]controls.Scalar{
-        .{ .name = "amplitude", .value = &amplitude, .range = .{ 0, 100 } },
-        .{ .name = "base height", .value = &base_h, .range = .{ 0, 100 } },
+    pub const Scalars = [_]controls.Scalar{
+        .{ "amplitude", &amplitude, .{ 0, 100 } },
+        .{ "base height", &base_h, .{ 0, 100 } },
     };
-    pub var Colors = [_]controls.Color{
-        .{ .name = "color1", .hue = &color1.x },
-        .{ .name = "color2", .hue = &color2.x },
+    pub const Colors = [_]controls.Color{
+        .{ "color1", &color1.x },
+        .{ "color2", &color2.x },
     };
     var color1 = rl.Vector3{ .x = 250, .y = 1, .z = 0.94 };
     var color2 = rl.Vector3{ .x = 270, .y = 1, .z = 0.9 };
@@ -74,18 +74,23 @@ pub const FFT = struct {
 };
 
 pub const Bubble = struct {
-    pub var Scalars = [_]controls.Scalar{
-        .{ .name = "ring radius", .value = &r_ring, .range = .{ 0.1, 8 } },
-        .{ .name = "sphere radius", .value = &r_sphere, .range = .{ 0.1, 4 } },
-        .{ .name = "volume effect", .value = &effect, .range = .{ 0.1, 1 } },
-        .{ .name = "color scale", .value = &color_scale, .range = .{ 0.0, 100 } },
-        .{ .name = "bubble color fx", .value = &bubble_color_scale, .range = .{ 0.0, 100 } },
-        .{ .name = "ring height", .value = &height_ring, .range = .{ 0.0, 1 } },
+    pub const Controls = struct {
+        pub var @"ring radius" = .{ &r_ring, 0.1, 8 };
     };
-    pub var Colors = [_]controls.Color{
-        .{ .name = "color1", .hue = &color1.x },
-        .{ .name = "color2", .hue = &color2.x },
-        .{ .name = "color2", .hue = &color3.x },
+    pub const Scalars = [_]controls.Scalar{
+        // zig fmt: off
+        .{ "ring radius",     &r_ring,             .{ 0.1, 8 } },
+        .{ "sphere radius",   &r_sphere,           .{ 0.1, 4 } },
+        .{ "volume effect",   &effect,             .{ 0.1, 1 } },
+        .{ "color scale",     &color_scale,        .{ 0.0, 100 } },
+        .{ "bubble color fx", &bubble_color_scale, .{ 0.0, 100 } },
+        .{ "ring height",     &height_ring,        .{ 0.0, 1 } },
+        // zig fmt: on
+    };
+    pub const Colors = [_]controls.Color{
+        .{ "color1", &color1.x },
+        .{ "color2", &color2.x },
+        .{ "color2", &color3.x },
     };
     var color1 = rl.Vector3{ .x = 195, .y = 0.5, .z = 1 };
     var color2 = rl.Vector3{ .x = 117, .y = 1, .z = 1 };

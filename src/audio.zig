@@ -6,8 +6,8 @@ const asF32 = @import("extras.zig").asF32;
 
 pub const Controls = struct {
     pub const Scalars = [_]controls.Scalar{
-        .{ .name = "Attack", .value = &Attack, .range = .{ 0.0, 1 } },
-        .{ .name = "Release", .value = &Release, .range = .{ 0.0, 1 } },
+        .{ "Attack", &Attack, .{ 0.0, 1 } },
+        .{ "Release", &Release, .{ 0.0, 1 } },
     };
 };
 
