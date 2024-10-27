@@ -2,7 +2,7 @@ const std = @import("std");
 const tracy = @import("tracy");
 
 const controls = @import("gui/controls.zig");
-const asF32 = @import("extras.zig").asF32;
+const asF32 = @import("ext/convert.zig").asF32;
 
 pub const Controls = struct {
     pub const Scalars = [_]controls.Scalar{

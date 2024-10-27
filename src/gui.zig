@@ -49,6 +49,7 @@ pub fn frame() void {
 
             var yoff: f32 = y * 20;
             _ = rl.GuiLabel(anchor.resize(200, 8).translate(5, 40 + yoff).c(), @typeName(info));
+
             const cfg = @field(info, "Scalars");
             inline for (cfg) |optinfo| {
                 const fname = optinfo.name;

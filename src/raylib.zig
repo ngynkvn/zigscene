@@ -1,5 +1,7 @@
 const std = @import("std");
 const vector = @import("ext/vector.zig");
+pub const c = @import("raylib");
+const _cage = struct {};
 pub usingnamespace @import("raylib");
 
 const Self = @This();
