@@ -14,3 +14,7 @@ tasks:
       LATEST_RAYGUI:
         sh: curl --silent https://api.github.com/repos/raysan5/raygui/commits | jq -r .[0].sha
     silent: true
+  release-win32:
+    cmds:
+      - zig build --release=fast -Dtarget=x86_64-windows --prefix release/windows
+      - zip release/win32.zip release/windows/bin/*
