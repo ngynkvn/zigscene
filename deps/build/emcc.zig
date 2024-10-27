@@ -59,6 +59,7 @@ pub fn linkWithEmscripten(
         "-sASSERTIONS",
         "-sINITIAL_MEMORY=81264640",
         "-O3",
+        "--profiling",
         "--emrun",
     });
     return emcc_command;
