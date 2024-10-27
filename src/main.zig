@@ -8,8 +8,8 @@ const debug = @import("debug.zig");
 const options = @import("options");
 const tracy = @import("tracy");
 
-pub const defaultScreenWidth = 800;
-pub const defaultScreenHeight = 600;
+pub const defaultScreenWidth = 1024;
+pub const defaultScreenHeight = 768;
 
 pub var isFullScreen = false;
 pub var screenWidth: c_int = defaultScreenWidth;

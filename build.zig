@@ -25,6 +25,7 @@ pub fn build(b: *std.Build) !void {
         .tracy_callstack = enable_callstack,
         .tracy_allocation = enable_allocation,
     });
+    const tracy_mod = tracy.module(if (target.query.isNative()) "tracy" else "tracy-stub");
 
     const raylib = b.dependency("raylib", .{
         .target = target,
@@ -45,7 +46,7 @@ pub fn build(b: *std.Build) !void {
         const cache_include = b.pathResolve(&.{ b.sysroot.?, "cache", "sysroot", "include" });
         exe_lib.addIncludePath(.{ .cwd_relative = cache_include });
         exe_lib.root_module.addImport("raylib", raylib.module("raylib"));
-        exe_lib.root_module.addImport("tracy", tracy.module("tracy-stub"));
+        exe_lib.root_module.addImport("tracy", tracy_mod);
         const link_step = try emcc.linkWithEmscripten(b, &[_]*std.Build.Step.Compile{ exe_lib, raylib.artifact("raylib") });
         run_step.step.dependOn(&link_step.step);
     }
@@ -60,7 +61,7 @@ pub fn build(b: *std.Build) !void {
 
     b.installArtifact(exe);
     exe.root_module.addImport("raylib", raylib.module("raylib"));
-    exe.root_module.addImport("tracy", tracy.module("tracy"));
+    exe.root_module.addImport("tracy", tracy_mod);
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
     if (b.args) |args| {
