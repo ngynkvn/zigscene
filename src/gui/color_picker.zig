@@ -1,5 +1,8 @@
 const std = @import("std");
 const rl = @import("../raylib.zig");
+const cnv = @import("../ext/convert.zig");
+const iff = cnv.iff;
+const ffi = cnv.ffi;
 const Rectangle = rl.Rectangle;
 const GuiState = rl.GuiState;
 const GuiGetState = rl.GuiGetState;
@@ -17,7 +20,7 @@ const IsMouseButtonDown = rl.IsMouseButtonDown;
 const MOUSE_BUTTON_LEFT = rl.MOUSE_BUTTON_LEFT;
 //const guiControlExclusiveRec = rl.guiControlExclusiveRec;
 pub var guiControlExclusiveRec: Rectangle = Rectangle{
-    .x = @as(f32, @floatFromInt(@as(c_int, 0))),
+    .x = 0,
     .y = 0,
     .width = 0,
     .height = 0,
@@ -56,21 +59,16 @@ pub fn GuiColorBarHueH(bounds: Rectangle, text: [*c]const u8, hue: [*c]f32) c_in
             if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
                 if ((((bounds.x == guiControlExclusiveRec.x) and (bounds.y == guiControlExclusiveRec.y)) and (bounds.width == guiControlExclusiveRec.width)) and (bounds.height == guiControlExclusiveRec.height)) {
                     state = @as(c_uint, @bitCast(STATE_PRESSED));
-                    hue.* = ((mousePoint.x - bounds.x) * @as(f32, @floatFromInt(@as(c_int, 360)))) / bounds.width;
-                    if (hue.* <= 0.0) {
-                        hue.* = 0.0;
-                    }
-                    if (hue.* >= 359.0) {
-                        hue.* = 359.0;
-                    }
+                    hue.* = ((mousePoint.x - bounds.x) * 360) / bounds.width;
+                    hue.* = std.math.clamp(hue.*, 0, 359);
                 }
             } else {
-                guiControlExclusiveMode = @as(c_int, 0) != 0;
+                guiControlExclusiveMode = false;
                 guiControlExclusiveRec = Rectangle{
-                    .x = @as(f32, @floatFromInt(@as(c_int, 0))),
-                    .y = @as(f32, @floatFromInt(@as(c_int, 0))),
-                    .width = @as(f32, @floatFromInt(@as(c_int, 0))),
-                    .height = @as(f32, @floatFromInt(@as(c_int, 0))),
+                    .x = 0,
+                    .y = 0,
+                    .width = 0,
+                    .height = 0,
                 };
             }
         } else if ((@as(c_int, @intFromBool(CheckCollisionPointRec(mousePoint, bounds))) != 0) or (@as(c_int, @intFromBool(CheckCollisionPointRec(mousePoint, selector))) != 0)) {
@@ -78,7 +76,7 @@ pub fn GuiColorBarHueH(bounds: Rectangle, text: [*c]const u8, hue: [*c]f32) c_in
                 state = @as(c_uint, @bitCast(STATE_PRESSED));
                 guiControlExclusiveMode = @as(c_int, 1) != 0;
                 guiControlExclusiveRec = bounds;
-                hue.* = ((mousePoint.x - bounds.x) * @as(f32, @floatFromInt(@as(c_int, 360)))) / bounds.width;
+                hue.* = ((mousePoint.x - bounds.x) * 360) / bounds.width;
                 if (hue.* <= 0.0) {
                     hue.* = 0.0;
                 }
@@ -91,67 +89,47 @@ pub fn GuiColorBarHueH(bounds: Rectangle, text: [*c]const u8, hue: [*c]f32) c_in
         }
     }
     if (state != @as(c_uint, @bitCast(STATE_DISABLED))) {
-        DrawRectangleGradientH(@as(c_int, @intFromFloat(bounds.x)), @as(c_int, @intFromFloat(bounds.y)), @as(c_int, @intFromFloat(ceilf(bounds.width / @as(f32, @floatFromInt(@as(c_int, 6)))))), @as(c_int, @intFromFloat(bounds.height)), Fade(Color{
-            .r = 255,
-            .g = 0,
-            .b = 0,
-            .a = 255,
-        }, guiAlpha), Fade(Color{
-            .r = 255,
-            .g = 255,
-            .b = 0,
-            .a = 255,
-        }, guiAlpha));
-        DrawRectangleGradientH(@as(c_int, @intFromFloat(bounds.x + (bounds.width / @as(f32, @floatFromInt(@as(c_int, 6)))))), @as(c_int, @intFromFloat(bounds.y)), @as(c_int, @intFromFloat(ceilf(bounds.width / @as(f32, @floatFromInt(@as(c_int, 6)))))), @as(c_int, @intFromFloat(bounds.height)), Fade(Color{
-            .r = 255,
-            .g = 255,
-            .b = 0,
-            .a = 255,
-        }, guiAlpha), Fade(Color{
-            .r = 0,
-            .g = 255,
-            .b = 0,
-            .a = 255,
-        }, guiAlpha));
-        DrawRectangleGradientH(@as(c_int, @intFromFloat(bounds.x + (@as(f32, @floatFromInt(@as(c_int, 2))) * (bounds.width / @as(f32, @floatFromInt(@as(c_int, 6))))))), @as(c_int, @intFromFloat(bounds.y)), @as(c_int, @intFromFloat(ceilf(bounds.width / @as(f32, @floatFromInt(@as(c_int, 6)))))), @as(c_int, @intFromFloat(bounds.height)), Fade(Color{
-            .r = 0,
-            .g = 255,
-            .b = 0,
-            .a = 255,
-        }, guiAlpha), Fade(Color{
-            .r = 0,
-            .g = 255,
-            .b = 255,
-            .a = 255,
-        }, guiAlpha));
-        DrawRectangleGradientH(@as(c_int, @intFromFloat(bounds.x + (@as(f32, @floatFromInt(@as(c_int, 3))) * (bounds.width / @as(f32, @floatFromInt(@as(c_int, 6))))))), @as(c_int, @intFromFloat(bounds.y)), @as(c_int, @intFromFloat(ceilf(bounds.width / @as(f32, @floatFromInt(@as(c_int, 6)))))), @as(c_int, @intFromFloat(bounds.height)), Fade(Color{
-            .r = 0,
-            .g = 255,
-            .b = 255,
-            .a = 255,
-        }, guiAlpha), Fade(Color{
-            .r = 0,
-            .g = 0,
-            .b = 255,
-            .a = 255,
-        }, guiAlpha));
-        DrawRectangleGradientH(@as(c_int, @intFromFloat(bounds.x + (@as(f32, @floatFromInt(@as(c_int, 4))) * (bounds.width / @as(f32, @floatFromInt(@as(c_int, 6))))))), @as(c_int, @intFromFloat(bounds.y)), @as(c_int, @intFromFloat(ceilf(bounds.width / @as(f32, @floatFromInt(@as(c_int, 6)))))), @as(c_int, @intFromFloat(bounds.height)), Fade(Color{
-            .r = 0,
-            .g = 0,
-            .b = 255,
-            .a = 255,
-        }, guiAlpha), Fade(Color{
-            .r = 255,
-            .g = 0,
-            .b = 255,
-            .a = 255,
-        }, guiAlpha));
-        DrawRectangleGradientH(@as(c_int, @intFromFloat(bounds.x + (@as(f32, @floatFromInt(@as(c_int, 5))) * (bounds.width / @as(f32, @floatFromInt(@as(c_int, 6))))))), @as(c_int, @intFromFloat(bounds.y)), @as(c_int, @intFromFloat(bounds.width / @as(f32, @floatFromInt(@as(c_int, 6))))), @as(c_int, @intFromFloat(bounds.height)), Fade(Color{
-            .r = 255,
-            .g = 0,
-            .b = 255,
-            .a = 255,
-        }, guiAlpha), Fade(Color{ .r = 255, .g = 0, .b = 0, .a = 255 }, guiAlpha));
+        DrawRectangleGradientH(
+            iff(c_int, bounds.x),
+            iff(c_int, bounds.y),
+            iff(c_int, ceilf(bounds.width / 6)),
+            iff(c_int, bounds.height),
+            Fade(Color{ .r = 255, .g = 0, .b = 0, .a = 255 }, guiAlpha),
+            Fade(Color{ .r = 255, .g = 255, .b = 0, .a = 255 }, guiAlpha),
+        );
+        DrawRectangleGradientH(
+            iff(c_int, bounds.x + (bounds.width / 6)),
+            iff(c_int, bounds.y),
+            iff(c_int, ceilf(bounds.width / 6)),
+            iff(c_int, (bounds.height)),
+            Fade(Color{ .r = 255, .g = 255, .b = 0, .a = 255 }, guiAlpha),
+            Fade(Color{ .r = 0, .g = 255, .b = 0, .a = 255 }, guiAlpha),
+        );
+        DrawRectangleGradientH(
+            iff(c_int, (bounds.x + (@as(f32, (@as(c_int, 2))) * (bounds.width / @as(f32, (@as(c_int, 6))))))),
+            iff(c_int, (bounds.y)),
+            iff(c_int, ceilf(bounds.width / 6)),
+            iff(c_int, (bounds.height)),
+            Fade(Color{ .r = 0, .g = 255, .b = 0, .a = 255 }, guiAlpha),
+            Fade(Color{ .r = 0, .g = 255, .b = 255, .a = 255 }, guiAlpha),
+        );
+        DrawRectangleGradientH(
+            @as(c_int, @intFromFloat(bounds.x + (@as(f32, @floatFromInt(@as(c_int, 3))) * (bounds.width / @as(f32, @floatFromInt(@as(c_int, 6))))))),
+            @as(c_int, @intFromFloat(bounds.y)),
+            @as(c_int, @intFromFloat(ceilf(bounds.width / @as(f32, @floatFromInt(@as(c_int, 6)))))),
+            @as(c_int, @intFromFloat(bounds.height)),
+            Fade(Color{ .r = 0, .g = 255, .b = 255, .a = 255 }, guiAlpha),
+            Fade(Color{ .r = 0, .g = 0, .b = 255, .a = 255 }, guiAlpha),
+        );
+        DrawRectangleGradientH(
+            @as(c_int, @intFromFloat(bounds.x + (@as(f32, @floatFromInt(@as(c_int, 4))) * (bounds.width / @as(f32, @floatFromInt(@as(c_int, 6))))))),
+            @as(c_int, @intFromFloat(bounds.y)),
+            @as(c_int, @intFromFloat(ceilf(bounds.width / @as(f32, @floatFromInt(@as(c_int, 6)))))),
+            @as(c_int, @intFromFloat(bounds.height)),
+            Fade(Color{ .r = 0, .g = 0, .b = 255, .a = 255 }, guiAlpha),
+            Fade(Color{ .r = 255, .g = 0, .b = 255, .a = 255 }, guiAlpha),
+        );
+        DrawRectangleGradientH(@as(c_int, @intFromFloat(bounds.x + (@as(f32, @floatFromInt(@as(c_int, 5))) * (bounds.width / @as(f32, @floatFromInt(@as(c_int, 6))))))), @as(c_int, @intFromFloat(bounds.y)), @as(c_int, @intFromFloat(bounds.width / @as(f32, @floatFromInt(@as(c_int, 6))))), @as(c_int, @intFromFloat(bounds.height)), Fade(Color{ .r = 255, .g = 0, .b = 255, .a = 255 }, guiAlpha), Fade(Color{ .r = 255, .g = 0, .b = 0, .a = 255 }, guiAlpha));
     } else {
         DrawRectangleGradientH(@as(c_int, @intFromFloat(bounds.x)), @as(c_int, @intFromFloat(bounds.y)), @as(c_int, @intFromFloat(bounds.width)), @as(c_int, @intFromFloat(bounds.height)), Fade(Fade(GetColor(@as(c_uint, @bitCast(GuiGetStyle(COLORPICKER, BASE_COLOR_DISABLED)))), 0.10000000149011612), guiAlpha), Fade(GetColor(@as(c_uint, @bitCast(GuiGetStyle(COLORPICKER, BORDER_COLOR_DISABLED)))), guiAlpha));
     }
