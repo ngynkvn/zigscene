@@ -1,11 +1,20 @@
 const std = @import("std");
-const rl = @import("raylib.zig").c;
-const asF32 = @import("extras.zig").asF32;
 const tracy = @import("tracy");
 
+const controls = @import("gui/controls.zig");
+const asF32 = @import("extras.zig").asF32;
+
+pub const Controls = struct {
+    pub const Scalars = [_]controls.Scalar{
+        .{ .name = "Attack", .value = &Attack, .range = .{ 0.0, 1 } },
+        .{ .name = "Release", .value = &Release, .range = .{ 0.0, 1 } },
+    };
+    pub const Colors = [0]controls.Color{};
+};
+
 const N = 256;
-const Attack = 0.8;
-const Release = 0.6;
+var Attack: f32 = 0.8;
+var Release: f32 = 0.6;
 comptime {
     @setFloatMode(.optimized);
 }
