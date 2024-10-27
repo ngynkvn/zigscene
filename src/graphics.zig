@@ -74,9 +74,6 @@ pub const FFT = struct {
 };
 
 pub const Bubble = struct {
-    pub const Controls = struct {
-        pub var @"ring radius" = .{ &r_ring, 0.1, 8 };
-    };
     pub const Scalars = [_]controls.Scalar{
         // zig fmt: off
         .{ "ring radius",     &r_ring,             .{ 0.1, 8 } },

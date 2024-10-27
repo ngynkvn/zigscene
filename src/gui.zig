@@ -109,7 +109,6 @@ const Layout = struct {
         const NumFields: usize = field_count();
         const Offset: usize = 24;
         const InitialOffset = 60;
-        /// .{type, type.Scalars.len * Offset + Offset }
         pub const Groups = sv: {
             const n: usize = group_count();
             var groups: [n]struct { type, usize } = undefined;
