@@ -127,7 +127,7 @@ pub const Bubble = struct {
 
             var col = color2;
             col.x += audio.rms_energy * color_scale + @abs(v) * 30;
-            rl.DrawCubeWires(.{}, 0.1, 0.1 + @abs(v) * effect + audio.rms_energy * 0.2, 0.1, fromHSV(col));
+            rl.DrawCubeWires(.{}, 0.1, height_ring + @abs(v) * effect + audio.rms_energy * 0.2, 0.1, fromHSV(col));
 
             rl.rlTranslatef(-0.1, 0.1, 0);
             col = color3;
