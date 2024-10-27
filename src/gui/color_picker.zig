@@ -106,65 +106,103 @@ pub fn GuiColorBarHueH(bounds: Rectangle, text: [*c]const u8, hue: [*c]f32) c_in
             Fade(Color{ .r = 0, .g = 255, .b = 0, .a = 255 }, guiAlpha),
         );
         DrawRectangleGradientH(
-            iff(c_int, (bounds.x + (@as(f32, (2)) * (bounds.width / @as(f32, (6)))))),
-            iff(c_int, (bounds.y)),
+            iff(c_int, bounds.x + (2 * (bounds.width / 6))),
+            iff(c_int, bounds.y),
             iff(c_int, ceilf(bounds.width / 6)),
-            iff(c_int, (bounds.height)),
+            iff(c_int, bounds.height),
             Fade(Color{ .r = 0, .g = 255, .b = 0, .a = 255 }, guiAlpha),
             Fade(Color{ .r = 0, .g = 255, .b = 255, .a = 255 }, guiAlpha),
         );
         DrawRectangleGradientH(
-            @as(c_int, @intFromFloat(bounds.x + (@as(f32, @floatFromInt(3)) * (bounds.width / @as(f32, @floatFromInt(6)))))),
-            @as(c_int, @intFromFloat(bounds.y)),
-            @as(c_int, @intFromFloat(ceilf(bounds.width / @as(f32, @floatFromInt(6))))),
-            @as(c_int, @intFromFloat(bounds.height)),
+            iff(c_int, bounds.x + (3 * (bounds.width / 6))),
+            iff(c_int, bounds.y),
+            iff(c_int, ceilf(bounds.width / 6)),
+            iff(c_int, bounds.height),
             Fade(Color{ .r = 0, .g = 255, .b = 255, .a = 255 }, guiAlpha),
             Fade(Color{ .r = 0, .g = 0, .b = 255, .a = 255 }, guiAlpha),
         );
         DrawRectangleGradientH(
-            @as(c_int, @intFromFloat(bounds.x + (@as(f32, @floatFromInt(4)) * (bounds.width / @as(f32, @floatFromInt(6)))))),
-            @as(c_int, @intFromFloat(bounds.y)),
-            @as(c_int, @intFromFloat(ceilf(bounds.width / @as(f32, @floatFromInt(6))))),
-            @as(c_int, @intFromFloat(bounds.height)),
+            iff(c_int, bounds.x + (4 * (bounds.width / 6))),
+            iff(c_int, bounds.y),
+            iff(c_int, ceilf(bounds.width / 6)),
+            iff(c_int, bounds.height),
             Fade(Color{ .r = 0, .g = 0, .b = 255, .a = 255 }, guiAlpha),
             Fade(Color{ .r = 255, .g = 0, .b = 255, .a = 255 }, guiAlpha),
         );
-        DrawRectangleGradientH(@as(c_int, @intFromFloat(bounds.x + (@as(f32, @floatFromInt(5)) * (bounds.width / @as(f32, @floatFromInt(6)))))), @as(c_int, @intFromFloat(bounds.y)), @as(c_int, @intFromFloat(bounds.width / @as(f32, @floatFromInt(6)))), @as(c_int, @intFromFloat(bounds.height)), Fade(Color{ .r = 255, .g = 0, .b = 255, .a = 255 }, guiAlpha), Fade(Color{ .r = 255, .g = 0, .b = 0, .a = 255 }, guiAlpha));
+        DrawRectangleGradientH(
+            iff(c_int, bounds.x + (5 * (bounds.width / 6))),
+            iff(c_int, bounds.y),
+            iff(c_int, bounds.width / 6),
+            iff(c_int, bounds.height),
+            Fade(Color{ .r = 255, .g = 0, .b = 255, .a = 255 }, guiAlpha),
+            Fade(Color{ .r = 255, .g = 0, .b = 0, .a = 255 }, guiAlpha),
+        );
     } else {
-        DrawRectangleGradientH(@as(c_int, @intFromFloat(bounds.x)), @as(c_int, @intFromFloat(bounds.y)), @as(c_int, @intFromFloat(bounds.width)), @as(c_int, @intFromFloat(bounds.height)), Fade(Fade(GetColor(@as(c_uint, @bitCast(GuiGetStyle(COLORPICKER, BASE_COLOR_DISABLED)))), 0.10000000149011612), guiAlpha), Fade(GetColor(@as(c_uint, @bitCast(GuiGetStyle(COLORPICKER, BORDER_COLOR_DISABLED)))), guiAlpha));
+        DrawRectangleGradientH(
+            iff(c_int, bounds.x),
+            iff(c_int, bounds.y),
+            iff(c_int, bounds.width),
+            iff(c_int, bounds.height),
+            Fade(Fade(GetColor(@intCast(GuiGetStyle(COLORPICKER, BASE_COLOR_DISABLED))), 0.1), guiAlpha),
+            Fade(GetColor(@intCast(GuiGetStyle(COLORPICKER, BORDER_COLOR_DISABLED))), guiAlpha),
+        );
     }
     GuiDrawRectangle(
         bounds,
         GuiGetStyle(COLORPICKER, BORDER_WIDTH),
-        GetColor(@as(c_uint, @bitCast(GuiGetStyle(COLORPICKER, @as(c_int, @bitCast(@as(c_uint, @bitCast(BORDER)) +% (state *% @as(c_uint, 3)))))))),
+        GetColor(@bitCast(GuiGetStyle(COLORPICKER, BORDER + @as(c_int, @intCast(state)) * 3))),
         Color{ .r = 0, .g = 0, .b = 0, .a = 0 },
     );
     GuiDrawRectangle(
         selector,
         0,
         Color{ .r = 0, .g = 0, .b = 0, .a = 0 },
-        GetColor(@as(c_uint, @bitCast(GuiGetStyle(COLORPICKER, @as(c_int, @bitCast(@as(c_uint, @bitCast(BORDER)) +% (state *% @as(c_uint, 3)))))))),
+        GetColor(@bitCast(GuiGetStyle(COLORPICKER, BORDER + @as(c_int, @bitCast(state)) * 3))),
     );
     return result;
 }
 pub fn GuiDrawRectangle(rec: Rectangle, borderWidth: c_int, borderColor: Color, color: Color) callconv(.c) void {
-    if (@as(c_int, @bitCast(@as(c_uint, color.a))) > 0) {
-        DrawRectangle(@as(c_int, @intFromFloat(rec.x)), @as(c_int, @intFromFloat(rec.y)), @as(c_int, @intFromFloat(rec.width)), @as(c_int, @intFromFloat(rec.height)), GuiFade(color, guiAlpha));
+    if (color.a > 0) {
+        DrawRectangle(
+            iff(c_int, rec.x),
+            iff(c_int, rec.y),
+            iff(c_int, rec.width),
+            iff(c_int, rec.height),
+            GuiFade(color, guiAlpha),
+        );
     }
     if (borderWidth > 0) {
-        DrawRectangle(@as(c_int, @intFromFloat(rec.x)), @as(c_int, @intFromFloat(rec.y)), @as(c_int, @intFromFloat(rec.width)), borderWidth, GuiFade(borderColor, guiAlpha));
-        DrawRectangle(@as(c_int, @intFromFloat(rec.x)), @as(c_int, @intFromFloat(rec.y)) + borderWidth, borderWidth, @as(c_int, @intFromFloat(rec.height)) - (2 * borderWidth), GuiFade(borderColor, guiAlpha));
-        DrawRectangle((@as(c_int, @intFromFloat(rec.x)) + @as(c_int, @intFromFloat(rec.width))) - borderWidth, @as(c_int, @intFromFloat(rec.y)) + borderWidth, borderWidth, @as(c_int, @intFromFloat(rec.height)) - (2 * borderWidth), GuiFade(borderColor, guiAlpha));
-        DrawRectangle(@as(c_int, @intFromFloat(rec.x)), (@as(c_int, @intFromFloat(rec.y)) + @as(c_int, @intFromFloat(rec.height))) - borderWidth, @as(c_int, @intFromFloat(rec.width)), borderWidth, GuiFade(borderColor, guiAlpha));
+        DrawRectangle(
+            iff(c_int, rec.x),
+            iff(c_int, rec.y),
+            iff(c_int, rec.width),
+            borderWidth,
+            GuiFade(borderColor, guiAlpha),
+        );
+        DrawRectangle(
+            iff(c_int, rec.x),
+            iff(c_int, rec.y) + borderWidth,
+            borderWidth,
+            iff(c_int, rec.height) - (2 * borderWidth),
+            GuiFade(borderColor, guiAlpha),
+        );
+        DrawRectangle(
+            iff(c_int, rec.x + rec.width) - borderWidth,
+            iff(c_int, rec.y) + borderWidth,
+            borderWidth,
+            iff(c_int, rec.height) - (2 * borderWidth),
+            GuiFade(borderColor, guiAlpha),
+        );
+        DrawRectangle(
+            iff(c_int, rec.x),
+            iff(c_int, rec.y + rec.height) - borderWidth,
+            iff(c_int, rec.width),
+            borderWidth,
+            GuiFade(borderColor, guiAlpha),
+        );
     }
 }
 pub fn GuiFade(color: Color, alpha: f32) callconv(.c) Color {
     const a = std.math.clamp(alpha, 0, 1);
-    const result: Color = Color{
-        .r = color.r,
-        .g = color.g,
-        .b = color.b,
-        .a = @as(u8, @intFromFloat(@as(f32, @floatFromInt(color.a)) * a)),
-    };
-    return result;
+    return Color{ .r = color.r, .g = color.g, .b = color.b, .a = iff(u8, ffi(f32, color.a) * a) };
 }
