@@ -4,8 +4,8 @@ const asF32 = @import("extras.zig").asF32;
 const tracy = @import("tracy");
 
 const N = 256;
-const Attack = 0.95;
-const Release = 0.9;
+const Attack = 0.9;
+const Release = 0.8;
 comptime {
     @setFloatMode(.optimized);
 }
