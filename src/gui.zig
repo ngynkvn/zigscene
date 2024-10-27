@@ -54,9 +54,9 @@ pub fn frame() void {
     } else if (active_menu.color) {
         const anchor = base.translate(2, 20).resize(200, 700);
         const panel_size = 90;
-        const panel_spacing = 40;
-        const panel = anchor.resize(16, panel_size);
-        _ = rl.GuiPanel(anchor.into(), "Colors");
+        const panel_spacing = 20;
+        const panel = anchor.resize(panel_size, 8);
+        _ = rl.GuiPanel(anchor.c(), "Colors");
 
         comptime var yoff: f32 = 0;
         inline for (&Tuners) |info| {
@@ -64,14 +64,15 @@ pub fn frame() void {
 
             const cfg = @field(info, "Colors");
             comptime var i: usize = 0;
-            _ = rl.GuiLabel(anchor.resize(200, 8).translate(5, 40 + yoff).into(), @typeName(info));
-            yoff += 20;
+            _ = rl.GuiLabel(anchor.resize(200, 8).translate(5, 40 + yoff).c(), @typeName(info));
             inline for (cfg) |optinfo| {
-                const fname, const fval = optinfo;
-                _ = rl.GuiColorBarHue(panel.translate(40 + panel_spacing * (i % 3), 40 + yoff).into(), fname.ptr, fval);
+                yoff += panel_spacing;
+                const fname = optinfo.name;
+                const fval: *f32 = optinfo.hue;
+                _ = rl.GuiColorBarHueH(panel.translate(40, 40 + yoff).c(), fname.ptr, fval);
                 i += 1;
             }
-            yoff += 100;
+            yoff += panel_spacing;
         }
     }
 }

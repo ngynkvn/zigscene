@@ -1,5 +1,10 @@
 const std = @import("std");
+const colorPicker = @import("gui/color_picker.zig");
 pub usingnamespace @import("raylib");
+
+pub usingnamespace struct {
+    pub const GuiColorBarHueH = colorPicker.GuiColorBarHueH;
+};
 
 const Self = @This();
 
