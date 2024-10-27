@@ -7,16 +7,14 @@ const controls = @import("gui/controls.zig");
 
 const Rectangle = @import("ext/structs.zig").Rectangle;
 
-const active_menu = struct {
-    var scalar: bool = true;
-    var color: bool = true;
-};
 var Tuners = .{
     graphics.WaveFormLine,
     graphics.WaveFormBar,
     graphics.Bubble,
     audio.Controls,
 };
+const Tab = enum(c_int) { scalar, color };
+var active_tab: Tab = .scalar;
 /// M is intended as a private namespace for the gui,
 /// This is where all comptime info will go
 const M = struct {
@@ -33,14 +31,10 @@ const M = struct {
 
 pub fn frame() void {
     const base = Layout.Base;
-    const a = rl.GuiToggle(base.translate(0, 0).into(), std.fmt.comptimePrint("#{}#", .{rl.ICON_FX}), &active_menu.scalar);
-    if (a != 0) {
-        std.debug.print("{}\n", .{a});
-    }
-    const b = rl.GuiToggle(base.translate(base.width, 0).into(), std.fmt.comptimePrint("#{}#", .{rl.ICON_COLOR_PICKER}), &active_menu.color);
-    if (b != 0) {
-        std.debug.print("{}\n", .{b});
-    }
+    const grouptxt = std.fmt.comptimePrint("#{}#;#{}#", .{ rl.ICON_FX, rl.ICON_COLOR_PICKER });
+    _ = rl.GuiToggleGroup(base.c(), grouptxt, @ptrCast(&active_tab));
+    // _ = rl.GuiToggle(base.translate(0, 0).into(), std.fmt.comptimePrint("#{}#", .{rl.ICON_FX}), &active_menu.scalar);
+    // _ = rl.GuiToggle(base.translate(base.width, 0).into(), std.fmt.comptimePrint("#{}#", .{rl.ICON_COLOR_PICKER}), &active_menu.color);
     const mtp = music.GetMusicTimePlayed();
     const mtl = music.GetMusicTimeLength();
     if (music.IsMusicStreamPlaying()) {
@@ -49,27 +43,27 @@ pub fn frame() void {
     }
     _ = rl.GuiStatusBar(base.translate(base.width * 2 + 5, 0).resize(800, base.height).into(), M.txt.ptr);
 
-    if (active_menu.scalar) {
+    if (active_tab == .scalar) {
         Layout.Scalars.draw();
-    } else if (active_menu.color) {
+    } else if (active_tab == .color) {
         const anchor = base.translate(2, 20).resize(200, 700);
-        const panel_size = 90;
-        const panel_spacing = 20;
-        const panel = anchor.resize(panel_size, 8);
+        const slider_w = 120;
+        const offset = 24;
+        const panel = anchor.resize(slider_w, 16);
         _ = rl.GuiPanel(anchor.c(), "Colors");
 
-        comptime var yoff: f32 = 0;
+        comptime var yoff: f32 = 32;
         inline for (&Tuners) |info| {
             if (!@hasDecl(info, "Colors")) continue;
 
             const cfg = @field(info, "Colors");
             comptime var i: usize = 0;
-            _ = rl.GuiLabel(anchor.resize(200, 8).translate(5, 40 + yoff).c(), @typeName(info));
+            _ = rl.GuiLabel(anchor.resize(200, 8).translate(5, yoff).c(), @typeName(info));
             inline for (cfg) |optinfo| {
-                yoff += panel_spacing;
                 const fname = optinfo.name;
                 const fval: *f32 = optinfo.hue;
-                _ = rl.GuiColorBarHueH(panel.translate(40, 40 + yoff).c(), fname.ptr, fval);
+                _ = rl.GuiColorBarHueH(panel.translate(40, offset + yoff).c(), fname.ptr, fval);
+                yoff += offset;
                 i += 1;
             }
             yoff += panel_spacing;

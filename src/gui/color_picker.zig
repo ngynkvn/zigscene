@@ -23,7 +23,6 @@ pub var guiControlExclusiveRec: Rectangle = Rectangle{ .x = 0, .y = 0, .width = 
 
 const ffi = cnv.ffi;
 const iff = cnv.iff;
-const ceilf = std.math.ceil;
 
 const CheckCollisionPointRec = rl.CheckCollisionPointRec;
 const DrawRectangle = rl.DrawRectangle;
@@ -79,55 +78,26 @@ pub fn GuiColorBarHueH(bounds: Rectangle, text: [*c]const u8, hue: [*c]f32) c_in
             }
         }
     }
+    const HUE_GRADIENTS = [_]struct { Color, Color }{
+        .{ rgb(255, 0, 0), rgb(255, 255, 0) },
+        .{ rgb(255, 255, 0), rgb(0, 255, 0) },
+        .{ rgb(0, 255, 0), rgb(0, 255, 255) },
+        .{ rgb(0, 255, 255), rgb(0, 0, 255) },
+        .{ rgb(0, 0, 255), rgb(255, 0, 255) },
+        .{ rgb(255, 0, 255), rgb(255, 0, 0) },
+    };
     if (state != STATE_DISABLED) {
-        DrawRectangleGradientH(
-            iff(c_int, bounds.x),
-            iff(c_int, bounds.y),
-            iff(c_int, ceilf(bounds.width / 6)),
-            iff(c_int, bounds.height),
-            Fade(Color{ .r = 255, .g = 0, .b = 0, .a = 255 }, guiAlpha),
-            Fade(Color{ .r = 255, .g = 255, .b = 0, .a = 255 }, guiAlpha),
-        );
-        DrawRectangleGradientH(
-            iff(c_int, bounds.x + (bounds.width / 6)),
-            iff(c_int, bounds.y),
-            iff(c_int, ceilf(bounds.width / 6)),
-            iff(c_int, (bounds.height)),
-            Fade(Color{ .r = 255, .g = 255, .b = 0, .a = 255 }, guiAlpha),
-            Fade(Color{ .r = 0, .g = 255, .b = 0, .a = 255 }, guiAlpha),
-        );
-        DrawRectangleGradientH(
-            iff(c_int, bounds.x + (2 * (bounds.width / 6))),
-            iff(c_int, bounds.y),
-            iff(c_int, ceilf(bounds.width / 6)),
-            iff(c_int, bounds.height),
-            Fade(Color{ .r = 0, .g = 255, .b = 0, .a = 255 }, guiAlpha),
-            Fade(Color{ .r = 0, .g = 255, .b = 255, .a = 255 }, guiAlpha),
-        );
-        DrawRectangleGradientH(
-            iff(c_int, bounds.x + (3 * (bounds.width / 6))),
-            iff(c_int, bounds.y),
-            iff(c_int, ceilf(bounds.width / 6)),
-            iff(c_int, bounds.height),
-            Fade(Color{ .r = 0, .g = 255, .b = 255, .a = 255 }, guiAlpha),
-            Fade(Color{ .r = 0, .g = 0, .b = 255, .a = 255 }, guiAlpha),
-        );
-        DrawRectangleGradientH(
-            iff(c_int, bounds.x + (4 * (bounds.width / 6))),
-            iff(c_int, bounds.y),
-            iff(c_int, ceilf(bounds.width / 6)),
-            iff(c_int, bounds.height),
-            Fade(Color{ .r = 0, .g = 0, .b = 255, .a = 255 }, guiAlpha),
-            Fade(Color{ .r = 255, .g = 0, .b = 255, .a = 255 }, guiAlpha),
-        );
-        DrawRectangleGradientH(
-            iff(c_int, bounds.x + (5 * (bounds.width / 6))),
-            iff(c_int, bounds.y),
-            iff(c_int, bounds.width / 6),
-            iff(c_int, bounds.height),
-            Fade(Color{ .r = 255, .g = 0, .b = 255, .a = 255 }, guiAlpha),
-            Fade(Color{ .r = 255, .g = 0, .b = 0, .a = 255 }, guiAlpha),
-        );
+        const seg_w = @ceil(bounds.width / 6);
+        inline for (HUE_GRADIENTS, 0..) |hg, i| {
+            const start, const end = hg;
+            rl.DrawRectangleGradientEx(
+                .{ .x = bounds.x + (i * bounds.width / HUE_GRADIENTS.len), .y = bounds.y, .width = seg_w, .height = bounds.height },
+                Fade(start, guiAlpha),
+                Fade(start, guiAlpha),
+                Fade(end, guiAlpha),
+                Fade(end, guiAlpha),
+            );
+        }
     } else {
         DrawRectangleGradientH(
             iff(c_int, bounds.x),
@@ -152,6 +122,7 @@ pub fn GuiColorBarHueH(bounds: Rectangle, text: [*c]const u8, hue: [*c]f32) c_in
     );
     return 0;
 }
+
 pub fn GuiDrawRectangle(rec: Rectangle, borderWidth: c_int, borderColor: Color, color: Color) callconv(.c) void {
     if (color.a > 0) {
         DrawRectangle(
@@ -198,4 +169,7 @@ pub fn GuiDrawRectangle(rec: Rectangle, borderWidth: c_int, borderColor: Color, 
 pub fn GuiFade(color: Color, alpha: f32) callconv(.c) Color {
     const a = std.math.clamp(alpha, 0, 1);
     return Color{ .r = color.r, .g = color.g, .b = color.b, .a = iff(u8, ffi(f32, color.a) * a) };
+}
+fn rgb(r: u8, g: u8, b: u8) Color {
+    return Color{ .r = r, .g = g, .b = b, .a = 255 };
 }
