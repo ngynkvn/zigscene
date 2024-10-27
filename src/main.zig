@@ -30,7 +30,7 @@ pub fn main() !void {
     defer rl.CloseAudioDevice();
 
     rl.GuiSetAlpha(0.8);
-    rl.GuiLoadStyleDark();
+    rl.RayguiDark();
     //try music.startMusic("./sounds/willix.mp3");
 
     var rot_offset: f32 = 0.0;
