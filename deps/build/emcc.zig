@@ -82,7 +82,10 @@ pub fn emscriptenRunStep(b: *std.Build) !*std.Build.Step.Run {
     const run_cmd = b.addSystemCommand(&[_][]const u8{ emrun_run_arg, emccOutputDir ++ emccOutputFile });
     return run_cmd;
 }
-pub const Options = struct { lib: *std.Build.Step.Compile, target: std.Build.ResolvedTarget, optimize: std.builtin.Mode };
+pub const Options = struct {
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.Mode,
+};
 
 pub fn addStepWeb(b: *std.Build, o: Options) !void {
     const run_option = b.step("web", "Build and run for web");
@@ -90,6 +93,13 @@ pub fn addStepWeb(b: *std.Build, o: Options) !void {
 
     const run_step = try emscriptenRunStep(b);
     run_option.dependOn(&run_step.step);
+
+    const raylib = b.dependency("raylib", .{
+        .target = o.target,
+        .optimize = o.optimize,
+    });
+    const libraylib = raylib.artifact("raylib");
+
     const exe_lib = b.addStaticLibrary(.{
         .name = "zigscene",
         .root_source_file = b.path("src/main.zig"),
@@ -102,8 +112,9 @@ pub fn addStepWeb(b: *std.Build, o: Options) !void {
 
     // Note that raylib itself isn't actually added to the exe_lib
     // output file, so it also needs to be linked with emscripten.
-    exe_lib.linkLibrary(o.lib);
-    const link_step = try linkWithEmscripten(b, &[_]*std.Build.Step.Compile{ exe_lib, o.lib });
+    exe_lib.root_module.addImport("raylib", raylib.module("raylib"));
+
+    const link_step = try linkWithEmscripten(b, &[_]*std.Build.Step.Compile{ exe_lib, libraylib });
 
     run_step.step.dependOn(&link_step.step);
 }

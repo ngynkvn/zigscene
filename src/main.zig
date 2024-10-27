@@ -5,8 +5,10 @@ const audio = @import("audio.zig");
 const graphics = @import("graphics.zig");
 const gui = @import("gui.zig");
 const debug = @import("debug.zig");
+const options = @import("options");
+const tracy = @import("tracy");
 
-pub const defaultScreenWidth = 1200;
+pub const defaultScreenWidth = 900;
 pub const defaultScreenHeight = 800;
 
 pub var isFullScreen = false;
@@ -28,7 +30,7 @@ pub fn main() !void {
     defer rl.CloseAudioDevice();
 
     rl.GuiSetAlpha(0.8);
-    rl.GuiLoadStyleDark();
+    rl.RayguiDark();
     //try music.startMusic("./sounds/willix.mp3");
 
     var rot_offset: f32 = 0.0;
@@ -43,9 +45,10 @@ pub fn main() !void {
     };
     rl.SetTargetFPS(90);
 
-    // Main game loop
+    // Main loop
     // Detects window close button or ESC key
     while (!rl.WindowShouldClose()) {
+        defer tracy.frameMarkNamed("zigscene");
         if (rl.IsFileDropped()) {
             try music.handleFile();
         }
@@ -95,24 +98,26 @@ pub fn main() !void {
         {
             rl.BeginDrawing();
             defer rl.EndDrawing();
-            const center = rl.GetWorldToScreen(.{ .x = 0, .y = 0 }, camera3d);
+            const ctx = tracy.traceNamed(@src(), "Renders");
+            defer ctx.end();
 
+            const center = rl.GetWorldToScreen(.{ .x = 0, .y = 0 }, camera3d);
             debug.render();
 
             rl.ClearBackground(rl.BLACK);
             // Drawing
-            const mtp = music.GetMusicTimePlayed();
-            graphics.Bubble.render(camera3d, rot_offset, mtp, t);
+            graphics.Bubble.render(camera3d, rot_offset, t);
+            const ctx_2d = tracy.traceNamed(@src(), "2d");
             for (audio.curr_buffer, audio.curr_fft, 0..) |v, fv, i| {
                 graphics.WaveFormLine.render(.{ .y = center.y - 80 }, i, v);
                 graphics.WaveFormBar.render(center, i, v);
                 graphics.WaveFormLine.render(.{ .y = center.y * 2 }, i, fv.magnitude() * 0.15);
                 graphics.FFT.render(center, i, fv.magnitude());
-                //graphics.draw_bubbles(center, i, v, t);
             }
+            ctx_2d.end();
+            gui.frame();
             t += rl.GetFrameTime();
         }
-        gui.frame();
     }
 }
 
