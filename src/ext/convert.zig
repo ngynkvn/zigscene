@@ -1,5 +1,9 @@
 const rl = @import("../raylib.zig");
 
+pub fn asF32(v: anytype) f32 {
+    return @floatFromInt(v);
+}
+
 // @floatFromInt shortcut
 pub inline fn ffi(T: type, x: anytype) T {
     return @as(T, @floatFromInt(x));

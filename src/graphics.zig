@@ -1,4 +1,5 @@
 const std = @import("std");
+
 const rl = @import("raylib.zig");
 const main = @import("main.zig");
 const audio = @import("audio.zig");
@@ -7,8 +8,9 @@ const tracy = @import("tracy");
 const cnv = @import("ext/convert.zig");
 const ffi = cnv.ffi;
 const iff = cnv.iff;
-
-const fromHSV = @import("extras.zig").fromHSV;
+const hsv = @import("ext/color.zig").Color.hsv.vec3;
+const Color = @import("ext/color.zig").Color;
+const Vector3 = @import("ext/vector.zig").Vector3;
 
 pub const WaveFormLine = struct {
     pub const Scalars = [_]controls.Scalar{
@@ -19,8 +21,8 @@ pub const WaveFormLine = struct {
         .{ "color2", &color2.x },
     };
     pub var amplitude: f32 = 60;
-    var color1 = rl.Vector3{ .x = 0, .y = 0, .z = 0.96 };
-    var color2 = rl.Vector3{ .x = 100, .y = 1, .z = 0.9 };
+    var color1 = Vector3{ .x = 0, .y = 0, .z = 0.96 };
+    var color2 = Vector3{ .x = 100, .y = 1, .z = 0.9 };
     pub fn render(center: rl.Vector2, i: usize, v: f32) void {
         const SPACING = ffi(f32, main.screenWidth) / ffi(f32, audio.curr_buffer.len);
         const x = ffi(f32, i) * SPACING;
@@ -28,8 +30,8 @@ pub const WaveFormLine = struct {
         // "plot" x and y
         const px = x + center.x;
         const py = y + center.y;
-        rl.DrawRectangleRec(.{ .x = px, .y = py, .width = 1, .height = 2 }, fromHSV(color1));
-        rl.DrawRectangleRec(.{ .x = px, .y = py + 12, .width = 2, .height = 1 }, fromHSV(color2));
+        rl.DrawRectangleRec(.{ .x = px, .y = py, .width = 1, .height = 2 }, hsv(color1).into());
+        rl.DrawRectangleRec(.{ .x = px, .y = py + 12, .width = 2, .height = 1 }, hsv(color2).into());
     }
 };
 
@@ -42,8 +44,8 @@ pub const WaveFormBar = struct {
         .{ "color1", &color1.x },
         .{ "color2", &color2.x },
     };
-    var color1 = rl.Vector3{ .x = 250, .y = 1, .z = 0.94 };
-    var color2 = rl.Vector3{ .x = 270, .y = 1, .z = 0.9 };
+    var color1 = Vector3{ .x = 250, .y = 1, .z = 0.94 };
+    var color2 = Vector3{ .x = 270, .y = 1, .z = 0.9 };
     pub var amplitude: f32 = 80;
     pub var base_h: f32 = 40;
 
@@ -52,8 +54,8 @@ pub const WaveFormBar = struct {
         const x = ffi(f32, i) * SPACING;
         const y = (v * amplitude);
         const px = x;
-        const c1 = fromHSV(color1);
-        const c2 = fromHSV(color2);
+        const c1 = hsv(color1).into();
+        const c2 = hsv(color2).into();
         rl.DrawRectangleGradientEx(.{
             .x = px,
             .y = center.y * 2 - y - base_h,
@@ -92,9 +94,9 @@ pub const Bubble = struct {
         .{ "color2", &color2.x },
         .{ "color2", &color3.x },
     };
-    var color1 = rl.Vector3{ .x = 195, .y = 0.5, .z = 1 };
-    var color2 = rl.Vector3{ .x = 117, .y = 1, .z = 1 };
-    var color3 = rl.Vector3{ .x = 132, .y = 1, .z = 0.9 };
+    var color1 = Vector3{ .x = 195, .y = 0.5, .z = 1 };
+    var color2 = Vector3{ .x = 117, .y = 1, .z = 1 };
+    var color3 = Vector3{ .x = 132, .y = 1, .z = 0.9 };
     // Radii
     pub var r_ring: f32 = 4;
     pub var r_sphere: f32 = 3;
@@ -111,7 +113,7 @@ pub const Bubble = struct {
             rl.rlRotatef(t * 32, 1, 1, 1);
             var col = color1;
             col.x += audio.rms_energy * bubble_color_scale;
-            rl.DrawSphereWires(.{}, r_sphere + audio.rms_energy * effect, 10, 10, fromHSV(col));
+            rl.DrawSphereWires(.{}, r_sphere + audio.rms_energy * effect, 10, 10, hsv(col).into());
             rl.rlPopMatrix();
         }
         rl.rlPushMatrix();
@@ -132,12 +134,12 @@ pub const Bubble = struct {
 
             var col = color2;
             col.x += audio.rms_energy * color_scale + @abs(v) * 30;
-            rl.DrawCubeWires(.{}, 0.1, height_ring + @abs(v) * effect + audio.rms_energy * 0.2, 0.1, fromHSV(col));
+            rl.DrawCubeWires(.{}, 0.1, height_ring + @abs(v) * effect + audio.rms_energy * 0.2, 0.1, hsv(col).into());
 
             rl.rlTranslatef(-0.1, 0.1, 0);
             col = color3;
             col.x += audio.rms_energy * 10 + @abs(v) * 20;
-            rl.DrawCubeWires(.{}, 0.03, 0.03, 0.03, fromHSV(col));
+            rl.DrawCubeWires(.{}, 0.03, 0.03, 0.03, hsv(col).into());
 
             rl.rlPopMatrix();
         }

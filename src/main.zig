@@ -123,4 +123,5 @@ pub fn main() !void {
 
 test "root" {
     std.testing.refAllDecls(@This());
+    _ = @import("ext/color.zig");
 }
