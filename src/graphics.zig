@@ -21,8 +21,8 @@ pub const WaveFormLine = struct {
         .{ "color2", &color2.x },
     };
     pub var amplitude: f32 = 80;
-    var color1 = rl.Vector3{ .x = 0, .y = 0, .z = 0.96 };
-    var color2 = rl.Vector3{ .x = 100, .y = 1, .z = 0.9 };
+    var color1 = Vector3{ .x = 0, .y = 0, .z = 0.96 };
+    var color2 = Vector3{ .x = 100, .y = 1, .z = 0.9 };
     pub fn render(center: rl.Vector2, i: usize, v: f32) void {
         const SPACING = ffi(f32, main.screenWidth) / ffi(f32, audio.curr_buffer.len);
         const x = ffi(f32, i) * SPACING;
@@ -101,7 +101,7 @@ pub const Bubble = struct {
     pub var r_ring: f32 = 4;
     pub var r_sphere: f32 = 3;
     pub var height_ring: f32 = 0.1;
-    pub var effect: f32 = 0.5;
+    pub var effect: f32 = 2;
     pub var color_scale: f32 = 45;
     pub var bubble_color_scale: f32 = 30;
     pub fn render(camera3d: rl.Camera3D, rot_offset: f32, t: f32) void {
@@ -119,7 +119,10 @@ pub const Bubble = struct {
         rl.rlPushMatrix();
         rl.rlRotatef(t * 32, 0.2, 0.2, 1);
         const tsteps = 2 * std.math.pi / @as(f32, @floatFromInt(audio.curr_buffer.len));
-        for (audio.curr_buffer, 0..) |v, i| {
+            var it = std.mem.window(f32, &audio.ringbuffer, 256, 128);
+            while (it.next()) |w| {
+                for (w, audio.bi..) |v, bi| {
+            const i = bi % w.len;
             const r = r_ring +
                 (effect * audio.rms_energy) +
                 (@abs(v) * effect);
@@ -143,6 +146,7 @@ pub const Bubble = struct {
 
             rl.rlPopMatrix();
         }
+    }
         rl.rlPopMatrix();
     }
 };

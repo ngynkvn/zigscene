@@ -111,13 +111,18 @@ pub fn main() !void {
             var it = std.mem.window(f32, &audio.ringbuffer, 256, 128);
             while (it.next()) |w| {
                 for (w, audio.bi..) |v, bi| {
+                    const i = bi % w.len;
                     graphics.WaveFormLine.render(.{ .y = center.y - 80 }, i, v);
                     graphics.WaveFormBar.render(center, i, v);
                 }
             }
-            for (audio.curr_buffer, audio.curr_fft, 0..) |v, fv, i| {
-                graphics.WaveFormLine.render(.{ .y = center.y * 2 }, i, fv.magnitude() * 0.15);
-                graphics.FFT.render(center, i, fv.magnitude());
+            var fit = std.mem.window(std.math.Complex(f32), audio.curr_fft, 256, 128);
+            while (fit.next()) |w| {
+                for (w, audio.bi..) |fv, bi| {
+                    const i = bi % w.len;
+                    graphics.WaveFormLine.render(.{ .y = center.y * 2 }, i, fv.magnitude() * 0.15);
+                    graphics.FFT.render(center, i, fv.magnitude());
+                }
             }
             ctx_2d.end();
             gui.frame();

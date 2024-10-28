@@ -54,7 +54,7 @@ pub fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
         const x = (l + r) * 0.5;
         ringbuffer[bi % (N * multiple)] =
             (Attack * x) +
-            (Release * audio_buffer[fi]);
+            (Release * ringbuffer[bi % (N * multiple)]);
         bi += 1;
 
         fft_buffer[fi] = ComplexF32.init(l + r, 0);
