@@ -23,6 +23,7 @@ pub var guiControlExclusiveRec: Rectangle = Rectangle{ .x = 0, .y = 0, .width = 
 
 const ffi = cnv.ffi;
 const iff = cnv.iff;
+const rgb = cnv.rgb;
 
 const CheckCollisionPointRec = rl.CheckCollisionPointRec;
 const DrawRectangle = rl.DrawRectangle;
@@ -137,7 +138,4 @@ pub fn GuiDrawRectangle(rec: Rectangle, borderWidth: c_int, borderColor: Color, 
 pub fn GuiFade(color: Color, alpha: f32) Color {
     const a = std.math.clamp(alpha, 0, 1);
     return .{ .r = color.r, .g = color.g, .b = color.b, .a = iff(u8, ffi(f32, color.a) * a) };
-}
-fn rgb(r: u8, g: u8, b: u8) Color {
-    return .{ .r = r, .g = g, .b = b, .a = 255 };
 }
