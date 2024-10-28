@@ -17,6 +17,9 @@ pub var screenHeight: c_int = defaultScreenHeight;
 
 const APP_NAME = "zigscene";
 
+var pressed: bool = false;
+var prevValue: f32 = 0;
+
 pub fn main() !void {
     var t: f32 = 0.0;
 
@@ -61,6 +64,14 @@ pub fn main() !void {
                 rl.CAMERA_ORTHOGRAPHIC => rl.CAMERA_PERSPECTIVE,
                 else => unreachable,
             };
+        }
+        if (!pressed and rl.isKeyDown(.SPACE)) {
+            // :)
+            pressed = true;
+            prevValue = audio.Release;
+            audio.Release = 1.0;
+        } else if (pressed and rl.IsKeyUp(.SPACE)) {
+            audio.Release = prevValue;
         }
         if (rl.isKeyPressed(.F)) {
             if (rl.IsWindowState(rl.FLAG_BORDERLESS_WINDOWED_MODE)) {
