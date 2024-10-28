@@ -13,7 +13,7 @@ var Tuners = .{
     graphics.Bubble,
     audio.Controls,
 };
-const Tab = enum(c_int) { scalar, color };
+const Tab = enum(c_int) { none, scalar, color };
 var active_tab: Tab = .scalar;
 /// M is intended as a private namespace for the gui,
 /// This is where all comptime info will go
@@ -31,7 +31,7 @@ const M = struct {
 
 pub fn frame() void {
     const base = Layout.Base;
-    const grouptxt = std.fmt.comptimePrint("#{}#;#{}#", .{ rl.ICON_FX, rl.ICON_COLOR_PICKER });
+    const grouptxt = std.fmt.comptimePrint("#{}#;#{}#;#{}#", .{ rl.ICON_ARROW_LEFT, rl.ICON_FX, rl.ICON_COLOR_PICKER });
     _ = rl.GuiToggleGroup(base.into(), grouptxt, @ptrCast(&active_tab));
     const mtp = music.GetMusicTimePlayed();
     const mtl = music.GetMusicTimeLength();
@@ -42,6 +42,7 @@ pub fn frame() void {
     _ = rl.GuiStatusBar(base.translate(base.width * 2 + 5, 0).resize(800, base.height).into(), M.txt.ptr);
 
     switch (active_tab) {
+        .none => {},
         .scalar => {
             Layout.Scalars.draw();
         },
@@ -72,7 +73,7 @@ pub fn frame() void {
 }
 
 const Layout = struct {
-    pub const Base = Rectangle.from(5, 5, 20, 20);
+    pub const Base = Rectangle.from(5, 5, 16, 16);
     pub const Scalars = struct {
         fn draw() void {
             const anchor = PanelSize;
