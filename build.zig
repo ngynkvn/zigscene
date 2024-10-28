@@ -25,7 +25,7 @@ pub fn build(b: *std.Build) !void {
         .tracy_callstack = enable_callstack,
         .tracy_allocation = enable_allocation,
     });
-    const tracy_mod = tracy.module(if (target.query.isNative()) "tracy" else "tracy-stub");
+    const tracy_mod = tracy.module(if (target.query.isNative() and tracy_enable) "tracy" else "tracy-stub");
 
     const raylib = b.dependency("raylib", .{
         .target = target,
@@ -86,4 +86,47 @@ pub fn build(b: *std.Build) !void {
     const check_step = b.step("check", "Check build");
     check_step.dependOn(&exe.step);
     check_step.dependOn(test_step);
+
+    try addReleaseStep(b, opts);
+}
+
+const release_targets: []const std.Target.Query = &.{
+    .{}, // Native
+    .{ .cpu_arch = .x86_64, .os_tag = .windows },
+
+    // TODO: fix linux builds because of wayland
+    // .{ .cpu_arch = .aarch64, .os_tag = .linux },
+    // .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu },
+    // .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .musl },
+};
+
+fn addReleaseStep(b: *std.Build, opts: *std.Build.Step.Options) !void {
+    const release_step = b.step("release-build", "Create set of releases for distribution");
+    for (release_targets) |t| {
+        const target = b.resolveTargetQuery(t);
+        const optimize = .ReleaseSafe;
+        const tracy = b.dependency("tracy", .{
+            .target = target,
+            .optimize = optimize,
+        });
+        const tracy_mod = tracy.module("tracy-stub");
+
+        const raylib = b.dependency("raylib", .{
+            .target = target,
+            .optimize = optimize,
+        });
+        const release_exe = b.addExecutable(.{
+            .name = "zigscene",
+            .root_source_file = b.path("src/main.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+        release_exe.root_module.addOptions("options", opts);
+        release_exe.root_module.addImport("raylib", raylib.module("raylib"));
+        release_exe.root_module.addImport("tracy", tracy_mod);
+        const target_output = b.addInstallArtifact(release_exe, .{
+            .dest_dir = .{ .override = .{ .custom = try t.zigTriple(b.allocator) } },
+        });
+        release_step.dependOn(&target_output.step);
+    }
 }

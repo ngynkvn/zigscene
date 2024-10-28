@@ -1,8 +1,13 @@
 const std = @import("std");
 const vector = @import("ext/vector.zig");
-pub const c = @import("raylib");
-const _cage = struct {};
-pub usingnamespace @import("raylib");
+pub usingnamespace struct {
+    // NOTE: eventually, the plan is completely get rid of raylib
+    // exporting out all of it's functions
+    pub usingnamespace @import("raylib");
+
+    const colorPicker = @import("gui/color_picker.zig");
+    pub const GuiColorBarHueH = colorPicker.GuiColorBarHueH;
+};
 
 const Self = @This();
 

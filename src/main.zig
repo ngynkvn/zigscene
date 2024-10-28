@@ -29,7 +29,7 @@ pub fn main() !void {
     rl.InitAudioDevice();
     defer rl.CloseAudioDevice();
 
-    rl.GuiSetAlpha(0.8);
+    rl.GuiSetAlpha(0.6);
     rl.RayguiDark();
     //try music.startMusic("./sounds/willix.mp3");
 
