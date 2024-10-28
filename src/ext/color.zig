@@ -1,6 +1,8 @@
 const std = @import("std");
 const rl = @import("../raylib.zig");
+const cnv = @import("convert.zig");
 const Vector3 = @import("vector.zig").Vector3;
+const iff = cnv.iff;
 
 const M = @This();
 
@@ -31,19 +33,19 @@ pub const Color = extern struct {
             k = if (t < k) t else k;
             k = if (k < 1) k else 1;
             k = if (k > 0) k else 0;
-            color.r = std.math.lossyCast(u8, (value - ((value * saturation) * k)) * 255.0);
+            color.r = iff(u8, (value - ((value * saturation) * k)) * 255.0);
             k = @mod(3.0 + (hue / 60.0), 6);
             t = 4.0 - k;
             k = if (t < k) t else k;
             k = if (k < 1) k else 1;
             k = if (k > 0) k else 0;
-            color.g = std.math.lossyCast(u8, (value - ((value * saturation) * k)) * 255.0);
+            color.g = iff(u8, (value - ((value * saturation) * k)) * 255.0);
             k = @mod(1.0 + (hue / 60.0), 6);
             t = 4.0 - k;
             k = if (t < k) t else k;
             k = if (k < 1) k else 1;
             k = if (k > 0) k else 0;
-            color.b = std.math.lossyCast(u8, (value - ((value * saturation) * k)) * 255.0);
+            color.b = iff(u8, (value - ((value * saturation) * k)) * 255.0);
             return color;
         }
     };
