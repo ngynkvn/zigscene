@@ -5,9 +5,11 @@ const audio = @import("audio.zig");
 const graphics = @import("graphics.zig");
 const gui = @import("gui.zig");
 const debug = @import("debug.zig");
+const options = @import("options");
+const tracy = @import("tracy");
 
-pub const defaultScreenWidth = 1200;
-pub const defaultScreenHeight = 800;
+pub const defaultScreenWidth = 1024;
+pub const defaultScreenHeight = 768;
 
 pub var isFullScreen = false;
 pub var screenWidth: c_int = defaultScreenWidth;
@@ -27,8 +29,8 @@ pub fn main() !void {
     rl.InitAudioDevice();
     defer rl.CloseAudioDevice();
 
-    rl.GuiSetAlpha(0.8);
-    rl.GuiLoadStyleDark();
+    rl.GuiSetAlpha(0.6);
+    rl.RayguiDark();
     //try music.startMusic("./sounds/willix.mp3");
 
     var rot_offset: f32 = 0.0;
@@ -43,9 +45,10 @@ pub fn main() !void {
     };
     rl.SetTargetFPS(60);
 
-    // Main game loop
+    // Main loop
     // Detects window close button or ESC key
     while (!rl.WindowShouldClose()) {
+        defer tracy.frameMarkNamed("zigscene");
         if (rl.IsFileDropped()) {
             try music.handleFile();
         }
@@ -95,40 +98,35 @@ pub fn main() !void {
         {
             rl.BeginDrawing();
             defer rl.EndDrawing();
-            const center = rl.GetWorldToScreen(.{ .x = 0, .y = 0 }, camera3d);
+            const ctx = tracy.traceNamed(@src(), "Renders");
+            defer ctx.end();
 
+            const center = rl.GetWorldToScreen(.{ .x = 0, .y = 0 }, camera3d);
             debug.render();
 
             rl.ClearBackground(rl.BLACK);
             // Drawing
-            const mtp = music.GetMusicTimePlayed();
-            graphics.Bubble.render(camera3d, rot_offset, mtp, t);
+            graphics.Bubble.render(camera3d, rot_offset, t);
+            const ctx_2d = tracy.traceNamed(@src(), "2d");
             var it = std.mem.window(f32, &audio.ringbuffer, 256, 128);
             while (it.next()) |w| {
                 for (w, audio.bi..) |v, bi| {
-                    const i = bi % w.len;
                     graphics.WaveFormLine.render(.{ .y = center.y - 80 }, i, v);
                     graphics.WaveFormBar.render(center, i, v);
-                    //graphics.WaveFormLine.render(.{ .y = center.y * 2 }, i, fv.magnitude() * 0.15);
-                    //graphics.FFT.render(center, i, fv.magnitude());
-                    //graphics.draw_bubbles(center, i, v, t);
                 }
             }
-            // for (0..audio.ringbuffer.len) |bi| {
-            //     const i = bi % audio.RB_LEN;
-            //     const v = audio.ringbuffer[i];
-            //     graphics.WaveFormLine.render(.{ .y = center.y - 80 }, i, v);
-            //     graphics.WaveFormBar.render(center, i, v);
-            //     //graphics.WaveFormLine.render(.{ .y = center.y * 2 }, i, fv.magnitude() * 0.15);
-            //     //graphics.FFT.render(center, i, fv.magnitude());
-            //     //graphics.draw_bubbles(center, i, v, t);
-            // }
+            for (audio.curr_buffer, audio.curr_fft, 0..) |v, fv, i| {
+                graphics.WaveFormLine.render(.{ .y = center.y * 2 }, i, fv.magnitude() * 0.15);
+                graphics.FFT.render(center, i, fv.magnitude());
+            }
+            ctx_2d.end();
+            gui.frame();
             t += rl.GetFrameTime();
         }
-        gui.frame();
     }
 }
 
 test "root" {
     std.testing.refAllDecls(@This());
+    _ = @import("ext/color.zig");
 }

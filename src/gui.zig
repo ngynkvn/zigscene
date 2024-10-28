@@ -1,98 +1,132 @@
 const std = @import("std");
 const graphics = @import("graphics.zig");
 const rl = @import("raylib.zig");
-const cdef = rl;
 const music = @import("music.zig");
 const audio = @import("audio.zig");
+const controls = @import("gui/controls.zig");
 
-pub const Rectangle = struct {
-    x: f32,
-    y: f32,
-    width: f32,
-    height: f32,
-    pub fn R(x: f32, y: f32, width: f32, height: f32) Rectangle {
-        return .{ .x = x, .y = y, .width = width, .height = height };
-    }
-    pub fn resize(self: Rectangle, width: f32, height: f32) Rectangle {
-        return .{ .x = self.x, .y = self.y, .width = width, .height = height };
-    }
-    pub fn translate(self: Rectangle, dx: f32, dy: f32) Rectangle {
-        return .{ .x = self.x + dx, .y = self.y + dy, .width = self.width, .height = self.height };
-    }
-    pub fn c(self: Rectangle) cdef.Rectangle {
-        return .{ .x = self.x, .y = self.y, .width = self.width, .height = self.height };
-    }
-};
-pub const R = Rectangle.R;
+const Rectangle = @import("ext/structs.zig").Rectangle;
 
-const active_menu = struct {
-    var scalar: bool = false;
-    var color: bool = true;
-};
-var Options = .{
+var Tuners = .{
     graphics.WaveFormLine,
     graphics.WaveFormBar,
     graphics.Bubble,
+    audio.Controls,
 };
-const window_width = 400;
-var value_buffer = std.mem.zeroes([256]u8);
-var text_buffer = std.mem.zeroes([256:0]u8);
-//                          \__/ ⬋ please be nice to him
-var txt: []u8 = text_buffer[0..0]; //\\//\\//\\//\\//\\
+const Tab = enum(c_int) { none, scalar, color };
+var active_tab: Tab = .scalar;
+/// M is intended as a private namespace for the gui,
+/// This is where all comptime info will go
+const M = struct {
+    /// Length of values in value buffer (+1 for zero)
+    /// It is expected that values shouldn't go over 1000 for the tunables.
+    const tunable_fmt = "{d:7.3}";
+    const vlen = std.fmt.count(tunable_fmt, .{0}) + 1;
+    var text_buffer = [_]u8{0} ** 256;
+    var value_buffer = [_]u8{0} ** (vlen * Layout.Scalars.NumFields);
+    //                          \__/ ⬋ please be nice to him
+    var txt: []u8 = text_buffer[0..0]; //\\//\\//\\//\\//\\
+
+};
+
 pub fn frame() void {
-    const base = R(5, 5, 16, 16);
-    _ = cdef.GuiToggle(base.translate(0, 0).c(), std.fmt.comptimePrint("#{}#", .{cdef.ICON_FX}), &active_menu.scalar);
-    _ = cdef.GuiToggle(base.translate(21, 0).c(), std.fmt.comptimePrint("#{}#", .{cdef.ICON_COLOR_PICKER}), &active_menu.color);
+    const base = Layout.Base;
+    const grouptxt = std.fmt.comptimePrint("#{}#;#{}#;#{}#", .{ rl.ICON_ARROW_LEFT, rl.ICON_FX, rl.ICON_COLOR_PICKER });
+    _ = rl.GuiToggleGroup(base.into(), grouptxt, @ptrCast(&active_tab));
     const mtp = music.GetMusicTimePlayed();
     const mtl = music.GetMusicTimeLength();
     if (music.IsMusicStreamPlaying()) {
-        const fps = cdef.GetFPS();
-        txt = std.fmt.bufPrintZ(&text_buffer, "#{}# {s} | {d:4.1}s / {d:4.1}s [FPS:{d}]", .{ cdef.ICON_PLAYER_PLAY, music.filename, mtp, mtl, fps }) catch unreachable;
+        const fps = rl.GetFPS();
+        M.txt = std.fmt.bufPrintZ(&M.text_buffer, "#{}# {s} | {d:4.1}s / {d:4.1}s [FPS:{d}]", .{ rl.ICON_PLAYER_PLAY, music.filename, mtp, mtl, fps }) catch unreachable;
     }
-    _ = cdef.GuiStatusBar(base.translate(base.width * 2 + 10, 0).resize(window_width * 2, 16).c(), txt.ptr);
+    _ = rl.GuiStatusBar(base.translate(base.width * 2 + 5, 0).resize(800, base.height).into(), M.txt.ptr);
 
-    if (active_menu.scalar) {
-        const anchor = base.translate(2, 20).resize(window_width, 400);
-        _ = cdef.GuiPanel(anchor.c(), "Scalars");
+    switch (active_tab) {
+        .none => {},
+        .scalar => {
+            Layout.Scalars.draw();
+        },
+        .color => {
+            const anchor = base.translate(2, 20).resize(200, 700);
+            const slider_w = 100;
+            const offset = 24;
+            const panel = anchor.resize(slider_w, 16);
+            _ = rl.GuiPanel(anchor.into(), "Colors");
 
-        comptime var yoff: f32 = 0;
-        comptime var i: usize = 0;
-        inline for (&Options) |info| {
-            const name = @typeName(info);
-            _ = cdef.GuiLabel(anchor.resize(200, 8).translate(5, 40 + yoff).c(), name.ptr);
-            yoff += 20;
-            const cfg = @field(info, "Scalars");
-            inline for (cfg) |optinfo| {
-                const fname = optinfo.name;
-                const fval = optinfo.value;
-                const buf = std.fmt.bufPrintZ(value_buffer[i * 7 .. i * 7 + 7], "{d:6.2}", .{fval.*}) catch unreachable;
-                _ = cdef.GuiSlider(anchor.resize(100, 8).translate(100, 32 + yoff).c(), fname.ptr, buf.ptr, fval, optinfo.range[0], optinfo.range[1]);
-                yoff += 20;
-                i += 1;
+            comptime var yoff: f32 = 32;
+            inline for (&Tuners) |info| {
+                if (!@hasDecl(info, "Colors")) continue;
+
+                const cfg = @field(info, "Colors");
+                comptime var i: usize = 0;
+                _ = rl.GuiLabel(anchor.resize(200, 8).translate(5, yoff).into(), @typeName(info));
+                inline for (cfg) |optinfo| {
+                    const fname, const fval = optinfo;
+                    _ = rl.GuiColorBarHueH(panel.translate(40, offset + yoff).into(), fname.ptr, fval);
+                    yoff += offset;
+                    i += 1;
+                }
+                yoff += offset;
             }
-            yoff += 20;
-        }
-    } else if (active_menu.color) {
-        const anchor = base.translate(2, 20).resize(window_width / 2, 400);
-        const panel_size = 90;
-        const panel_spacing = 40;
-        const panel = anchor.resize(16, panel_size);
-        _ = cdef.GuiPanel(anchor.c(), "Colors");
-
-        comptime var yoff: f32 = 0;
-        inline for (&Options) |info| {
-            comptime var i: usize = 0;
-            const name = @typeName(info);
-            _ = cdef.GuiLabel(anchor.resize(200, 8).translate(5, 40 + yoff).c(), name.ptr);
-            yoff += 20;
-            const cfg = @field(info, "Colors");
-            inline for (cfg) |optinfo| {
-                const fname = optinfo.name;
-                const fval: *f32 = optinfo.hue;
-                _ = cdef.GuiColorBarHue(panel.translate(40 + panel_spacing * (i % 3), 40 + yoff).c(), fname.ptr, fval);
-                i += 1;
-            }
-            yoff += 100;
-        }
+        },
     }
 }
+
+const Layout = struct {
+    pub const Base = Rectangle.from(5, 5, 16, 16);
+    pub const Scalars = struct {
+        fn draw() void {
+            const anchor = PanelSize;
+            _ = rl.GuiPanel(anchor.into(), Label.ptr);
+            comptime var y = InitialOffset;
+            inline for (Layout.Scalars.Groups) |group| {
+                const info, const ygroup = group;
+                const cfg = @field(info, Label);
+                const offset = Layout.Scalars.Offset;
+                _ = rl.GuiLabel(Layout.Scalars.LabelSize.translate(5, y).into(), @typeName(info));
+                inline for (cfg, 0..) |optinfo, y2| {
+                    const fname, const fval, const frange = optinfo;
+                    const buf = std.fmt.bufPrintZ(M.value_buffer[y2 * M.vlen .. y2 * M.vlen + M.vlen], M.tunable_fmt, .{fval.*}) catch unreachable;
+                    _ = rl.GuiSlider(
+                        anchor.resize(150, 16).translate(100, y + y2 * offset).into(),
+                        fname.ptr,
+                        buf.ptr,
+                        fval,
+                        frange[0],
+                        frange[1],
+                    );
+                }
+                y += ygroup;
+            }
+        }
+        const PanelSize = Base.translate(2, 20).resize(300, 700);
+        const LabelSize = Base.resize(200, 8);
+        const Label: []const u8 = "Scalars";
+        const NumFields: usize = field_count();
+        const Offset: usize = 24;
+        const InitialOffset = 60;
+        pub const Groups = sv: {
+            const n: usize = group_count();
+            var groups: [n]struct { type, usize } = undefined;
+            var i = 0;
+            for (Tuners) |t| {
+                if (@hasDecl(t, Label)) {
+                    groups[i] = .{ t, @field(t, Label).len * Offset + (i + 1 * Offset) };
+                    i += 1;
+                }
+            }
+            break :sv groups;
+        };
+
+        fn field_count() usize {
+            var n = 0;
+            for (Tuners) |knob| n += if (@hasDecl(knob, Label)) @field(knob, Label).len;
+            return comptime n;
+        }
+        fn group_count() usize {
+            var n = 0;
+            for (Tuners) |knob| n += if (@hasDecl(knob, Label)) 1;
+            return comptime n;
+        }
+    };
+};

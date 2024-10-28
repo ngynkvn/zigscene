@@ -1,54 +1,61 @@
 const std = @import("std");
+
 const rl = @import("raylib.zig");
 const main = @import("main.zig");
 const audio = @import("audio.zig");
-const asF32 = @import("extras.zig").asF32;
-const fromHSV = @import("extras.zig").fromHSV;
+const controls = @import("gui/controls.zig");
+const tracy = @import("tracy");
+const cnv = @import("ext/convert.zig");
+const ffi = cnv.ffi;
+const iff = cnv.iff;
+const hsv = @import("ext/color.zig").Color.hsv.vec3;
+const Color = @import("ext/color.zig").Color;
+const Vector3 = @import("ext/vector.zig").Vector3;
 
 pub const WaveFormLine = struct {
-    pub var Scalars = [_]Scalar{
-        .{ .name = "amplitude", .value = &amplitude, .range = .{ 0, 100 } },
+    pub const Scalars = [_]controls.Scalar{
+        .{ "amplitude", &amplitude, .{ 0, 100 } },
     };
-    pub var Colors = [_]Color{
-        .{ .name = "color1", .hue = &color1.x },
-        .{ .name = "color2", .hue = &color2.x },
+    pub const Colors = [_]controls.Color{
+        .{ "color1", &color1.x },
+        .{ "color2", &color2.x },
     };
     pub var amplitude: f32 = 80;
     var color1 = rl.Vector3{ .x = 0, .y = 0, .z = 0.96 };
     var color2 = rl.Vector3{ .x = 100, .y = 1, .z = 0.9 };
     pub fn render(center: rl.Vector2, i: usize, v: f32) void {
-        const SPACING = asF32(main.screenWidth) / asF32(audio.curr_buffer.len);
-        const x = @as(f32, @floatFromInt(i)) * SPACING;
+        const SPACING = ffi(f32, main.screenWidth) / ffi(f32, audio.curr_buffer.len);
+        const x = ffi(f32, i) * SPACING;
         const y = -(v * amplitude);
         // "plot" x and y
         const px = x + center.x;
         const py = y + center.y;
-        rl.DrawRectangleRec(.{ .x = px, .y = py, .width = 1, .height = 2 }, fromHSV(color1));
-        rl.DrawRectangleRec(.{ .x = px, .y = py + 12, .width = 2, .height = 1 }, fromHSV(color2));
+        rl.DrawRectangleRec(.{ .x = px, .y = py, .width = 1, .height = 2 }, hsv(color1).into());
+        rl.DrawRectangleRec(.{ .x = px, .y = py + 12, .width = 2, .height = 1 }, hsv(color2).into());
     }
 };
 
 pub const WaveFormBar = struct {
-    pub var Scalars = [_]Scalar{
-        .{ .name = "amplitude", .value = &amplitude, .range = .{ 0, 100 } },
-        .{ .name = "base height", .value = &base_h, .range = .{ 0, 100 } },
+    pub const Scalars = [_]controls.Scalar{
+        .{ "amplitude", &amplitude, .{ 0, 100 } },
+        .{ "base height", &base_h, .{ 0, 100 } },
     };
-    pub var Colors = [_]Color{
-        .{ .name = "color1", .hue = &color1.x },
-        .{ .name = "color2", .hue = &color2.x },
+    pub const Colors = [_]controls.Color{
+        .{ "color1", &color1.x },
+        .{ "color2", &color2.x },
     };
-    var color1 = rl.Vector3{ .x = 229, .y = 1, .z = 0.94 };
-    var color2 = rl.Vector3{ .x = 162, .y = 1, .z = 0.89 };
+    var color1 = Vector3{ .x = 250, .y = 1, .z = 0.94 };
+    var color2 = Vector3{ .x = 270, .y = 1, .z = 0.9 };
     pub var amplitude: f32 = 80;
     pub var base_h: f32 = 40;
 
     pub fn render(center: rl.Vector2, i: usize, v: f32) void {
-        const SPACING = asF32(main.screenWidth) / asF32(audio.curr_buffer.len);
-        const x = @as(f32, @floatFromInt(i)) * SPACING;
+        const SPACING = ffi(f32, main.screenWidth) / ffi(f32, audio.curr_buffer.len);
+        const x = ffi(f32, i) * SPACING;
         const y = (v * amplitude);
         const px = x;
-        const c1 = fromHSV(color1);
-        const c2 = fromHSV(color2);
+        const c1 = hsv(color1).into();
+        const c2 = hsv(color2).into();
         rl.DrawRectangleGradientEx(.{
             .x = px,
             .y = center.y * 2 - y - base_h,
@@ -60,8 +67,8 @@ pub const WaveFormBar = struct {
 
 pub const FFT = struct {
     pub fn render(center: rl.Vector2, i: usize, v: f32) void {
-        const SPACING = asF32(main.screenWidth) / asF32(audio.curr_buffer.len);
-        const x = @as(f32, @floatFromInt(i)) * SPACING;
+        const SPACING = ffi(f32, main.screenWidth) / ffi(f32, audio.curr_buffer.len);
+        const x = ffi(f32, i) * SPACING;
         const y = v;
         // "plot" x and y
         const px = x;
@@ -72,43 +79,41 @@ pub const FFT = struct {
 };
 
 pub const Bubble = struct {
-    pub var Scalars = [_]Scalar{
-        .{ .name = "ring radius", .value = &r_ring, .range = .{ 0.1, 8 } },
-        .{ .name = "sphere radius", .value = &r_sphere, .range = .{ 0.1, 4 } },
-        .{ .name = "volume effect", .value = &effect, .range = .{ 0.1, 1 } },
-        .{ .name = "color scale", .value = &color_scale, .range = .{ 0.0, 100 } },
-        .{ .name = "bubble color fx", .value = &bubble_color_scale, .range = .{ 0.0, 100 } },
+    pub const Scalars = [_]controls.Scalar{
+        // zig fmt: off
+        .{ "ring radius",     &r_ring,             .{ 0.1, 8 } },
+        .{ "sphere radius",   &r_sphere,           .{ 0.1, 4 } },
+        .{ "volume effect",   &effect,             .{ 0.1, 1 } },
+        .{ "color scale",     &color_scale,        .{ 0.0, 100 } },
+        .{ "bubble color fx", &bubble_color_scale, .{ 0.0, 100 } },
+        .{ "ring height",     &height_ring,        .{ 0.0, 1 } },
+        // zig fmt: on
     };
-    pub var Colors = [_]Color{
-        .{ .name = "color1", .hue = &color1.x },
-        .{ .name = "color2", .hue = &color2.x },
-        .{ .name = "color2", .hue = &color3.x },
+    pub const Colors = [_]controls.Color{
+        .{ "color1", &color1.x },
+        .{ "color2", &color2.x },
+        .{ "color2", &color3.x },
     };
-    var color1 = rl.Vector3{ .x = 195, .y = 0.5, .z = 1 };
-    var color2 = rl.Vector3{ .x = 117, .y = 1, .z = 1 };
-    var color3 = rl.Vector3{ .x = 132, .y = 1, .z = 0.9 };
+    var color1 = Vector3{ .x = 195, .y = 0.5, .z = 1 };
+    var color2 = Vector3{ .x = 117, .y = 1, .z = 1 };
+    var color3 = Vector3{ .x = 132, .y = 1, .z = 0.9 };
     // Radii
     pub var r_ring: f32 = 4;
     pub var r_sphere: f32 = 3;
+    pub var height_ring: f32 = 0.1;
     pub var effect: f32 = 0.5;
     pub var color_scale: f32 = 45;
     pub var bubble_color_scale: f32 = 30;
-    pub fn render(camera3d: rl.Camera3D, rot_offset: f32, mtp: f32, t: f32) void {
+    pub fn render(camera3d: rl.Camera3D, rot_offset: f32, t: f32) void {
         rl.BeginMode3D(camera3d);
         defer rl.EndMode3D();
         rl.rlRotatef(rot_offset, 0, 1, 0);
-        if (false) {
-            rl.rlPushMatrix();
-            rl.rlTranslatef(0, -5, mtp * 0.4);
-            rl.DrawGrid(64, 16);
-            rl.rlPopMatrix();
-        }
         {
             rl.rlPushMatrix();
             rl.rlRotatef(t * 32, 1, 1, 1);
             var col = color1;
-            col.x += audio.avg_intensity * bubble_color_scale;
-            rl.DrawSphereWires(.{}, r_sphere + audio.avg_intensity * effect, 10, 10, fromHSV(col));
+            col.x += audio.rms_energy * bubble_color_scale;
+            rl.DrawSphereWires(.{}, r_sphere + audio.rms_energy * effect, 10, 10, hsv(col).into());
             rl.rlPopMatrix();
         }
         rl.rlPushMatrix();
@@ -116,10 +121,10 @@ pub const Bubble = struct {
         const tsteps = 2 * std.math.pi / @as(f32, @floatFromInt(audio.curr_buffer.len));
         for (audio.curr_buffer, 0..) |v, i| {
             const r = r_ring +
-                (effect * audio.avg_intensity) +
+                (effect * audio.rms_energy) +
                 (@abs(v) * effect);
 
-            const angle_rad = @as(f32, @floatFromInt(i)) * tsteps;
+            const angle_rad = ffi(f32, i) * tsteps;
             const x = @cos(angle_rad) * r;
             const y = @sin(angle_rad) * r;
 
@@ -128,27 +133,16 @@ pub const Bubble = struct {
             rl.rlRotatef(90 + (angle_rad * 180 / std.math.pi), 0, 0, 1);
 
             var col = color2;
-            col.x += audio.avg_intensity * color_scale + @abs(v) * 30;
-            rl.DrawCubeWires(.{}, 0.1, 0.1 + @abs(v) * effect + audio.avg_intensity * 0.2, 0.1, fromHSV(col));
+            col.x += audio.rms_energy * color_scale + @abs(v) * 30;
+            rl.DrawCubeWires(.{}, 0.1, height_ring + @abs(v) * effect + audio.rms_energy * 0.2, 0.1, hsv(col).into());
 
             rl.rlTranslatef(-0.1, 0.1, 0);
             col = color3;
-            col.x += audio.avg_intensity * 10 + @abs(v) * 20;
-            rl.DrawCubeWires(.{}, 0.03, 0.03, 0.03, fromHSV(col));
+            col.x += audio.rms_energy * 10 + @abs(v) * 20;
+            rl.DrawCubeWires(.{}, 0.03, 0.03, 0.03, hsv(col).into());
 
             rl.rlPopMatrix();
         }
         rl.rlPopMatrix();
     }
-};
-
-// Configurables. These get set up in the UI
-pub const Scalar = struct {
-    name: []const u8,
-    value: *f32,
-    range: struct { f32, f32 },
-};
-pub const Color = struct {
-    name: []const u8,
-    hue: *f32,
 };
