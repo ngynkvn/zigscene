@@ -34,7 +34,7 @@ pub fn main() !void {
 
     rl.GuiSetAlpha(0.6);
     rl.RayguiDark();
-    //try music.startMusic("./sounds/willix.mp3");
+    _ = try processArgs();
 
     var rot_offset: f32 = 0.0;
     rl.SetMasterVolume(0.10);
@@ -116,6 +116,14 @@ pub fn main() !void {
             t += rl.GetFrameTime();
         }
     }
+}
+
+var _buffer: [256]u8 = @splat(0);
+var fba = std.heap.FixedBufferAllocator.init(&_buffer);
+fn processArgs() !?[]const u8 {
+    const allocator = fba.allocator();
+    var args = try std.process.argsWithAllocator(allocator);
+    return if (!args.skip()) null else args.next();
 }
 
 test "root" {

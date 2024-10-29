@@ -88,7 +88,7 @@ test "fft" {
     const globals = struct {
         fn cf32(comptime raw: []const [2]f32) [raw.len]ComplexF32 {
             comptime {
-                var out = std.mem.zeroes([raw.len]ComplexF32);
+                var out: [raw.len]ComplexF32 = @splat(.init(0, 0));
                 for (0..raw.len) |i| {
                     out[i] = ComplexF32.init(raw[i][0], raw[i][1]);
                 }
