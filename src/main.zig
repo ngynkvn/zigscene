@@ -37,7 +37,7 @@ pub fn main() !void {
     _ = try processArgs();
 
     var rot_offset: f32 = 0.0;
-    rl.SetMasterVolume(0.10);
+    rl.SetMasterVolume(0.40);
 
     // zig fmt: off
     var camera3d: rl.Camera3D = .{
