@@ -8,7 +8,6 @@ var pos: rl.Rectangle = .{ .x = 300, .y = 300, .width = 10, .height = 10 };
 var visible = false;
 pub fn render() void {
     if (!visible) return;
-
     var txt = std.mem.zeroes([256]u8);
     const pressed = rl.IsMouseButtonPressed(rl.MOUSE_LEFT_BUTTON);
     const buf = std.fmt.bufPrintZ(txt[0..64], "{}", .{pressed}) catch txt[0..0];
@@ -17,7 +16,7 @@ pub fn render() void {
     rl.DrawRectangleRec(pos, rl.RED);
 }
 
-pub fn input() void {
+pub fn frame() void {
     if (rl.isKeyPressed(.D)) {
         visible = !visible;
     }
@@ -30,7 +29,6 @@ pub fn input() void {
         pos.y += delta.y;
     }
 }
-
 pub fn debug_thread() !void {
     const options = @import("options");
     if (!options.enable_ttyz) return;

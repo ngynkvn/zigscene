@@ -50,11 +50,9 @@ pub const Key = enum(c_int) {
         return @intFromEnum(self);
     }
 };
-// zig fmt: on
 
-pub fn isKeyPressed(k: Key) bool {
-    return @This().IsKeyPressed(k.c());
-}
-pub fn isKeyDown(k: Key) bool {
-    return @This().IsKeyDown(k.c());
-}
+pub fn isKeyUp(k: Key) bool { return @This().IsKeyUp(k.c()); }
+pub fn isKeyDown(k: Key) bool { return @This().IsKeyDown(k.c()); }
+pub fn isKeyPressed(k: Key) bool { return @This().IsKeyPressed(k.c()); }
+pub fn isKeyReleased(k: Key) bool { return @This().IsKeyReleased(k.c()); }
+// zig fmt: on

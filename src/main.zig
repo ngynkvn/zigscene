@@ -39,73 +39,59 @@ pub fn main() !void {
     var rot_offset: f32 = 0.0;
     rl.SetMasterVolume(0.10);
 
+    // zig fmt: off
     var camera3d: rl.Camera3D = .{
-        .position = .{ .x = 0.0, .y = 0, .z = 10.0 }, // Camera position
-        .target = .{ .x = 0.0, .y = 0.0, .z = 0.0 }, // Camera looking at point
-        .up = .{ .x = 0.0, .y = 1.0, .z = 0.0 }, // Camera up vector (rotation towards target)
-        .fovy = 65.0, // Camera field-of-view Y
-        .projection = rl.CAMERA_PERSPECTIVE, // Camera projection type
-    };
+        .position   = .{ .x = 0.0, .y = 0,   .z = 10.0 }, // Camera position
+        .target     = .{ .x = 0.0, .y = 0.0, .z = 0.0  }, // Camera looking at point
+        .up         = .{ .x = 0.0, .y = 1.0, .z = 0.0  }, // Camera up vector (rotation towards target)
+        .fovy       = 65.0,                               // Camera field-of-view Y
+        .projection = rl.CAMERA_PERSPECTIVE,              // Camera projection type
+    }; // zig fmt: on
+
     rl.SetTargetFPS(90);
 
     // Main loop
     // Detects window close button or ESC key
     while (!rl.WindowShouldClose()) {
         defer tracy.frameMarkNamed("zigscene");
-        if (rl.IsFileDropped()) {
-            try music.handleFile();
-        }
-        if (music.IsMusicStreamPlaying()) {
-            music.UpdateMusicStream();
-        }
-        if (rl.isKeyPressed(.C)) {
-            camera3d.projection = switch (camera3d.projection) {
-                rl.CAMERA_PERSPECTIVE => rl.CAMERA_ORTHOGRAPHIC,
-                rl.CAMERA_ORTHOGRAPHIC => rl.CAMERA_PERSPECTIVE,
-                else => unreachable,
-            };
-        }
-        if (!pressed and rl.isKeyDown(.SPACE)) {
+        if (rl.IsFileDropped()) try music.handleFile();
+        if (music.IsMusicStreamPlaying()) music.UpdateMusicStream();
+
+        if (rl.isKeyPressed(.C)) camera3d.projection = switch (camera3d.projection) {
+            rl.CAMERA_PERSPECTIVE => rl.CAMERA_ORTHOGRAPHIC,
+            rl.CAMERA_ORTHOGRAPHIC => rl.CAMERA_PERSPECTIVE,
+            else => unreachable,
+        };
+
+        // The key was not pressed before but it's down now
+        if (rl.isKeyPressed(.SPACE)) {
             // :)
-            pressed = true;
             prevValue = audio.Release;
             audio.Release = 1.0;
-        } else if (pressed and rl.IsKeyUp(.SPACE)) {
-            audio.Release = prevValue;
-        }
+            // The key was pressed before but it's up now
+        } else if (rl.isKeyReleased(.SPACE)) audio.Release = prevValue;
+
         if (rl.isKeyPressed(.F)) {
-            if (rl.IsWindowState(rl.FLAG_BORDERLESS_WINDOWED_MODE)) {
-                screenWidth = defaultScreenWidth;
-                screenHeight = defaultScreenHeight;
-            } else {
-                const display = rl.GetCurrentMonitor();
-                screenWidth = rl.GetMonitorWidth(display);
-                screenHeight = rl.GetMonitorHeight(display);
-                rl.SetWindowPosition(0, 0);
-            }
-            rl.SetWindowSize(screenWidth, screenHeight);
+            if (!rl.IsWindowState(rl.FLAG_BORDERLESS_WINDOWED_MODE)) rl.SetWindowPosition(0, 0);
             rl.ToggleBorderlessWindowed();
         }
+        if (rl.isKeyDown(.LEFT)) rot_offset -= 1;
+        if (rl.isKeyDown(.RIGHT)) rot_offset += 1;
+
+        // Debug related visuals + controls
+        debug.frame();
+
         if (rl.IsWindowResized()) {
             const display = rl.GetCurrentMonitor();
             screenWidth = rl.GetMonitorWidth(display);
             screenHeight = rl.GetMonitorHeight(display);
         }
-        // Debug related controls
-        debug.input();
-
-        if (rl.isKeyDown(.LEFT)) {
-            rot_offset -= 1;
-        }
-        if (rl.isKeyDown(.RIGHT)) {
-            rot_offset += 1;
-        }
         const wheelMove = rl.GetMouseWheelMoveV();
+
         if (@abs(wheelMove.x) > @abs(wheelMove.y)) {
             rot_offset += wheelMove.x;
-        } else {
-            camera3d.position.z += wheelMove.y;
-        }
+        } else camera3d.position.z += wheelMove.y;
+
         {
             rl.BeginDrawing();
             defer rl.EndDrawing();
@@ -133,6 +119,5 @@ pub fn main() !void {
 }
 
 test "root" {
-    std.testing.refAllDecls(@This());
-    _ = @import("ext/color.zig");
+    std.testing.refAllDeclsRecursive(@This());
 }
