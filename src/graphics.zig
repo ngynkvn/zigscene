@@ -21,8 +21,9 @@ pub const WaveFormLine = struct {
         .{ "color2", &color2.x },
     };
     pub var amplitude: f32 = 60;
-    var color1 = Vector3{ .x = 0, .y = 0, .z = 0.96 };
-    var color2 = Vector3{ .x = 100, .y = 1, .z = 0.9 };
+    // zig fmt: off
+    var color1 = Vector3{ .x = 0,   .y = 0, .z = 0.96 };
+    var color2 = Vector3{ .x = 100, .y = 1, .z = 0.90 };
     pub fn render(center: rl.Vector2, i: usize, v: f32) void {
         const SPACING = ffi(f32, main.screenWidth) / ffi(f32, audio.curr_buffer.len);
         const x = ffi(f32, i) * SPACING;
@@ -30,8 +31,10 @@ pub const WaveFormLine = struct {
         // "plot" x and y
         const px = x + center.x;
         const py = y + center.y;
-        rl.DrawRectangleRec(.{ .x = px, .y = py, .width = 1, .height = 2 }, hsv(color1).into());
+        // zig fmt: off
+        rl.DrawRectangleRec(.{ .x = px, .y = py,      .width = 1, .height = 2 }, hsv(color1).into());
         rl.DrawRectangleRec(.{ .x = px, .y = py + 12, .width = 2, .height = 1 }, hsv(color2).into());
+        // zig fmt: on
     }
 };
 
