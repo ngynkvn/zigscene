@@ -36,50 +36,72 @@ pub fn IsMusicStreamPlaying() bool {
 pub fn UpdateMusicStream() void {
     rl.UpdateMusicStream(music);
 }
-pub export fn strpbrk(arg_s: [*c]const u8, arg_accept: [*c]const u8) [*c]u8 {
-    var s = arg_s;
-    _ = &s;
-    var accept = arg_accept;
-    _ = &accept;
-    while (@as(c_int, @bitCast(@as(c_uint, s.*))) != @as(c_int, '\x00')) {
-        var a: [*c]const u8 = accept;
-        _ = &a;
-        while (@as(c_int, @bitCast(@as(c_uint, a.*))) != @as(c_int, '\x00')) if (@as(c_int, @bitCast(@as(c_uint, (blk: {
-            const ref = &a;
-            const tmp = ref.*;
-            ref.* += 1;
-            break :blk tmp;
-        }).*))) == @as(c_int, @bitCast(@as(c_uint, s.*)))) return @as([*c]u8, @ptrCast(@volatileCast(@constCast(s))));
-        s += 1;
-    }
-    return null;
+
+fn strpbrk(s: [*:0]const u8, accept: [*:0]const u8) ?[*:0]const u8 {
+    var curr_s = s;
+    while (curr_s[0] != 0) : (curr_s += 1) {
+        var curr_accept = accept;
+        while (curr_accept[0] != 0) : (curr_accept += 1)
+            if (curr_accept[0] == curr_s[0]) return curr_s;
+    } else return null;
 }
-pub fn strprbrk(arg_s: [*c]const u8, arg_charset: [*c]const u8) callconv(.c) [*c]const u8 {
-    var s = arg_s;
-    _ = &s;
-    var charset = arg_charset;
-    _ = &charset;
-    var latestMatch: [*c]const u8 = null;
-    _ = &latestMatch;
-    while ((blk: {
-        s = strpbrk(s, charset);
-        break :blk s != null;
-    })) : (latestMatch = blk: {
-        const ref = &s;
-        const tmp = ref.*;
-        ref.* += 1;
-        break :blk tmp;
-    }) {}
-    return latestMatch;
+
+test "strpbrk basic functionality" {
+    const s = "hello world".*;
+    const accept = "ow".*;
+    const result = strpbrk(&s, &accept);
+    try std.testing.expect(result != null);
+    try std.testing.expectEqual(@as(u8, 'o'), result.?[0]);
 }
-pub fn GetFileName(arg_filePath: [*c]const u8) callconv(.c) [*c]const u8 {
-    var filePath = arg_filePath;
-    _ = &filePath;
-    var fileName: [*c]const u8 = null;
-    _ = &fileName;
-    if (filePath != null) {
-        fileName = strprbrk(filePath, "\\/");
+
+test "strpbrk no match" {
+    const s = "hello".*;
+    const accept = "xyz".*;
+    const result = strpbrk(&s, &accept);
+    try std.testing.expect(result == null);
+}
+
+fn strprbrk(s: [*:0]const u8, charset: [*:0]const u8) ?[*:0]const u8 {
+    var curr_s = s;
+    var latest_match: ?[*:0]const u8 = null;
+
+    while (strpbrk(curr_s, charset)) |match| {
+        latest_match = match;
+        curr_s = match + 1;
     }
-    if (!(fileName != null)) return filePath;
-    return fileName + @as(usize, @bitCast(@as(isize, @intCast(@as(c_int, 1)))));
+
+    return latest_match;
+}
+
+test "strprbrk basic functionality" {
+    const s = "hello/world/file.txt".*;
+    const charset = "/".*;
+    const result = strprbrk(&s, &charset);
+    try std.testing.expect(result != null);
+    try std.testing.expectEqualStrings("file.txt", result.?[1 .. "file.txt".len + 1]);
+}
+
+test "strprbrk no separators" {
+    const s = "filename.txt".*;
+    const charset = "/".*;
+    const result = strprbrk(&s, &charset);
+    try std.testing.expect(result == null);
+}
+
+pub fn GetFileName(file_path: [*:0]const u8) [*:0]const u8 {
+    if (strprbrk(file_path, "\\/")) |last_sep| {
+        return last_sep + 1;
+    } else return file_path;
+}
+
+test "GetFileName with path" {
+    const path = "/home/user/file.txt".*;
+    const result = GetFileName(&path);
+    try std.testing.expectEqualStrings("file.txt", result[0 .. "file.txt.".len - 1]);
+}
+
+test "GetFileName no path" {
+    const path = "file.txt".*;
+    const result = GetFileName(&path);
+    try std.testing.expectEqualStrings("file.txt", result[0.."file.txt".len]);
 }
