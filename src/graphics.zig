@@ -104,7 +104,7 @@ pub const Bubble = struct {
     pub var r_ring: f32 = 3.25;
     pub var r_sphere: f32 = 3;
     pub var height_ring: f32 = 0.1;
-    pub var effect: f32 = 0.5;
+    pub var effect: f32 = 0.75;
     pub var color_scale: f32 = 45;
     pub var bubble_color_scale: f32 = 30;
     pub fn render(camera3d: rl.Camera3D, rot_offset: f32, t: f32) void {
