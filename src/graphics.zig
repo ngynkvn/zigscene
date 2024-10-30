@@ -101,7 +101,7 @@ pub const Bubble = struct {
     var color2 = Vector3{ .x = 117, .y = 1, .z = 1 };
     var color3 = Vector3{ .x = 132, .y = 1, .z = 0.9 };
     // Radii
-    pub var r_ring: f32 = 4;
+    pub var r_ring: f32 = 3.25;
     pub var r_sphere: f32 = 3;
     pub var height_ring: f32 = 0.1;
     pub var effect: f32 = 0.5;

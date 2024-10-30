@@ -14,7 +14,7 @@ var Tuners = .{
     audio.Controls,
 };
 const Tab = enum(c_int) { none, scalar, color };
-var active_tab: Tab = .scalar;
+pub var active_tab: Tab = .scalar;
 /// M is intended as a private namespace for the gui,
 /// This is where all comptime info will go
 const M = struct {
@@ -39,7 +39,7 @@ pub fn frame() void {
         const fps = rl.GetFPS();
         M.txt = std.fmt.bufPrintZ(&M.text_buffer, "#{}# {s} | {d:4.1}s / {d:4.1}s [FPS:{d}]", .{ rl.ICON_PLAYER_PLAY, music.filename, mtp, mtl, fps }) catch unreachable;
     }
-    _ = rl.GuiStatusBar(base.translate(base.width * 2 + 5, 0).resize(800, base.height).into(), M.txt.ptr);
+    _ = rl.GuiStatusBar(base.translate(base.width * 3 + 5, 0).resize(800, base.height).into(), M.txt.ptr);
 
     switch (active_tab) {
         .none => {},

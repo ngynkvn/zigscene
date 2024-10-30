@@ -63,6 +63,13 @@ pub fn main() !void {
             else => unreachable,
         };
 
+        if (rl.isKeyPressed(.ONE))
+            gui.active_tab = .none
+        else if (rl.isKeyPressed(.TWO))
+            gui.active_tab = .scalar
+        else if (rl.isKeyPressed(.THREE))
+            gui.active_tab = .color;
+
         // The key was not pressed before but it's down now
         if (rl.isKeyPressed(.SPACE)) {
             // :)
