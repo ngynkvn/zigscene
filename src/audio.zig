@@ -14,8 +14,8 @@ pub const Controls = struct {
 };
 
 const N = 256;
-pub var Attack: f32 = 0.8;
-pub var Release: f32 = 0.6;
+pub var Attack: f32 = 0.5;
+pub var Release: f32 = 0.9;
 comptime {
     @setFloatMode(.optimized);
 }

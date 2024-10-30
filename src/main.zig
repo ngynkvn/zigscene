@@ -103,7 +103,6 @@ pub fn main() !void {
 
             rl.ClearBackground(rl.BLACK);
             // Drawing
-            graphics.Bubble.render(camera3d, rot_offset, t);
             const ctx_2d = tracy.traceNamed(@src(), "2d");
             for (audio.curr_buffer, audio.curr_fft, 0..) |v, fv, i| {
                 graphics.WaveFormLine.render(.{ .y = center.y - 80 }, i, v);
@@ -112,6 +111,7 @@ pub fn main() !void {
                 graphics.FFT.render(center, i, fv.magnitude());
             }
             ctx_2d.end();
+            graphics.Bubble.render(camera3d, rot_offset, t);
             gui.frame();
             t += rl.GetFrameTime();
         }
