@@ -43,7 +43,6 @@ pub fn frame() void {
     }
     if (menu_x < 0) {
         menu_x = @trunc(rl.Lerp(menu_x, 0, 0.25));
-        std.debug.print("{}\n", .{menu_x});
     }
     _ = rl.GuiStatusBar(base.translate(base.width * 4 + 5, 0).resize(800, base.height).into(), M.txt.ptr);
 

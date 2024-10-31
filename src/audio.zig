@@ -19,11 +19,13 @@ pub var Release: f32 = 0.95;
 const ComplexF32 = std.math.Complex(f32);
 /// Currently loaded audio buffer data
 var audio_buffer = std.mem.zeroes([N]f32);
+var raw_sample = std.mem.zeroes([N]f32);
 /// Currently loaded buffer for fft data
 var fft_buffer = std.mem.zeroes([N]ComplexF32);
 /// Root mean square of signal
 pub var rms_energy: f32 = 0;
 
+pub var raw_buffer: []f32 = &raw_sample;
 pub var curr_buffer: []f32 = &audio_buffer;
 pub var curr_fft: []ComplexF32 = &fft_buffer;
 
@@ -44,6 +46,7 @@ pub fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
         l = buffer[fi * 2 + 0];
         r = buffer[fi * 2 + 1];
         const x = (l + r) * 0.5;
+        raw_sample[fi] = x * 2;
         audio_buffer[fi] =
             (Attack * x) +
             (Release * audio_buffer[fi]);
@@ -53,6 +56,7 @@ pub fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
     }
     rms_energy = 0.65 * rms_energy + 0.90 * @sqrt(rms * ool);
     fft(fft_buffer[0..curr_len]);
+    raw_buffer = raw_sample[0..curr_len];
     curr_buffer = audio_buffer[0..curr_len];
     curr_fft = fft_buffer[0..curr_len];
 }

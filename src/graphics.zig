@@ -95,11 +95,9 @@ pub const Bubble = struct {
     pub const Colors = [_]controls.Color{
         .{ "color1", &color1.x },
         .{ "color2", &color2.x },
-        .{ "color2", &color3.x },
     };
     var color1 = Vector3{ .x = 195, .y = 0.5, .z = 1 };
     var color2 = Vector3{ .x = 117, .y = 1, .z = 1 };
-    var color3 = Vector3{ .x = 132, .y = 1, .z = 0.9 };
     // Radii
     pub var r_ring: f32 = 3.25;
     pub var r_sphere: f32 = 3;
@@ -138,12 +136,6 @@ pub const Bubble = struct {
             var col = color2;
             col.x += audio.rms_energy * color_scale + @abs(v) * 30;
             rl.DrawCubeWires(.{}, 0.1, height_ring + @abs(v) * effect + audio.rms_energy * 0.2, 0.1, hsv(col).into());
-
-            rl.rlTranslatef(-0.1, 0.1, 0);
-            col = color3;
-            col.x += audio.rms_energy * 10 + @abs(v) * 20;
-            rl.DrawCubeWires(.{}, 0.03, 0.03, 0.03, hsv(col).into());
-
             rl.rlPopMatrix();
         }
         rl.rlPopMatrix();
