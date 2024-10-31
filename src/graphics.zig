@@ -33,7 +33,7 @@ pub const WaveFormLine = struct {
         const py = y + center.y;
         // zig fmt: off
         rl.DrawRectangleRec(.{ .x = px, .y = py,      .width = 1, .height = 2 }, hsv(color1).into());
-        rl.DrawRectangleRec(.{ .x = px, .y = py + 8, .width = 1, .height = 2 }, hsv(color2).into());
+        rl.DrawRectangleRec(.{ .x = px, .y = py + 8,  .width = 1, .height = 2 }, hsv(color2).into());
         // zig fmt: on
     }
 };
