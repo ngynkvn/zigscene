@@ -33,7 +33,7 @@ pub const WaveFormLine = struct {
         const py = y + center.y;
         // zig fmt: off
         rl.DrawRectangleRec(.{ .x = px, .y = py,      .width = 1, .height = 2 }, hsv(color1).into());
-        rl.DrawRectangleRec(.{ .x = px, .y = py + 12, .width = 2, .height = 1 }, hsv(color2).into());
+        rl.DrawRectangleRec(.{ .x = px, .y = py + 8, .width = 1, .height = 2 }, hsv(color2).into());
         // zig fmt: on
     }
 };
@@ -49,8 +49,8 @@ pub const WaveFormBar = struct {
     };
     var color1 = Vector3{ .x = 250, .y = 1, .z = 0.94 };
     var color2 = Vector3{ .x = 270, .y = 1, .z = 0.9 };
-    pub var amplitude: f32 = 80;
-    pub var base_h: f32 = 40;
+    pub var amplitude: f32 = 50;
+    pub var base_h: f32 = 20;
 
     pub fn render(center: rl.Vector2, i: usize, v: f32) void {
         const SPACING = ffi(f32, main.screenWidth) / ffi(f32, audio.curr_buffer.len);
@@ -62,7 +62,7 @@ pub const WaveFormBar = struct {
         rl.DrawRectangleGradientEx(.{
             .x = px,
             .y = center.y * 2 - y - base_h,
-            .width = 3,
+            .width = 2,
             .height = y + base_h,
         }, c1, c2, c2, c1);
     }
@@ -76,8 +76,8 @@ pub const FFT = struct {
         // "plot" x and y
         const px = x;
         const py = -y + center.y * 2 - 5;
-        rl.DrawRectangleRec(.{ .x = px, .y = py, .width = 3, .height = 2 }, rl.RAYWHITE);
-        rl.DrawRectangleRec(.{ .x = px, .y = py + 12, .width = 3, .height = y + 2 }, rl.RED);
+        rl.DrawRectangleRec(.{ .x = px, .y = py, .width = 2, .height = 2 }, rl.RAYWHITE);
+        rl.DrawRectangleRec(.{ .x = px, .y = py + 12, .width = 2, .height = y + 2 }, rl.RED);
     }
 };
 
