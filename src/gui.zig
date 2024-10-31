@@ -36,7 +36,7 @@ pub fn frame() void {
         M.txt = std.fmt.bufPrintZ(&M.text_buffer, "#{}# {s} | {d:4.1}s / {d:4.1}s [FPS:{d}]", .{ rl.ICON_PLAYER_PLAY, music.filename, mtp, mtl, fps }) catch unreachable;
     }
     if (menu_x < 0) {
-        menu_x = @trunc(rl.Lerp(menu_x, 0, 0.25));
+        menu_x = @trunc(rl.Lerp(menu_x, 0, 30 * rl.GetFrameTime()));
     }
     _ = rl.GuiStatusBar(base.translate(base.width * 4 + 5, 0).resize(800, base.height).into(), M.txt.ptr);
 

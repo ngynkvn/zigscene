@@ -99,7 +99,7 @@ fn processInput() void {
     };
 
     if (rl.isKeyPressed(.ONE) and gui.active_tab != .none) {
-        gui.menu_x = -600;
+        gui.menu_x = -300;
         gui.active_tab = .none;
     } else if (rl.isKeyPressed(.TWO) and gui.active_tab != .audio) {
         gui.menu_x = -600;
@@ -124,8 +124,8 @@ fn processInput() void {
         if (!rl.IsWindowState(rl.FLAG_BORDERLESS_WINDOWED_MODE)) rl.SetWindowPosition(0, 0);
         rl.ToggleBorderlessWindowed();
     }
-    if (rl.isKeyDown(.LEFT)) rot_offset -= 1;
-    if (rl.isKeyDown(.RIGHT)) rot_offset += 1;
+    if (rl.isKeyDown(.LEFT)) rot_offset -= 100 * rl.GetFrameTime();
+    if (rl.isKeyDown(.RIGHT)) rot_offset += 100 * rl.GetFrameTime();
 
     if (rl.IsWindowResized()) {
         const display = rl.GetCurrentMonitor();
