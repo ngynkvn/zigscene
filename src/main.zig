@@ -19,6 +19,16 @@ const APP_NAME = "zigscene";
 
 var pressed: bool = false;
 var prevValue: f32 = 0;
+var rot_offset: f32 = 0.0;
+var camera3d: rl.Camera3D = .{
+    // zig fmt: off
+    .position   = .{ .x = 0.0, .y = 0,   .z = 10.0 }, // Camera position
+    .target     = .{ .x = 0.0, .y = 0.0, .z = 0.0  }, // Camera looking at point
+    .up         = .{ .x = 0.0, .y = 1.0, .z = 0.0  }, // Camera up vector (rotation towards target)
+    .fovy       = 65.0,                               // Camera field-of-view Y
+    .projection = rl.CAMERA_PERSPECTIVE,              // Camera projection type
+    // zig fmt: on
+};
 
 pub fn main() !void {
     var t: f32 = 0.0;
@@ -38,17 +48,7 @@ pub fn main() !void {
         try music.startMusic(path.ptr);
     }
 
-    var rot_offset: f32 = 0.0;
     rl.SetMasterVolume(0.40);
-
-    // zig fmt: off
-    var camera3d: rl.Camera3D = .{
-        .position   = .{ .x = 0.0, .y = 0,   .z = 10.0 }, // Camera position
-        .target     = .{ .x = 0.0, .y = 0.0, .z = 0.0  }, // Camera looking at point
-        .up         = .{ .x = 0.0, .y = 1.0, .z = 0.0  }, // Camera up vector (rotation towards target)
-        .fovy       = 65.0,                               // Camera field-of-view Y
-        .projection = rl.CAMERA_PERSPECTIVE,              // Camera projection type
-    }; // zig fmt: on
 
     rl.SetTargetFPS(90);
 
@@ -56,54 +56,13 @@ pub fn main() !void {
     // Detects window close button or ESC key
     while (!rl.WindowShouldClose()) {
         defer tracy.frameMarkNamed("zigscene");
-        if (rl.IsFileDropped()) try music.handleFile();
-        if (music.IsMusicStreamPlaying()) music.UpdateMusicStream();
-
-        if (rl.isKeyPressed(.C)) camera3d.projection = switch (camera3d.projection) {
-            rl.CAMERA_PERSPECTIVE => rl.CAMERA_ORTHOGRAPHIC,
-            rl.CAMERA_ORTHOGRAPHIC => rl.CAMERA_PERSPECTIVE,
-            else => unreachable,
-        };
-
-        if (rl.isKeyPressed(.ONE))
-            gui.active_tab = .none
-        else if (rl.isKeyPressed(.TWO))
-            gui.active_tab = .scalar
-        else if (rl.isKeyPressed(.THREE))
-            gui.active_tab = .color;
-
-        // The key was not pressed before but it's down now
-        if (rl.isKeyPressed(.SPACE)) {
-            // :)
-            prevValue = audio.Release;
-            audio.Release = 1.0;
-            // The key was pressed before but it's up now
-        } else if (rl.isKeyReleased(.SPACE)) audio.Release = prevValue;
-
-        if (rl.isKeyPressed(.F)) {
-            if (!rl.IsWindowState(rl.FLAG_BORDERLESS_WINDOWED_MODE)) rl.SetWindowPosition(0, 0);
-            rl.ToggleBorderlessWindowed();
-        }
-        if (rl.isKeyDown(.LEFT)) rot_offset -= 1;
-        if (rl.isKeyDown(.RIGHT)) rot_offset += 1;
-
-        // Debug related visuals + controls
-        debug.frame();
-
-        if (rl.IsWindowResized()) {
-            const display = rl.GetCurrentMonitor();
-            screenWidth = rl.GetMonitorWidth(display);
-            screenHeight = rl.GetMonitorHeight(display);
-        }
-        const wheelMove = rl.GetMouseWheelMoveV();
-
-        if (@abs(wheelMove.x) > @abs(wheelMove.y)) {
-            rot_offset += wheelMove.x;
-        } else camera3d.position.z += wheelMove.y;
+        processInput();
 
         {
             rl.BeginDrawing();
             defer rl.EndDrawing();
+            // Debug related visuals + controls
+            debug.frame();
             const ctx = tracy.traceNamed(@src(), "Renders");
             defer ctx.end();
 
@@ -127,14 +86,57 @@ pub fn main() !void {
     }
 }
 
+test "root" {
+    std.testing.refAllDeclsRecursive(@This());
+}
+
+fn processInput() void {
+    if (rl.IsFileDropped()) try music.handleFile();
+    if (music.IsMusicStreamPlaying()) music.UpdateMusicStream();
+
+    if (rl.isKeyPressed(.C)) camera3d.projection = switch (camera3d.projection) {
+        rl.CAMERA_PERSPECTIVE => rl.CAMERA_ORTHOGRAPHIC,
+        rl.CAMERA_ORTHOGRAPHIC => rl.CAMERA_PERSPECTIVE,
+        else => unreachable,
+    };
+
+    if (rl.isKeyPressed(.ONE))
+        gui.active_tab = .none
+    else if (rl.isKeyPressed(.TWO))
+        gui.active_tab = .scalar
+    else if (rl.isKeyPressed(.THREE))
+        gui.active_tab = .color;
+
+    // The key was not pressed before but it's down now
+    if (rl.isKeyPressed(.SPACE)) {
+        // :)
+        prevValue = audio.Release;
+        audio.Release = 1.0;
+        // The key was pressed before but it's up now
+    } else if (rl.isKeyReleased(.SPACE)) audio.Release = prevValue;
+
+    if (rl.isKeyPressed(.F)) {
+        if (!rl.IsWindowState(rl.FLAG_BORDERLESS_WINDOWED_MODE)) rl.SetWindowPosition(0, 0);
+        rl.ToggleBorderlessWindowed();
+    }
+    if (rl.isKeyDown(.LEFT)) rot_offset -= 1;
+    if (rl.isKeyDown(.RIGHT)) rot_offset += 1;
+
+    if (rl.IsWindowResized()) {
+        const display = rl.GetCurrentMonitor();
+        screenWidth = rl.GetMonitorWidth(display);
+        screenHeight = rl.GetMonitorHeight(display);
+    }
+    const wheelMove = rl.GetMouseWheelMoveV();
+
+    if (@abs(wheelMove.x) > @abs(wheelMove.y)) {
+        rot_offset += wheelMove.x;
+    } else camera3d.position.z += wheelMove.y;
+}
 fn processArgs() !?[]const u8 {
     var buffer: [256]u8 = @splat(0);
     var fba = std.heap.FixedBufferAllocator.init(&buffer);
     const allocator = fba.allocator();
     var args = try std.process.argsWithAllocator(allocator);
     return if (!args.skip()) null else args.next();
-}
-
-test "root" {
-    std.testing.refAllDeclsRecursive(@This());
 }
