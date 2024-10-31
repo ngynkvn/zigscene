@@ -85,10 +85,6 @@ pub fn main() !void {
     }
 }
 
-test "root" {
-    std.testing.refAllDeclsRecursive(@This());
-}
-
 fn processInput() void {
     if (rl.IsFileDropped()) try music.handleFile();
 
@@ -144,4 +140,8 @@ fn processArgs() !?[]const u8 {
     const allocator = fba.allocator();
     var args = try std.process.argsWithAllocator(allocator);
     return if (!args.skip()) null else args.next();
+}
+
+test "root" {
+    std.testing.refAllDeclsRecursive(@This());
 }
