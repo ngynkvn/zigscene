@@ -7,7 +7,7 @@ const ffi = cnv.ffi;
 const iff = cnv.iff;
 
 pub const Controls = struct {
-    pub const Scalars = [_]controls.Scalar{
+    pub var Scalars = [_]controls.Scalar{
         .{ "Attack", &Attack, .{ 0.0, 1 } },
         .{ "Release", &Release, .{ 0.0, 1 } },
     };

@@ -7,12 +7,6 @@ const controls = @import("gui/controls.zig");
 
 const Rectangle = @import("ext/structs.zig").Rectangle;
 
-var Tuners = .{
-    graphics.WaveFormLine,
-    graphics.WaveFormBar,
-    graphics.Bubble,
-    audio.Controls,
-};
 const Tab = enum(c_int) { none, audio, scalar, color };
 var prev_tab: Tab = .none;
 pub var active_tab: Tab = .scalar;
@@ -25,7 +19,7 @@ const M = struct {
     const tunable_fmt = "{d:7.3}";
     const vlen = std.fmt.count(tunable_fmt, .{0}) + 1;
     var text_buffer = [_]u8{0} ** 256;
-    var value_buffer = [_]u8{0} ** (vlen * Layout.Scalars.NumFields);
+    var value_buffer = [_]u8{0} ** (vlen * 64);
     //                          \__/ ⬋ please be nice to him
     var txt: []u8 = text_buffer[0..0]; //\\//\\//\\//\\//\\
 
@@ -61,6 +55,12 @@ pub fn frame() void {
     }
 }
 
+var Tuners = .{
+    graphics.WaveFormLine,
+    graphics.WaveFormBar,
+    graphics.Bubble,
+    audio.Controls,
+};
 const Layout = struct {
     pub const Base = Rectangle.from(5, 5, 16, 16);
     pub const Scalars = struct {
@@ -68,52 +68,50 @@ const Layout = struct {
             const anchor = PanelSize.translate(menu_x, 0);
             const label = Scalars.LabelSize.translate(menu_x, 0);
             _ = rl.GuiPanel(anchor.into(), Label.ptr);
-            comptime var y = InitialOffset;
-            inline for (Layout.Scalars.Groups) |group| {
-                const info, const ygroup = group;
-                const cfg = @field(info, Label);
+            comptime var nth_field = 0;
+            // TODO: refactor this is such a mess
+            inline for (Fields, 0..) |sf, gi| {
+                const name, const group = sf;
                 const offset = Layout.Scalars.Offset;
-                _ = rl.GuiLabel(label.translate(5, y).into(), @typeName(info));
-                inline for (cfg, 0..) |optinfo, y2| {
+                const y = InitialOffset + offset * nth_field + offset * gi;
+                _ = rl.GuiLabel(label.translate(5, y).into(), name.ptr);
+                inline for (group, 0..) |optinfo, fi| {
                     const fname, const fval, const frange = optinfo;
-                    const buf = std.fmt.bufPrintZ(M.value_buffer[y2 * M.vlen .. y2 * M.vlen + M.vlen], M.tunable_fmt, .{fval.*}) catch unreachable;
-                    _ = rl.GuiSlider(anchor.resize(150, 16).translate(90, y + y2 * offset).into(), fname.ptr, "", fval, frange[0], frange[1]);
-                    if (rl.GuiValueBoxFloat(anchor.resize(50, 16).translate(245, y + y2 * offset).into(), "", buf.ptr, fval, false) != 0) {
+                    const j = nth_field + fi;
+                    const buf = std.fmt.bufPrintZ(M.value_buffer[fi * M.vlen .. fi * M.vlen + M.vlen], M.tunable_fmt, .{fval.*}) catch unreachable;
+                    _ = rl.GuiSlider(anchor.resize(150, 16).translate(100, y + fi * offset).into(), fname.ptr, "", fval, frange[0], frange[1]);
+                    if (rl.GuiValueBoxFloat(anchor.resize(50, 16).translate(255, y + fi * offset).into(), "", buf.ptr, fval, editState[j]) != 0) {
+                        editState[j] = !editState[j];
                         std.debug.print("TODO\n", .{});
                     }
                 }
-                y += ygroup;
+                nth_field += group.len;
             }
         }
-        const PanelSize = Base.translate(2, 20).resize(300, 700);
+        fn collect(t: type) struct { []const u8, []controls.Scalar } {
+            comptime {
+                return .{ @typeName(t), &@field(t, "Scalars") };
+            }
+        }
+        const Fields = [_]struct { []const u8, []controls.Scalar }{
+            collect(graphics.WaveFormLine),
+            collect(graphics.WaveFormBar),
+            collect(graphics.Bubble),
+            collect(audio.Controls),
+        };
+        const numFields: usize = brk: {
+            var n = 0;
+            for (Fields) |f| {
+                n += f[1].len;
+            }
+            break :brk n;
+        };
+        var editState: [numFields]bool = @splat(false);
+        const PanelSize = Base.translate(2, 20).resize(310, 700);
         const LabelSize = Base.resize(200, 8);
         const Label: []const u8 = "Scalars";
-        const NumFields: usize = field_count();
         const Offset: usize = 24;
         const InitialOffset = 60;
-        pub const Groups = sv: {
-            const n: usize = group_count();
-            var groups: [n]struct { type, usize } = undefined;
-            var i = 0;
-            for (Tuners) |t| {
-                if (@hasDecl(t, Label)) {
-                    groups[i] = .{ t, @field(t, Label).len * Offset + (i + 1 * Offset) };
-                    i += 1;
-                }
-            }
-            break :sv groups;
-        };
-
-        fn field_count() usize {
-            var n = 0;
-            for (Tuners) |knob| n += if (@hasDecl(knob, Label)) @field(knob, Label).len;
-            return comptime n;
-        }
-        fn group_count() usize {
-            var n = 0;
-            for (Tuners) |knob| n += if (@hasDecl(knob, Label)) 1;
-            return comptime n;
-        }
     };
     const Colors = struct {
         fn draw() void {
@@ -124,12 +122,10 @@ const Layout = struct {
             _ = rl.GuiPanel(anchor.into(), "Colors");
 
             comptime var yoff: f32 = 32;
-            inline for (&Tuners) |info| {
-                if (!@hasDecl(info, "Colors")) continue;
-
-                const cfg = @field(info, "Colors");
+            inline for (Fields) |info| {
+                const name, const cfg = info;
                 comptime var i: usize = 0;
-                _ = rl.GuiLabel(anchor.resize(200, 8).translate(5, yoff).into(), @typeName(info));
+                _ = rl.GuiLabel(anchor.resize(200, 8).translate(5, yoff).into(), name.ptr);
                 inline for (cfg) |optinfo| {
                     const fname, const fval = optinfo;
                     _ = rl.GuiColorBarHueH(panel.translate(40, offset + yoff).into(), fname.ptr, fval);
@@ -139,5 +135,13 @@ const Layout = struct {
                 yoff += offset;
             }
         }
+        fn collect(t: type) struct { []const u8, []controls.Color } {
+            return .{ @typeName(t), &@field(t, "Colors") };
+        }
+        const Fields = [_]struct { []const u8, []controls.Color }{
+            collect(graphics.WaveFormLine),
+            collect(graphics.WaveFormBar),
+            collect(graphics.Bubble),
+        };
     };
 };

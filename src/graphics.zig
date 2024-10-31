@@ -13,10 +13,10 @@ const Color = @import("ext/color.zig").Color;
 const Vector3 = @import("ext/vector.zig").Vector3;
 
 pub const WaveFormLine = struct {
-    pub const Scalars = [_]controls.Scalar{
+    pub var Scalars = [_]controls.Scalar{
         .{ "amplitude", &amplitude, .{ 0, 100 } },
     };
-    pub const Colors = [_]controls.Color{
+    pub var Colors = [_]controls.Color{
         .{ "color1", &color1.x },
         .{ "color2", &color2.x },
     };
@@ -39,11 +39,11 @@ pub const WaveFormLine = struct {
 };
 
 pub const WaveFormBar = struct {
-    pub const Scalars = [_]controls.Scalar{
+    pub var Scalars = [_]controls.Scalar{
         .{ "amplitude", &amplitude, .{ 0, 100 } },
         .{ "base height", &base_h, .{ 0, 100 } },
     };
-    pub const Colors = [_]controls.Color{
+    pub var Colors = [_]controls.Color{
         .{ "color1", &color1.x },
         .{ "color2", &color2.x },
     };
@@ -82,7 +82,7 @@ pub const FFT = struct {
 };
 
 pub const Bubble = struct {
-    pub const Scalars = [_]controls.Scalar{
+    pub var Scalars = [_]controls.Scalar{
         // zig fmt: off
         .{ "ring radius",     &r_ring,             .{ 0.1, 8 } },
         .{ "sphere radius",   &r_sphere,           .{ 0.1, 4 } },
@@ -92,7 +92,7 @@ pub const Bubble = struct {
         .{ "ring height",     &height_ring,        .{ 0.0, 1 } },
         // zig fmt: on
     };
-    pub const Colors = [_]controls.Color{
+    pub var Colors = [_]controls.Color{
         .{ "color1", &color1.x },
         .{ "color2", &color2.x },
     };
