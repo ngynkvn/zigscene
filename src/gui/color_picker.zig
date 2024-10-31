@@ -16,7 +16,7 @@ const STATE_FOCUSED = rl.STATE_FOCUSED;
 const STATE_PRESSED = rl.STATE_PRESSED;
 // const guiAlpha = rl.guiAlpha;
 // TODO: rl.GuiSetAlpha
-const guiAlpha = 0.6;
+const guiAlpha = 0.8;
 var guiControlExclusiveMode = false;
 // const guiControlExclusiveMode = rl.guiControlExclusiveMode;
 pub var guiControlExclusiveRec: Rectangle = Rectangle{ .x = 0, .y = 0, .width = 0, .height = 0 };

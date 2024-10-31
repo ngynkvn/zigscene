@@ -122,14 +122,12 @@ fn processInput() void {
     }
     if (rl.isKeyDown(.LEFT)) rot_offset -= 100 * rl.GetFrameTime();
     if (rl.isKeyDown(.RIGHT)) rot_offset += 100 * rl.GetFrameTime();
-
     if (rl.IsWindowResized()) {
         const display = rl.GetCurrentMonitor();
         screenWidth = rl.GetMonitorWidth(display);
         screenHeight = rl.GetMonitorHeight(display);
     }
     const wheelMove = rl.GetMouseWheelMoveV();
-
     if (@abs(wheelMove.x) > @abs(wheelMove.y)) {
         rot_offset += wheelMove.x;
     } else camera3d.position.z += wheelMove.y;

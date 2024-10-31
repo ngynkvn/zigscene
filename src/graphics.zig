@@ -102,7 +102,7 @@ pub const Bubble = struct {
     pub var r_ring: f32 = 3.25;
     pub var r_sphere: f32 = 3;
     pub var height_ring: f32 = 0.1;
-    pub var effect: f32 = 0.75;
+    pub var effect: f32 = 0.5;
     pub var color_scale: f32 = 45;
     pub var bubble_color_scale: f32 = 30;
     pub fn render(camera3d: rl.Camera3D, rot_offset: f32, t: f32) void {
@@ -118,7 +118,7 @@ pub const Bubble = struct {
             rl.rlPopMatrix();
         }
         rl.rlPushMatrix();
-        rl.rlRotatef(t * 32, 0.2, 0.2, 1);
+        rl.rlRotatef(t * 32, 0.1, 0.1, 1);
         const tsteps = 2 * std.math.pi / @as(f32, @floatFromInt(audio.curr_buffer.len));
         for (audio.curr_buffer, 0..) |v, i| {
             const r = r_ring +

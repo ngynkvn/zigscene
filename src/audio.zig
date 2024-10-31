@@ -15,7 +15,7 @@ pub const Controls = struct {
 
 const N = 256;
 pub var Attack: f32 = 0.8;
-pub var Release: f32 = 0.95;
+pub var Release: f32 = 0.90;
 const ComplexF32 = std.math.Complex(f32);
 /// Currently loaded audio buffer data
 var audio_buffer = std.mem.zeroes([N]f32);
