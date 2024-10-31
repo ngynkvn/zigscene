@@ -4,22 +4,21 @@ const audio = @import("audio.zig");
 
 pub var music = rl.Music{};
 var fnbuff: [256]u8 = @splat(0);
-pub var filename: []u8 = undefined;
+pub var filename: []u8 = fnbuff[0..0];
 
 pub fn handleFile() !void {
     const files = rl.LoadDroppedFiles();
     defer rl.UnloadDroppedFiles(files);
     const file = files.paths[0];
-
-    const cfilename = GetFileName(file);
-    const clen = std.mem.len(cfilename);
-    @memcpy(fnbuff[0..clen], cfilename[0..clen]);
-    filename = fnbuff[0..clen];
     try startMusic(file);
 }
 
 pub fn startMusic(path: [*c]const u8) !void {
     music = rl.LoadMusicStream(path);
+    const cfilename = GetFileName(path);
+    const clen = std.mem.len(cfilename);
+    @memcpy(fnbuff[0..clen], cfilename[0..clen]);
+    filename = fnbuff[0..clen];
     std.log.info("samplesize = {}, samplerate = {}\n", .{ music.stream.sampleSize, music.stream.sampleRate });
     rl.AttachAudioStreamProcessor(music.stream, audio.audioStreamCallback);
     rl.PlayMusicStream(music);

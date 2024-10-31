@@ -34,7 +34,9 @@ pub fn main() !void {
 
     rl.GuiSetAlpha(0.6);
     rl.RayguiDark();
-    _ = try processArgs();
+    if (try processArgs()) |path| {
+        try music.startMusic(path.ptr);
+    }
 
     var rot_offset: f32 = 0.0;
     rl.SetMasterVolume(0.40);
@@ -125,9 +127,9 @@ pub fn main() !void {
     }
 }
 
-var _buffer: [256]u8 = @splat(0);
-var fba = std.heap.FixedBufferAllocator.init(&_buffer);
 fn processArgs() !?[]const u8 {
+    var buffer: [256]u8 = @splat(0);
+    var fba = std.heap.FixedBufferAllocator.init(&buffer);
     const allocator = fba.allocator();
     var args = try std.process.argsWithAllocator(allocator);
     return if (!args.skip()) null else args.next();
