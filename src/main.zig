@@ -50,12 +50,13 @@ pub fn main() !void {
 
     rl.SetMasterVolume(0.40);
 
-    rl.SetTargetFPS(90);
+    //rl.SetTargetFPS(144);
 
     // Main loop
     // Detects window close button or ESC key
     while (!rl.WindowShouldClose()) {
         defer tracy.frameMarkNamed("zigscene");
+        if (music.IsMusicStreamPlaying()) music.UpdateMusicStream();
         processInput();
 
         {
@@ -92,7 +93,6 @@ test "root" {
 
 fn processInput() void {
     if (rl.IsFileDropped()) try music.handleFile();
-    if (music.IsMusicStreamPlaying()) music.UpdateMusicStream();
 
     if (rl.isKeyPressed(.C)) camera3d.projection = switch (camera3d.projection) {
         rl.CAMERA_PERSPECTIVE => rl.CAMERA_ORTHOGRAPHIC,
