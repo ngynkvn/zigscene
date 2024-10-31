@@ -22,7 +22,7 @@ var prevValue: f32 = 0;
 var rot_offset: f32 = 0.0;
 var camera3d: rl.Camera3D = .{
     // zig fmt: off
-    .position   = .{ .x = 0.0, .y = 0,   .z = 10.0 }, // Camera position
+    .position   = .{ .x = 0.0, .y = 0.0, .z = 10.0 }, // Camera position
     .target     = .{ .x = 0.0, .y = 0.0, .z = 0.0  }, // Camera looking at point
     .up         = .{ .x = 0.0, .y = 1.0, .z = 0.0  }, // Camera up vector (rotation towards target)
     .fovy       = 65.0,                               // Camera field-of-view Y
@@ -42,7 +42,7 @@ pub fn main() !void {
     rl.InitAudioDevice();
     defer rl.CloseAudioDevice();
 
-    rl.GuiSetAlpha(0.6);
+    rl.GuiSetAlpha(0.8);
     rl.RayguiDark();
     if (try processArgs()) |path| {
         try music.startMusic(path.ptr);
@@ -66,7 +66,7 @@ pub fn main() !void {
             const ctx = tracy.traceNamed(@src(), "Renders");
             defer ctx.end();
 
-            const center = rl.GetWorldToScreen(.{ .x = 0, .y = 0 }, camera3d);
+            const center = rl.GetWorldToScreen(.{}, camera3d);
             debug.render();
 
             rl.ClearBackground(rl.BLACK);
@@ -100,12 +100,19 @@ fn processInput() void {
         else => unreachable,
     };
 
-    if (rl.isKeyPressed(.ONE))
-        gui.active_tab = .none
-    else if (rl.isKeyPressed(.TWO))
-        gui.active_tab = .scalar
-    else if (rl.isKeyPressed(.THREE))
+    if (rl.isKeyPressed(.ONE) and gui.active_tab != .none) {
+        gui.menu_x = -600;
+        gui.active_tab = .none;
+    } else if (rl.isKeyPressed(.TWO) and gui.active_tab != .audio) {
+        gui.menu_x = -600;
+        gui.active_tab = .audio;
+    } else if (rl.isKeyPressed(.THREE) and gui.active_tab != .scalar) {
+        gui.menu_x = -600;
+        gui.active_tab = .scalar;
+    } else if (rl.isKeyPressed(.FOUR) and gui.active_tab != .color) {
+        gui.menu_x = -600;
         gui.active_tab = .color;
+    }
 
     // The key was not pressed before but it's down now
     if (rl.isKeyPressed(.SPACE)) {
