@@ -50,8 +50,6 @@ pub fn main() !void {
 
     rl.SetMasterVolume(0.40);
 
-    //rl.SetTargetFPS(144);
-
     // Main loop
     // Detects window close button or ESC key
     while (!rl.WindowShouldClose()) {
