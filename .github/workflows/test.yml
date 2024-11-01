@@ -11,4 +11,4 @@ jobs:
       - uses: mlugg/setup-zig@v1
         with:
           version: master
-      - run: zig build test
+      - run: zig build test --summary all
