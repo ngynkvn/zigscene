@@ -102,8 +102,6 @@ const release_targets: []const std.Target.Query = &.{
 
 fn addReleaseStep(b: *std.Build, opts: *std.Build.Step.Options) !void {
     const release_step = b.step("release-build", "Create set of releases for distribution");
-    const zip_release = b.addSystemCommand(&.{ "zip", "-j" });
-    const release_zip_path = zip_release.addOutputFileArg("release.zip");
     for (release_targets) |t| {
         const target = b.resolveTargetQuery(t);
         const optimize = .ReleaseSafe;
@@ -118,7 +116,7 @@ fn addReleaseStep(b: *std.Build, opts: *std.Build.Step.Options) !void {
             .optimize = optimize,
         });
         const release_exe = b.addExecutable(.{
-            .name = b.fmt("zigscene-{s}", .{try t.zigTriple(b.allocator)}),
+            .name = "zigscene",
             .root_source_file = b.path("src/main.zig"),
             .target = target,
             .optimize = optimize,
@@ -126,7 +124,6 @@ fn addReleaseStep(b: *std.Build, opts: *std.Build.Step.Options) !void {
         release_exe.root_module.addOptions("options", opts);
         release_exe.root_module.addImport("raylib", raylib.module("raylib"));
         release_exe.root_module.addImport("tracy", tracy_mod);
-        zip_release.addArtifactArg(release_exe);
+        release_step.dependOn(&b.addInstallArtifact(release_exe, .{ .dest_dir = .{ .override = .{ .custom = try t.zigTriple(b.allocator) } } }).step);
     }
-    release_step.dependOn(&b.addInstallFile(release_zip_path, "release.zip").step);
 }
