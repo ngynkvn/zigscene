@@ -15,7 +15,7 @@ pub fn handleFile() !void {
 
 pub fn startMusic(path: [*c]const u8) !void {
     music = rl.LoadMusicStream(path);
-    const cfilename = GetFileName(path);
+    const cfilename = rl.GetFileName(path);
     const clen = std.mem.len(cfilename);
     @memcpy(fnbuff[0..clen], cfilename[0..clen]);
     filename = fnbuff[0..clen];
