@@ -10,13 +10,19 @@ jobs:
       contents: write
     name: Build and Release
     steps:
+      - name: Install dependencies
+        run: sudo apt install -y libasound2-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev libxcursor-dev libxinerama-dev libwayland-dev libxkbcommon-dev
+
       - uses: actions/checkout@v4
+
       - name: Zig setup
         uses: mlugg/setup-zig@v1
         with:
           version: master
+
       - name: Build
         run: zig build --release=safe
+
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
