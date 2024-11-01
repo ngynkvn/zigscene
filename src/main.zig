@@ -94,18 +94,14 @@ fn processInput() void {
         else => unreachable,
     };
 
-    if (rl.isKeyPressed(.ONE) and gui.active_tab != .none) {
-        gui.menu_x = -300;
-        gui.active_tab = .none;
-    } else if (rl.isKeyPressed(.TWO) and gui.active_tab != .audio) {
-        gui.menu_x = -600;
-        gui.active_tab = .audio;
-    } else if (rl.isKeyPressed(.THREE) and gui.active_tab != .scalar) {
-        gui.menu_x = -600;
-        gui.active_tab = .scalar;
-    } else if (rl.isKeyPressed(.FOUR) and gui.active_tab != .color) {
-        gui.menu_x = -600;
-        gui.active_tab = .color;
+    if (rl.isKeyPressed(.ONE)) {
+        gui.to(.none);
+    } else if (rl.isKeyPressed(.TWO)) {
+        gui.to(.audio);
+    } else if (rl.isKeyPressed(.THREE)) {
+        gui.to(.scalar);
+    } else if (rl.isKeyPressed(.FOUR)) {
+        gui.to(.color);
     }
 
     // The key was not pressed before but it's down now
@@ -122,14 +118,12 @@ fn processInput() void {
     }
     if (rl.isKeyDown(.LEFT)) rot_offset -= 100 * rl.GetFrameTime();
     if (rl.isKeyDown(.RIGHT)) rot_offset += 100 * rl.GetFrameTime();
-
     if (rl.IsWindowResized()) {
         const display = rl.GetCurrentMonitor();
         screenWidth = rl.GetMonitorWidth(display);
         screenHeight = rl.GetMonitorHeight(display);
     }
     const wheelMove = rl.GetMouseWheelMoveV();
-
     if (@abs(wheelMove.x) > @abs(wheelMove.y)) {
         rot_offset += wheelMove.x;
     } else camera3d.position.z += wheelMove.y;
