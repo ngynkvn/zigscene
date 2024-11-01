@@ -1,12 +1,12 @@
 const std = @import("std");
-const rl = @import("raylib.zig");
-const music = @import("music.zig");
-const audio = @import("audio.zig");
-const graphics = @import("graphics.zig");
-const gui = @import("gui.zig");
-const debug = @import("debug.zig");
-const options = @import("options");
-const tracy = @import("tracy");
+pub const rl = @import("raylib.zig");
+pub const music = @import("music.zig");
+pub const audio = @import("audio.zig");
+pub const graphics = @import("graphics.zig");
+pub const gui = @import("gui.zig");
+pub const debug = @import("debug.zig");
+pub const options = @import("options");
+pub const tracy = @import("tracy");
 
 pub const defaultScreenWidth = 1024;
 pub const defaultScreenHeight = 768;
@@ -75,7 +75,7 @@ pub fn main() !void {
                 graphics.WaveFormLine.render(.{ .y = center.y - 80 }, i, v);
                 graphics.WaveFormBar.render(center, i, v);
                 graphics.WaveFormLine.render(.{ .y = center.y * 2 }, i, fv.magnitude() * 0.15);
-                graphics.FFT.render(center, i, fv.magnitude());
+                graphics.FFTSpectrum.render(center, i, fv.magnitude());
             }
             ctx_2d.end();
             graphics.Bubble.render(camera3d, rot_offset, t);

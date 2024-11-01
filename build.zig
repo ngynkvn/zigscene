@@ -58,6 +58,8 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
     exe.root_module.addOptions("options", opts);
+    // TODO: dunno if I love this...
+    exe.root_module.addImport("zigscene", &exe.root_module);
 
     b.installArtifact(exe);
     exe.root_module.addImport("raylib", raylib.module("raylib"));
@@ -78,6 +80,8 @@ pub fn build(b: *std.Build) !void {
     exe_unit_tests.root_module.addImport("raylib", raylib.module("raylib"));
     exe_unit_tests.root_module.addImport("tracy", tracy_mod);
     exe_unit_tests.root_module.addOptions("options", opts);
+    // TODO: dunno if I love this...
+    exe_unit_tests.root_module.addImport("zigscene", &exe_unit_tests.root_module);
 
     const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
     const test_step = b.step("test", "Run unit tests");
