@@ -76,7 +76,7 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
     exe_unit_tests.root_module.addImport("raylib", raylib.module("raylib"));
-    exe_unit_tests.root_module.addImport("tracy", tracy.module("tracy"));
+    exe_unit_tests.root_module.addImport("tracy", tracy_mod);
     exe_unit_tests.root_module.addOptions("options", opts);
 
     const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
