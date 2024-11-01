@@ -1,0 +1,23 @@
+name: Zig Build and Release
+on:
+  push:
+    tags:
+      - "v*.*.*"
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    name: Build and Release
+    steps:
+      - uses: actions/checkout@v4
+      - name: Zig setup
+        uses: mlugg/setup-zig@v1
+        with:
+          version: master
+      - name: Build
+        run: zig build --release=safe
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: zig-out/bin/zigscene
