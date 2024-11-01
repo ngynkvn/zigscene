@@ -1,6 +1,7 @@
 const std = @import("std");
 const tracy = @import("tracy");
 const controls = @import("gui/controls.zig");
+const Config = @import("zigscene").Config;
 
 const cnv = @import("ext/convert.zig");
 const ffi = cnv.ffi;
@@ -13,9 +14,10 @@ pub const Controls = struct {
     };
 };
 
-const N = 256;
-pub var Attack: f32 = 0.8;
-pub var Release: f32 = 0.90;
+// TODO: Not properly connected yet
+const N = Config.Audio.buffer_size;
+pub var Attack: f32 = Config.Audio.attack;
+pub var Release: f32 = Config.Audio.release;
 const ComplexF32 = std.math.Complex(f32);
 /// Currently loaded audio buffer data
 var audio_buffer = std.mem.zeroes([N]f32);

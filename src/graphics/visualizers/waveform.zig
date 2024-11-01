@@ -12,20 +12,21 @@ const iff = cnv.iff;
 
 pub const WaveFormLine = struct {
     pub var Scalars = [_]controls.Scalar{
-        .{ "amplitude", &amplitude, .{ 0, 100 } },
+        .{ "amplitude", amplitude, .{ 0, 100 } },
     };
     pub var Colors = [_]controls.Color{
-        .{ "color1", &color1.x },
-        .{ "color2", &color2.x },
+        .{ "color1", color1.x },
+        .{ "color2", color2.x },
     };
-    pub var amplitude: f32 = 60;
+    const Config = @import("zigscene").Config.Visualizer.WaveFormLine;
+    pub var amplitude: *f32 = &Config.amplitude;
     // zig fmt: off
-    var color1 = Vector3{ .x = 0,   .y = 0, .z = 0.96 };
-    var color2 = Vector3{ .x = 100, .y = 1, .z = 0.90 };
+    const color1 = &Config.color1;
+    const color2 = &Config.color2;
     pub fn render(center: rl.Vector2, i: usize, v: f32) void {
         const SPACING = ffi(f32, main.screenWidth) / ffi(f32, audio.curr_buffer.len);
         const x = ffi(f32, i) * SPACING;
-        const y = -(v * amplitude);
+        const y = -(v * amplitude.*);
         // "plot" x and y
         const px = x + center.x;
         const py = y + center.y;
@@ -38,17 +39,18 @@ pub const WaveFormLine = struct {
 
 pub const WaveFormBar = struct {
     pub var Scalars = [_]controls.Scalar{
-        .{ "amplitude", &amplitude, .{ 0, 100 } },
-        .{ "base height", &base_h, .{ 0, 100 } },
+        .{ "amplitude", amplitude, .{ 0, 100 } },
+        .{ "base height", base_h, .{ 0, 100 } },
     };
     pub var Colors = [_]controls.Color{
-        .{ "color1", &color1.x },
-        .{ "color2", &color2.x },
+        .{ "color1", color1.x },
+        .{ "color2", color2.x },
     };
-    var color1 = Vector3{ .x = 250, .y = 1, .z = 0.94 };
-    var color2 = Vector3{ .x = 270, .y = 1, .z = 0.9 };
-    pub var amplitude: f32 = 50;
-    pub var base_h: f32 = 20;
+    const Config = @import("zigscene").Config.Visualizer.WaveFormBar;
+    const amplitude: f32 = &Config.amplitude;
+    const base_h: f32 = &Config.base_h;
+    const color1 = &Config.color1;
+    const color2 = &Config.color2;
 
     pub fn render(center: rl.Vector2, i: usize, v: f32) void {
         const SPACING = ffi(f32, main.screenWidth) / ffi(f32, audio.curr_buffer.len);
