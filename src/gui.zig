@@ -7,10 +7,6 @@ const controls = @import("gui/controls.zig");
 
 const Rectangle = @import("ext/structs.zig").Rectangle;
 
-const Tab = enum(c_int) { none, audio, scalar, color };
-var prev_tab: Tab = .none;
-pub var active_tab: Tab = .scalar;
-pub var menu_x: f32 = 0;
 /// M is intended as a private namespace for the gui,
 /// This is where all comptime info will go
 const M = struct {
@@ -22,27 +18,58 @@ const M = struct {
     var value_buffer = [_]u8{0} ** (vlen * 64);
     //                          \__/ ⬋ please be nice to him
     var txt: []u8 = text_buffer[0..0]; //\\//\\//\\//\\//\\
-
 };
+
+const Tab = enum(c_int) { none, audio, scalar, color };
+var prev_tab: Tab = .none;
+var _null: Tab = .none;
+const State = union(enum) {
+    open: struct { tab: Tab = .none, x: f32 = 0 },
+    closed: struct { x: f32 = 0 },
+    pub fn to(self: *State, next: State) void {
+        self.* = next;
+        switch (self.*) {
+            .open => {
+                self.open.x = -300;
+            },
+            .closed => {
+                self.closed.x = -300;
+            },
+        }
+    }
+    pub fn x(self: *State) *f32 {
+        return switch (self.*) {
+            inline else => |*s| &s.x,
+        };
+    }
+    pub fn activeTab(self: *State) *Tab {
+        return switch (self.*) {
+            .open => |*s| &s.tab,
+            .closed => &_null,
+        };
+    }
+};
+pub var currentState = State{ .open = .{ .tab = .scalar, .x = 0 } };
 
 pub fn frame() void {
     const base = Layout.Base;
     const grouptxt = std.fmt.comptimePrint("#{}#;#{}#;#{}#;#{}#", .{ rl.ICON_ARROW_LEFT, rl.ICON_FILETYPE_AUDIO, rl.ICON_FX, rl.ICON_COLOR_PICKER });
-    _ = rl.GuiToggleGroup(base.into(), grouptxt, @ptrCast(&active_tab));
+    _ = rl.GuiToggleGroup(base.into(), grouptxt, @ptrCast(currentState.activeTab()));
     const mtp = music.GetMusicTimePlayed();
     const mtl = music.GetMusicTimeLength();
     if (music.IsMusicStreamPlaying()) {
         const fps = rl.GetFPS();
         M.txt = std.fmt.bufPrintZ(&M.text_buffer, "#{}# {s} | {d:4.1}s / {d:4.1}s [FPS:{d}]", .{ rl.ICON_PLAYER_PLAY, music.filename, mtp, mtl, fps }) catch unreachable;
     }
-    if (menu_x < 0) {
-        menu_x = @trunc(rl.Lerp(menu_x, 0, 30 * rl.GetFrameTime()));
+    const menu_x = currentState.x();
+    if (menu_x.* < 0) {
+        menu_x.* = @trunc(rl.Lerp(menu_x.*, 0, 30 * rl.GetFrameTime()));
     }
     _ = rl.GuiStatusBar(base.translate(base.width * 4 + 5, 0).resize(800, base.height).into(), M.txt.ptr);
 
-    switch (active_tab) {
+    switch (currentState.activeTab()) {
         .none => {
-            const PanelSize = Layout.Base.translate(-310 - menu_x, 20).resize(300, 700);
+            const PanelSize = Layout.Base.translate(-310 - menu_x.*, 20).resize(300, 700);
             _ = rl.GuiPanel(PanelSize.into(), "");
         },
         .audio => {},
@@ -65,8 +92,8 @@ const Layout = struct {
     pub const Base = Rectangle.from(5, 5, 16, 16);
     pub const Scalars = struct {
         fn draw() void {
-            const anchor = PanelSize.translate(menu_x, 0);
-            const label = Scalars.LabelSize.translate(menu_x, 0);
+            const anchor = PanelSize.translate(currentState.x().*, 0);
+            const label = Scalars.LabelSize.translate(currentState.x().*, 0);
             _ = rl.GuiPanel(anchor.into(), Label.ptr);
             comptime var nth_field = 0;
             // TODO: refactor this is such a mess
@@ -115,7 +142,7 @@ const Layout = struct {
     };
     const Colors = struct {
         fn draw() void {
-            const anchor = Base.translate(menu_x + 2, 20).resize(200, 700);
+            const anchor = Base.translate(currentState.x().* + 2, 20).resize(200, 700);
             const slider_w = 100;
             const offset = 24;
             const panel = anchor.resize(slider_w, 16);

@@ -95,17 +95,17 @@ fn processInput() void {
     };
 
     if (rl.isKeyPressed(.ONE) and gui.active_tab != .none) {
-        gui.menu_x = -300;
         gui.active_tab = .none;
+        gui.currentState.to(.{ .closed = .{} });
     } else if (rl.isKeyPressed(.TWO) and gui.active_tab != .audio) {
-        gui.menu_x = -600;
         gui.active_tab = .audio;
+        gui.currentState.to(.{ .open = .{ .tab = .audio } });
     } else if (rl.isKeyPressed(.THREE) and gui.active_tab != .scalar) {
-        gui.menu_x = -600;
         gui.active_tab = .scalar;
+        gui.currentState.to(.{ .open = .{ .tab = .scalar } });
     } else if (rl.isKeyPressed(.FOUR) and gui.active_tab != .color) {
-        gui.menu_x = -600;
         gui.active_tab = .color;
+        gui.currentState.to(.{ .open = .{ .tab = .color } });
     }
 
     // The key was not pressed before but it's down now
