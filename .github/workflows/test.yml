@@ -1,4 +1,4 @@
-name: Zig Build and Release
+name: Zig Build and Test
 on: [push]
 jobs:
   test:
