@@ -41,9 +41,9 @@ pub const Bubble = struct {
         {
             rl.rlPushMatrix();
             rl.rlRotatef(t * 32, 1, 1, 1);
-            var col = color1;
+            var col = color1.*;
             col.x += audio.rms_energy * bubble_color_scale.*;
-            rl.DrawSphereWires(.{}, r_sphere.* + audio.rms_energy * effect.*, 10, 10, hsv(col.*).into());
+            rl.DrawSphereWires(.{}, r_sphere.* + audio.rms_energy * effect.*, 10, 10, hsv(col).into());
             rl.rlPopMatrix();
         }
         rl.rlPushMatrix();
@@ -62,9 +62,9 @@ pub const Bubble = struct {
             rl.rlTranslatef(x, y, 0);
             rl.rlRotatef(90 + (angle_rad * 180 / std.math.pi), 0, 0, 1);
 
-            var col = color2;
+            var col = color2.*;
             col.x += audio.rms_energy * color_scale.* + @abs(v) * 30;
-            rl.DrawCubeWires(.{}, 0.1, height_ring.* + @abs(v) * effect.* + audio.rms_energy * 0.2, 0.1, hsv(col.*).into());
+            rl.DrawCubeWires(.{}, 0.1, height_ring.* + @abs(v) * effect.* + audio.rms_energy * 0.2, 0.1, hsv(col).into());
             rl.rlPopMatrix();
         }
         rl.rlPopMatrix();

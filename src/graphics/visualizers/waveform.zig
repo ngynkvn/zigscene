@@ -15,11 +15,11 @@ pub const WaveFormLine = struct {
         .{ "amplitude", amplitude, .{ 0, 100 } },
     };
     pub var Colors = [_]controls.Color{
-        .{ "color1", color1.x },
-        .{ "color2", color2.x },
+        .{ "color1", &color1.x },
+        .{ "color2", &color2.x },
     };
     const Config = @import("zigscene").Config.Visualizer.WaveFormLine;
-    pub var amplitude: *f32 = &Config.amplitude;
+    const amplitude: *f32 = &Config.amplitude;
     // zig fmt: off
     const color1 = &Config.color1;
     const color2 = &Config.color2;
@@ -31,8 +31,8 @@ pub const WaveFormLine = struct {
         const px = x + center.x;
         const py = y + center.y;
         // zig fmt: off
-        rl.DrawRectangleRec(.{ .x = px, .y = py,      .width = 1, .height = 2 }, hsv(color1).into());
-        rl.DrawRectangleRec(.{ .x = px, .y = py + 8,  .width = 1, .height = 2 }, hsv(color2).into());
+        rl.DrawRectangleRec(.{ .x = px, .y = py,      .width = 1, .height = 2 }, hsv(color1.*).into());
+        rl.DrawRectangleRec(.{ .x = px, .y = py + 8,  .width = 1, .height = 2 }, hsv(color2.*).into());
         // zig fmt: on
     }
 };
@@ -43,27 +43,27 @@ pub const WaveFormBar = struct {
         .{ "base height", base_h, .{ 0, 100 } },
     };
     pub var Colors = [_]controls.Color{
-        .{ "color1", color1.x },
-        .{ "color2", color2.x },
+        .{ "color1", &color1.x },
+        .{ "color2", &color2.x },
     };
     const Config = @import("zigscene").Config.Visualizer.WaveFormBar;
-    const amplitude: f32 = &Config.amplitude;
-    const base_h: f32 = &Config.base_h;
+    const amplitude: *f32 = &Config.amplitude;
+    const base_h: *f32 = &Config.base_h;
     const color1 = &Config.color1;
     const color2 = &Config.color2;
 
     pub fn render(center: rl.Vector2, i: usize, v: f32) void {
         const SPACING = ffi(f32, main.screenWidth) / ffi(f32, audio.curr_buffer.len);
         const x = ffi(f32, i) * SPACING;
-        const y = (v * amplitude);
+        const y = (v * amplitude.*);
         const px = x;
-        const c1 = hsv(color1).into();
-        const c2 = hsv(color2).into();
+        const c1 = hsv(color1.*).into();
+        const c2 = hsv(color2.*).into();
         rl.DrawRectangleGradientEx(.{
             .x = px,
-            .y = center.y * 2 - y - base_h,
+            .y = center.y * 2 - y - base_h.*,
             .width = 2,
-            .height = y + base_h,
+            .height = y + base_h.*,
         }, c1, c2, c2, c1);
     }
 };
