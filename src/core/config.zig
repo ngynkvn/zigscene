@@ -16,17 +16,20 @@ pub const Audio = struct {
     pub const channels: u8 = 2;
     pub const volume: f32 = 0.40;
 
-    // Analysis settings
-    pub const attack: f32 = 0.8;
-    pub const release: f32 = 0.90;
+    pub const Scalars = [_]controls.Scalar{
+        .{ "Attack", &attack, .{ 0.0, 1 } },
+        .{ "Release", &release, .{ 0.0, 1 } },
+    };
+    pub var attack: f32 = 0.8;
+    pub var release: f32 = 0.90;
 };
 
 pub const Visualizer = struct {
     pub const WaveFormLine = struct {
-        pub var Scalars = [_]controls.Scalar{
+        pub const Scalars = [_]controls.Scalar{
             .{ "amplitude", &amplitude, .{ 0, 100 } },
         };
-        pub var Colors = [_]controls.Color{
+        pub const Colors = [_]controls.Color{
             .{ "color1", &color1.x },
             .{ "color2", &color2.x },
         };

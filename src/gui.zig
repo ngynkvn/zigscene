@@ -88,11 +88,11 @@ const Layout = struct {
                 nth_field += group.len;
             }
         }
-        const Fields = [_]struct { []const u8, []controls.Scalar }{
+        const Fields = [_]struct { []const u8, []const controls.Scalar }{
             .{ "WaveFormLine", &config.Visualizer.WaveFormLine.Scalars },
             .{ "WaveFormBar", &config.Visualizer.WaveFormBar.Scalars },
             .{ "Bubble", &config.Visualizer.Bubble.Scalars },
-            .{ "Controls", &audio.Controls.Scalars },
+            .{ "Audio Controls", &config.Audio.Scalars },
         };
     };
     const Colors = struct {
@@ -117,7 +117,7 @@ const Layout = struct {
                 yoff += offset;
             }
         }
-        const Fields = [_]struct { []const u8, []controls.Color }{
+        const Fields = [_]struct { []const u8, []const controls.Color }{
             .{ "WaveFormLine", &config.Visualizer.WaveFormLine.Colors },
             .{ "WaveFormBar", &config.Visualizer.WaveFormBar.Colors },
             .{ "Bubble", &config.Visualizer.Bubble.Colors },

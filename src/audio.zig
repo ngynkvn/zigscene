@@ -7,17 +7,8 @@ const cnv = @import("ext/convert.zig");
 const ffi = cnv.ffi;
 const iff = cnv.iff;
 
-pub const Controls = struct {
-    pub var Scalars = [_]controls.Scalar{
-        .{ "Attack", &Attack, .{ 0.0, 1 } },
-        .{ "Release", &Release, .{ 0.0, 1 } },
-    };
-};
-
 // TODO: Not properly connected yet
 const N = Config.Audio.buffer_size;
-pub var Attack: f32 = Config.Audio.attack;
-pub var Release: f32 = Config.Audio.release;
 const ComplexF32 = std.math.Complex(f32);
 /// Currently loaded audio buffer data
 var audio_buffer = std.mem.zeroes([N]f32);
@@ -50,8 +41,8 @@ pub fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
         const x = (l + r) * 0.5;
         raw_sample[fi] = x * 2;
         audio_buffer[fi] =
-            (Attack * x) +
-            (Release * audio_buffer[fi]);
+            (Config.Audio.attack * x) +
+            (Config.Audio.release * audio_buffer[fi]);
 
         fft_buffer[fi] = ComplexF32.init(l + r, 0);
         rms += (x * x);

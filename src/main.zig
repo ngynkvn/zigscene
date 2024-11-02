@@ -105,10 +105,10 @@ fn processInput() void {
     // The key was not pressed before but it's down now
     if (rl.isKeyPressed(.SPACE)) {
         // :)
-        prevValue = audio.Release;
-        audio.Release = 1.0;
+        prevValue = Config.Audio.release;
+        Config.Audio.release = 1.0;
         // The key was pressed before but it's up now
-    } else if (rl.isKeyReleased(.SPACE)) audio.Release = prevValue;
+    } else if (rl.isKeyReleased(.SPACE)) Config.Audio.release = prevValue;
 
     if (rl.isKeyPressed(.F)) {
         if (!rl.IsWindowState(rl.FLAG_BORDERLESS_WINDOWED_MODE)) rl.SetWindowPosition(0, 0);
