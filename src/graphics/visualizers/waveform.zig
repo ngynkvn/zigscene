@@ -1,6 +1,6 @@
 const std = @import("std");
 const main = @import("zigscene");
-const audio = main.audio;
+const processor = main.processor;
 const rl = main.rl;
 const controls = @import("../../gui/controls.zig");
 const cnv = @import("../../ext/convert.zig");
@@ -16,7 +16,7 @@ pub const WaveFormLine = struct {
         const amplitude: f32 = Config.amplitude;
         const color1 = Config.color1;
         const color2 = Config.color2;
-        const SPACING = ffi(f32, main.screenWidth) / ffi(f32, audio.curr_buffer.len);
+        const SPACING = ffi(f32, main.screenWidth) / ffi(f32, processor.curr_buffer.len);
         const x = ffi(f32, i) * SPACING;
         const y = -(v * amplitude);
         // "plot" x and y
@@ -37,7 +37,7 @@ pub const WaveFormBar = struct {
     const color2 = &Config.color2;
 
     pub fn render(center: rl.Vector2, i: usize, v: f32) void {
-        const SPACING = ffi(f32, main.screenWidth) / ffi(f32, audio.curr_buffer.len);
+        const SPACING = ffi(f32, main.screenWidth) / ffi(f32, processor.curr_buffer.len);
         const x = ffi(f32, i) * SPACING;
         const y = (v * amplitude.*);
         const px = x;

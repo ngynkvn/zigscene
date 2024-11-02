@@ -2,7 +2,7 @@ const std = @import("std");
 
 const rl = @import("raylib.zig");
 const main = @import("main.zig");
-const audio = @import("audio.zig");
+const processor = @import("audio/processor.zig");
 const controls = @import("gui/controls.zig");
 const tracy = @import("tracy");
 const cnv = @import("ext/convert.zig");

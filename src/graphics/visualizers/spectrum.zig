@@ -1,6 +1,6 @@
 const std = @import("std");
 const main = @import("zigscene");
-const audio = main.audio;
+const processor = main.processor;
 const rl = main.rl;
 const controls = @import("../../gui/controls.zig");
 const cnv = @import("../../ext/convert.zig");
@@ -12,7 +12,7 @@ const iff = cnv.iff;
 
 pub const FFTSpectrum = struct {
     pub fn render(center: rl.Vector2, i: usize, v: f32) void {
-        const SPACING = ffi(f32, main.screenWidth) / ffi(f32, audio.curr_buffer.len);
+        const SPACING = ffi(f32, main.screenWidth) / ffi(f32, processor.curr_buffer.len);
         const x = ffi(f32, i) * SPACING;
         const y = v;
         // "plot" x and y

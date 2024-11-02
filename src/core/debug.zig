@@ -1,6 +1,6 @@
 const std = @import("std");
 const rl = @import("../raylib.zig");
-const audio = @import("../audio.zig");
+const processor = @import("../audio/processor.zig");
 const main = @import("../main.zig");
 const asF32 = @import("../ext/convert.zig").asF32;
 
@@ -12,7 +12,7 @@ pub fn render() void {
     const pressed = rl.IsMouseButtonPressed(rl.MOUSE_LEFT_BUTTON);
     const buf = std.fmt.bufPrintZ(txt[0..64], "{}", .{pressed}) catch txt[0..0];
     rl.DrawText(buf.ptr, main.screenWidth - 100, 200, 24, rl.RAYWHITE);
-    pos.height = 10 + 100 * audio.rms_energy;
+    pos.height = 10 + 100 * processor.rms_energy;
     rl.DrawRectangleRec(pos, rl.RED);
 }
 

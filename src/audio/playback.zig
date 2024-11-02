@@ -1,6 +1,6 @@
 const std = @import("std");
-const rl = @import("raylib.zig");
-const audio = @import("audio.zig");
+const rl = @import("../raylib.zig");
+const processor = @import("processor.zig");
 
 pub var music = rl.Music{};
 var fnbuff: [256]u8 = @splat(0);
@@ -20,7 +20,7 @@ pub fn startMusic(path: [*c]const u8) !void {
     @memcpy(fnbuff[0..clen], cfilename[0..clen]);
     filename = fnbuff[0..clen];
     std.log.info("samplesize = {}, samplerate = {}\n", .{ music.stream.sampleSize, music.stream.sampleRate });
-    rl.AttachAudioStreamProcessor(music.stream, audio.audioStreamCallback);
+    rl.AttachAudioStreamProcessor(music.stream, processor.audioStreamCallback);
     rl.PlayMusicStream(music);
 }
 pub fn GetMusicTimePlayed() f32 {

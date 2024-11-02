@@ -3,8 +3,8 @@ const options = @import("options");
 const tracy = @import("tracy");
 
 pub const rl = @import("raylib.zig");
-pub const music = @import("music.zig");
-pub const audio = @import("audio.zig");
+pub const music = @import("audio/playback.zig");
+pub const processor = @import("audio/processor.zig");
 pub const graphics = @import("graphics.zig");
 pub const gui = @import("gui.zig");
 pub const debug = @import("core/debug.zig");
@@ -69,7 +69,7 @@ pub fn main() !void {
             rl.ClearBackground(rl.BLACK);
             // Drawing
             const ctx_2d = tracy.traceNamed(@src(), "2d");
-            for (audio.curr_buffer, audio.curr_fft, 0..) |v, fv, i| {
+            for (processor.curr_buffer, processor.curr_fft, 0..) |v, fv, i| {
                 graphics.WaveFormLine.render(.{ .y = center.y - 80 }, i, v);
                 graphics.WaveFormBar.render(center, i, v);
                 graphics.WaveFormLine.render(.{ .y = center.y * 2 }, i, fv.magnitude() * 0.15);
@@ -136,7 +136,7 @@ fn processArgs() !?[]const u8 {
 
 test "root" {
     _ = music;
-    _ = audio;
+    _ = processor;
     _ = graphics;
     _ = gui;
     _ = debug;

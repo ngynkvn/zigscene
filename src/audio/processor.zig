@@ -1,9 +1,9 @@
 const std = @import("std");
 const tracy = @import("tracy");
-const controls = @import("gui/controls.zig");
+const controls = @import("../gui/controls.zig");
 const Config = @import("zigscene").Config;
 
-const cnv = @import("ext/convert.zig");
+const cnv = @import("../ext/convert.zig");
 const ffi = cnv.ffi;
 const iff = cnv.iff;
 

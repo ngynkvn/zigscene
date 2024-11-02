@@ -1,8 +1,8 @@
 const std = @import("std");
 const graphics = @import("graphics.zig");
 const rl = @import("raylib.zig");
-const music = @import("music.zig");
-const audio = @import("audio.zig");
+const playback = @import("audio/playback.zig");
+const processor = @import("audio/processor.zig");
 const controls = @import("gui/controls.zig");
 const config = @import("core/config.zig");
 
@@ -26,10 +26,10 @@ pub fn frame() void {
 
     var fbs = std.io.fixedBufferStream(&Layout.txt);
     const text = fbs.writer();
-    text.print("#{}# | {s}", .{ rl.ICON_PLAYER_PLAY, music.filename }) catch unreachable;
-    if (music.IsMusicStreamPlaying()) {
-        const mtp = music.GetMusicTimePlayed();
-        const mtl = music.GetMusicTimeLength();
+    text.print("#{}# | {s}", .{ rl.ICON_PLAYER_PLAY, playback.filename }) catch unreachable;
+    if (playback.IsMusicStreamPlaying()) {
+        const mtp = playback.GetMusicTimePlayed();
+        const mtl = playback.GetMusicTimeLength();
         text.print(" | {d:7.2}s/{d:7.2}s", .{ mtp, mtl }) catch unreachable;
     }
     text.print(" | [FPS:{d}]\x00", .{rl.GetFPS()}) catch unreachable;
