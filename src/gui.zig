@@ -4,6 +4,7 @@ const rl = @import("raylib.zig");
 const music = @import("music.zig");
 const audio = @import("audio.zig");
 const controls = @import("gui/controls.zig");
+const config = @import("core/config.zig");
 
 const Rectangle = @import("ext/structs.zig").Rectangle;
 
@@ -88,20 +89,10 @@ const Layout = struct {
             }
         }
         const Fields = [_]struct { []const u8, []controls.Scalar }{
-            collect(graphics.WaveFormLine),
-            collect(graphics.WaveFormBar),
-            collect(graphics.Bubble),
-            collect(audio.Controls),
-        };
-        fn collect(t: type) struct { []const u8, []controls.Scalar } {
-            comptime return .{ @typeName(t), &@field(t, label) };
-        }
-        const NumFields: usize = brk: {
-            var n = 0;
-            for (Fields) |f| {
-                n += f[1].len;
-            }
-            break :brk n;
+            .{ "WaveFormLine", &config.Visualizer.WaveFormLine.Scalars },
+            .{ "WaveFormBar", &config.Visualizer.WaveFormBar.Scalars },
+            .{ "Bubble", &config.Visualizer.Bubble.Scalars },
+            .{ "Controls", &audio.Controls.Scalars },
         };
     };
     const Colors = struct {
@@ -127,13 +118,10 @@ const Layout = struct {
             }
         }
         const Fields = [_]struct { []const u8, []controls.Color }{
-            collect(graphics.WaveFormLine),
-            collect(graphics.WaveFormBar),
-            collect(graphics.Bubble),
+            .{ "WaveFormLine", &config.Visualizer.WaveFormLine.Colors },
+            .{ "WaveFormBar", &config.Visualizer.WaveFormBar.Colors },
+            .{ "Bubble", &config.Visualizer.Bubble.Colors },
         };
-        fn collect(t: type) struct { []const u8, []controls.Color } {
-            comptime return .{ @typeName(t), &@field(t, "Colors") };
-        }
     };
     /// Length of values in value buffer (+1 for zero)
     /// It is expected that values shouldn't go over 1000 for the tunables.

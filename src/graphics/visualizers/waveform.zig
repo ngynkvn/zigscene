@@ -11,41 +11,25 @@ const ffi = cnv.ffi;
 const iff = cnv.iff;
 
 pub const WaveFormLine = struct {
-    pub var Scalars = [_]controls.Scalar{
-        .{ "amplitude", amplitude, .{ 0, 100 } },
-    };
-    pub var Colors = [_]controls.Color{
-        .{ "color1", &color1.x },
-        .{ "color2", &color2.x },
-    };
     const Config = @import("zigscene").Config.Visualizer.WaveFormLine;
-    const amplitude: *f32 = &Config.amplitude;
-    // zig fmt: off
-    const color1 = &Config.color1;
-    const color2 = &Config.color2;
     pub fn render(center: rl.Vector2, i: usize, v: f32) void {
+        const amplitude: f32 = Config.amplitude;
+        const color1 = Config.color1;
+        const color2 = Config.color2;
         const SPACING = ffi(f32, main.screenWidth) / ffi(f32, audio.curr_buffer.len);
         const x = ffi(f32, i) * SPACING;
-        const y = -(v * amplitude.*);
+        const y = -(v * amplitude);
         // "plot" x and y
         const px = x + center.x;
         const py = y + center.y;
         // zig fmt: off
-        rl.DrawRectangleRec(.{ .x = px, .y = py,      .width = 1, .height = 2 }, hsv(color1.*).into());
-        rl.DrawRectangleRec(.{ .x = px, .y = py + 8,  .width = 1, .height = 2 }, hsv(color2.*).into());
+        rl.DrawRectangleRec(.{ .x = px, .y = py,      .width = 1, .height = 2 }, hsv(color1).into());
+        rl.DrawRectangleRec(.{ .x = px, .y = py + 8,  .width = 1, .height = 2 }, hsv(color2).into());
         // zig fmt: on
     }
 };
 
 pub const WaveFormBar = struct {
-    pub var Scalars = [_]controls.Scalar{
-        .{ "amplitude", amplitude, .{ 0, 100 } },
-        .{ "base height", base_h, .{ 0, 100 } },
-    };
-    pub var Colors = [_]controls.Color{
-        .{ "color1", &color1.x },
-        .{ "color2", &color2.x },
-    };
     const Config = @import("zigscene").Config.Visualizer.WaveFormBar;
     const amplitude: *f32 = &Config.amplitude;
     const base_h: *f32 = &Config.base_h;

@@ -11,20 +11,6 @@ const iff = cnv.iff;
 
 const Config = @import("zigscene").Config.Visualizer.Bubble;
 pub const Bubble = struct {
-    pub var Scalars = [_]controls.Scalar{
-        // zig fmt: off
-        .{ "ring radius",     r_ring,             .{ 0.1, 8 } },
-        .{ "sphere radius",   r_sphere,           .{ 0.1, 4 } },
-        .{ "volume effect",   effect,             .{ 0.1, 1 } },
-        .{ "color scale",     color_scale,        .{ 0.0, 100 } },
-        .{ "bubble color fx", bubble_color_scale, .{ 0.0, 100 } },
-        .{ "ring height",     height_ring,        .{ 0.0, 1 } },
-        // zig fmt: on
-    };
-    pub var Colors = [_]controls.Color{
-        .{ "color1", &color1.x },
-        .{ "color2", &color2.x },
-    };
     const color1 = &Config.color1;
     const color2 = &Config.color2;
     // Radii
