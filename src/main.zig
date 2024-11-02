@@ -1,32 +1,30 @@
 const std = @import("std");
-const rl = @import("raylib.zig");
-const music = @import("music.zig");
-const audio = @import("audio.zig");
-const graphics = @import("graphics.zig");
-const gui = @import("gui.zig");
-const debug = @import("debug.zig");
 const options = @import("options");
 const tracy = @import("tracy");
 
-pub const defaultScreenWidth = 1024;
-pub const defaultScreenHeight = 768;
+pub const rl = @import("raylib.zig");
+pub const music = @import("music.zig");
+pub const audio = @import("audio.zig");
+pub const graphics = @import("graphics.zig");
+pub const gui = @import("gui.zig");
+pub const debug = @import("core/debug.zig");
+pub const Config = @import("core/config.zig");
 
 pub var isFullScreen = false;
-pub var screenWidth: c_int = defaultScreenWidth;
-pub var screenHeight: c_int = defaultScreenHeight;
-
-const APP_NAME = "zigscene";
+pub var screenWidth: c_int = Config.Window.width;
+pub var screenHeight: c_int = Config.Window.height;
+const APP_NAME = Config.Window.title;
 
 var pressed: bool = false;
 var prevValue: f32 = 0;
 var rot_offset: f32 = 0.0;
 var camera3d: rl.Camera3D = .{
     // zig fmt: off
-    .position   = .{ .x = 0.0, .y = 0.0, .z = 10.0 }, // Camera position
-    .target     = .{ .x = 0.0, .y = 0.0, .z = 0.0  }, // Camera looking at point
-    .up         = .{ .x = 0.0, .y = 1.0, .z = 0.0  }, // Camera up vector (rotation towards target)
-    .fovy       = 65.0,                               // Camera field-of-view Y
-    .projection = rl.CAMERA_PERSPECTIVE,              // Camera projection type
+    .position   = Config.Camera.initial_position,       // Camera position
+    .target     = Config.Camera.initial_target,         // Camera looking at point
+    .up         = .{ .x = 0.0, .y = 1.0, .z = 0.0  },   // Camera up vector (rotation towards target)
+    .fovy       = Config.Camera.fov,                    // Camera field-of-view Y
+    .projection = rl.CAMERA_PERSPECTIVE,                // Camera projection type
     // zig fmt: on
 };
 
@@ -48,7 +46,7 @@ pub fn main() !void {
         try music.startMusic(path.ptr);
     }
 
-    rl.SetMasterVolume(0.40);
+    rl.SetMasterVolume(Config.Audio.volume);
 
     // Main loop
     // Detects window close button or ESC key
@@ -75,7 +73,7 @@ pub fn main() !void {
                 graphics.WaveFormLine.render(.{ .y = center.y - 80 }, i, v);
                 graphics.WaveFormBar.render(center, i, v);
                 graphics.WaveFormLine.render(.{ .y = center.y * 2 }, i, fv.magnitude() * 0.15);
-                graphics.FFT.render(center, i, fv.magnitude());
+                graphics.FFTSpectrum.render(center, i, fv.magnitude());
             }
             ctx_2d.end();
             graphics.Bubble.render(camera3d, rot_offset, t);
@@ -107,10 +105,10 @@ fn processInput() void {
     // The key was not pressed before but it's down now
     if (rl.isKeyPressed(.SPACE)) {
         // :)
-        prevValue = audio.Release;
-        audio.Release = 1.0;
+        prevValue = Config.Audio.release;
+        Config.Audio.release = 1.0;
         // The key was pressed before but it's up now
-    } else if (rl.isKeyReleased(.SPACE)) audio.Release = prevValue;
+    } else if (rl.isKeyReleased(.SPACE)) Config.Audio.release = prevValue;
 
     if (rl.isKeyPressed(.F)) {
         if (!rl.IsWindowState(rl.FLAG_BORDERLESS_WINDOWED_MODE)) rl.SetWindowPosition(0, 0);
@@ -137,5 +135,10 @@ fn processArgs() !?[]const u8 {
 }
 
 test "root" {
-    std.testing.refAllDeclsRecursive(@This());
+    _ = music;
+    _ = audio;
+    _ = graphics;
+    _ = gui;
+    _ = debug;
+    _ = Config;
 }
