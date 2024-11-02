@@ -17,7 +17,7 @@ pub var min_beat_interval = 10;
 /// - beat = `if (E(n) > C*avg(E(n))) true else false`
 /// This is a very basic version based on:
 /// https://archive.gamedev.net/archive/reference/programming/features/beatdetection/index.html
-pub fn process(buffer: []f32) bool {
+pub fn process(buffer: []const f32) bool {
     var current_energy: f32 = 0;
     for (buffer) |sample| current_energy += sample * sample;
     current_energy = current_energy / @as(f32, @floatFromInt(buffer.len));
