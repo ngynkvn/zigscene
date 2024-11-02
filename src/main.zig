@@ -135,5 +135,10 @@ fn processArgs() !?[]const u8 {
 }
 
 test "root" {
-    std.testing.refAllDeclsRecursive(@This());
+    _ = music;
+    _ = audio;
+    _ = graphics;
+    _ = gui;
+    _ = debug;
+    _ = Config;
 }
