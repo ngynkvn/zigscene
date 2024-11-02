@@ -8,8 +8,7 @@ var visible = false;
 pub fn render() void {
     if (!visible) return;
     var txt = std.mem.zeroes([256]u8);
-    const pressed = rl.IsMouseButtonPressed(rl.MOUSE_LEFT_BUTTON);
-    const buf = std.fmt.bufPrintZ(txt[0..64], "{}", .{pressed}) catch txt[0..0];
+    const buf = std.fmt.bufPrintZ(txt[0..64], "{}", .{processor.on_beat}) catch txt[0..0];
     rl.DrawText(buf.ptr, main.screenWidth - 100, 200, 24, rl.RAYWHITE);
     pos.height = 10 + 100 * processor.rms_energy;
     rl.DrawRectangleRec(pos, rl.RED);

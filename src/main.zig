@@ -47,7 +47,6 @@ pub fn main() !void {
             defer ctx.end();
 
             const center = rl.GetWorldToScreen(.{}, camera3d);
-            debug.render();
 
             rl.ClearBackground(rl.BLACK);
             // Drawing
@@ -60,6 +59,7 @@ pub fn main() !void {
             }
             ctx_2d.end();
             graphics.Bubble.render(camera3d, rot_offset, t);
+            debug.render();
             gui.frame();
             t += rl.GetFrameTime();
         }

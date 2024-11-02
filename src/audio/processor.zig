@@ -3,6 +3,7 @@ const tracy = @import("tracy");
 const Config = @import("zigscene").Config;
 const cnv = @import("../ext/convert.zig");
 const fft = @import("analysis/fft.zig");
+const beat = @import("analysis/beat_detector.zig");
 const ffi = cnv.ffi;
 
 const N = Config.Audio.buffer_size;
@@ -18,6 +19,7 @@ pub var curr_buffer: []f32 = &audio_buffer;
 /// Currently loaded buffer for fft data
 var fft_buffer = std.mem.zeroes([N]fft.ComplexF32);
 pub var curr_fft: []fft.ComplexF32 = &fft_buffer;
+pub var on_beat = false;
 
 /// Accepts a buffer of the stream + the length of the buffer
 /// The buffer is composed of PCM samples from the audio stream
@@ -46,6 +48,7 @@ pub fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
     }
     rms_energy = 0.65 * rms_energy + 0.90 * @sqrt(rms * ool);
     fft.fft(fft_buffer[0..curr_len]);
+    on_beat = beat.process(buffer);
     raw_buffer = raw_sample[0..curr_len];
     curr_buffer = audio_buffer[0..curr_len];
     curr_fft = fft_buffer[0..curr_len];
