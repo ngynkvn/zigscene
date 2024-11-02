@@ -6,6 +6,7 @@ pub var energy_history: [N]f32 = std.mem.zeroes([N]f32);
 pub var history_pos: usize = 0;
 pub var beat_sensitivity: f32 = 1.5142857;
 pub var var_sensititvity: f32 = -0.0025714;
+pub var min_beat_interval = 10;
 
 /// The core concept comes from the observation that musical beats often
 /// come with sudden spikes in the energy of the signal So, we can try to

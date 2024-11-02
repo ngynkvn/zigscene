@@ -1,6 +1,5 @@
 const c = @import("tracy-c");
 const std = @import("std");
-const builtin = @import("builtin");
 const options = @import("options");
 
 comptime {

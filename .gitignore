@@ -3,3 +3,4 @@ zig-out/
 sounds/
 release/
 trace/
+flat-copy/

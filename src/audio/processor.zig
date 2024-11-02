@@ -27,7 +27,6 @@ pub var bi: usize = 0;
 /// The buffer is composed of PCM samples from the audio stream
 /// that were passed to raylib / miniaudio.h
 pub fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
-    if (ptr == null) return;
     const ctx = tracy.traceNamed(@src(), "audio_stream");
     defer ctx.end();
     const buffer: []f32 = @as([*]f32, @ptrCast(@alignCast(ptr)))[0..n];
