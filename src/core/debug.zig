@@ -1,7 +1,11 @@
 const std = @import("std");
 const rl = @import("../raylib.zig");
-const processor = @import("../audio/processor.zig");
 const main = @import("../main.zig");
+const processor = @import("../audio/processor.zig");
+const cnv = @import("../ext/convert.zig");
+const ffi = cnv.ffi;
+
+const Rectangle = @import("../ext/structs.zig").Rectangle;
 
 var pos: rl.Rectangle = .{ .x = 300, .y = 300, .width = 10, .height = 10 };
 var visible = false;
@@ -12,6 +16,15 @@ pub fn render() void {
     rl.DrawText(buf.ptr, main.screenWidth - 100, 200, 24, rl.RAYWHITE);
     pos.height = 10 + 100 * processor.rms_energy;
     rl.DrawRectangleRec(pos, rl.RED);
+    // timeseries beats
+    const tsbeats = Rectangle.from(150, 64, 2, 10);
+    // Go past last written and scan from there
+    const bi = processor.bi;
+    for (1..processor.past_beats.len + 1) |b| {
+        const i = (bi + b) % processor.past_beats.len;
+        const value = processor.past_beats[i];
+        rl.DrawRectangleRec(tsbeats.translate(ffi(f32, b * 3), 0).into(), if (!value) rl.BLUE else rl.RED);
+    }
 }
 
 pub fn frame() void {

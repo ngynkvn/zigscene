@@ -20,6 +20,8 @@ pub var curr_buffer: []f32 = &audio_buffer;
 var fft_buffer = std.mem.zeroes([N]fft.ComplexF32);
 pub var curr_fft: []fft.ComplexF32 = &fft_buffer;
 pub var on_beat = false;
+pub var past_beats: [N]bool = @splat(false);
+pub var bi: usize = 0;
 
 /// Accepts a buffer of the stream + the length of the buffer
 /// The buffer is composed of PCM samples from the audio stream
@@ -49,6 +51,8 @@ pub fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
     rms_energy = 0.65 * rms_energy + 0.90 * @sqrt(rms * ool);
     fft.fft(fft_buffer[0..curr_len]);
     on_beat = beat.process(buffer);
+    past_beats[bi] = on_beat;
+    bi = (bi + 1) % N;
     raw_buffer = raw_sample[0..curr_len];
     curr_buffer = audio_buffer[0..curr_len];
     curr_fft = fft_buffer[0..curr_len];
