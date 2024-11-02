@@ -44,7 +44,7 @@ pub fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
             (Config.Audio.release * audio_buffer[fi]);
 
         fft_buffer[fi] = fft.ComplexF32.init(l + r, 0);
-        rms += (x * x);
+        rms += (l * l + r * r);
     }
     rms_energy = 0.65 * rms_energy + 0.90 * @sqrt(rms * ool);
     fft.fft(fft_buffer[0..curr_len]);
@@ -52,5 +52,3 @@ pub fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
     curr_buffer = audio_buffer[0..curr_len];
     curr_fft = fft_buffer[0..curr_len];
 }
-
-
