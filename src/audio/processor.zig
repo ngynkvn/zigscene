@@ -1,11 +1,9 @@
 const std = @import("std");
 const tracy = @import("tracy");
 const Config = @import("zigscene").Config;
-const controls = @import("../gui/controls.zig");
 const cnv = @import("../ext/convert.zig");
 const fft = @import("analysis/fft.zig");
 const ffi = cnv.ffi;
-const iff = cnv.iff;
 
 const N = Config.Audio.buffer_size;
 /// Currently loaded audio buffer data

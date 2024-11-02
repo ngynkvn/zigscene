@@ -2,7 +2,6 @@ const std = @import("std");
 const rl = @import("../raylib.zig");
 const processor = @import("../audio/processor.zig");
 const main = @import("../main.zig");
-const asF32 = @import("../ext/convert.zig").asF32;
 
 var pos: rl.Rectangle = .{ .x = 300, .y = 300, .width = 10, .height = 10 };
 var visible = false;

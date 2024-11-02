@@ -1,13 +1,10 @@
 const std = @import("std");
 const processor = @import("../../audio/processor.zig");
 const rl = @import("../../raylib.zig");
-const controls = @import("../../gui/controls.zig");
 const cnv = @import("../../ext/convert.zig");
 
 const hsv = @import("../../ext/color.zig").Color.hsv.vec3;
-const Vector3 = @import("../../ext/vector.zig").Vector3;
 const ffi = cnv.ffi;
-const iff = cnv.iff;
 
 pub const Bubble = struct {
     const Config = @import("zigscene").Config.Visualizer.Bubble;

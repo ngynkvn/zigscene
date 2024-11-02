@@ -1,5 +1,3 @@
-const std = @import("std");
-const vector = @import("ext/vector.zig");
 pub usingnamespace struct {
     // NOTE: eventually, the plan is completely get rid of raylib
     // exporting out all of it's functions
@@ -8,8 +6,6 @@ pub usingnamespace struct {
     const colorPicker = @import("gui/color_picker.zig");
     pub const GuiColorBarHueH = colorPicker.GuiColorBarHueH;
 };
-
-const Self = @This();
 
 // zig fmt: off
 pub const Key = enum(c_int) {

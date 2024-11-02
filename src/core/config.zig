@@ -1,4 +1,3 @@
-const std = @import("std");
 const rl = @import("../raylib.zig");
 const controls = @import("../gui/controls.zig");
 const Vector3 = @import("../ext/vector.zig").Vector3;

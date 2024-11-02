@@ -3,7 +3,6 @@ const Config = @import("zigscene").Config;
 
 const cnv = @import("../../ext/convert.zig");
 const ffi = cnv.ffi;
-const iff = cnv.iff;
 
 pub const ComplexF32 = std.math.Complex(f32);
 const N = Config.Audio.buffer_size;

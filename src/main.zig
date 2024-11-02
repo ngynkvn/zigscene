@@ -1,5 +1,3 @@
-const std = @import("std");
-const options = @import("options");
 const tracy = @import("tracy");
 
 pub const rl = @import("raylib.zig");
@@ -14,9 +12,7 @@ pub const init = @import("core/init.zig");
 pub var isFullScreen = false;
 pub var screenWidth: c_int = Config.Window.width;
 pub var screenHeight: c_int = Config.Window.height;
-const APP_NAME = Config.Window.title;
 
-var pressed: bool = false;
 var prevValue: f32 = 0;
 var rot_offset: f32 = 0.0;
 var camera3d: rl.Camera3D = .{

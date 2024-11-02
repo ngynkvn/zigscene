@@ -27,8 +27,6 @@ const iff = cnv.iff;
 const rgb = cnv.rgb;
 
 const CheckCollisionPointRec = rl.CheckCollisionPointRec;
-const DrawRectangle = rl.DrawRectangle;
-const DrawRectangleGradientH = rl.DrawRectangleGradientH;
 const Fade = rl.Fade;
 const GetColor = rl.GetColor;
 const GetMousePosition = rl.GetMousePosition;
@@ -38,7 +36,6 @@ const GuiIsLocked = rl.GuiIsLocked;
 const IsMouseButtonDown = rl.IsMouseButtonDown;
 
 const Color = rl.Color;
-const GuiState = rl.GuiState;
 const Rectangle = rl.Rectangle;
 const Vector2 = rl.Vector2;
 

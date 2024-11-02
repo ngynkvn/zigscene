@@ -1,15 +1,12 @@
 const std = @import("std");
-const graphics = @import("graphics.zig");
 const rl = @import("raylib.zig");
 const playback = @import("audio/playback.zig");
-const processor = @import("audio/processor.zig");
 const controls = @import("gui/controls.zig");
 const config = @import("core/config.zig");
 
 const Rectangle = @import("ext/structs.zig").Rectangle;
 
 const Tab = enum(c_int) { none, audio, scalar, color };
-var prev_tab: Tab = .none;
 pub var active_tab: Tab = .scalar;
 pub var gui_xoffset: f32 = 0;
 /// Moves the gui state to the desired tab
