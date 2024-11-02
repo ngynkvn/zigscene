@@ -9,6 +9,7 @@ pub const graphics = @import("graphics.zig");
 pub const gui = @import("gui.zig");
 pub const debug = @import("core/debug.zig");
 pub const Config = @import("core/config.zig");
+pub const init = @import("core/init.zig");
 
 pub var isFullScreen = false;
 pub var screenWidth: c_int = Config.Window.width;
@@ -31,22 +32,8 @@ var camera3d: rl.Camera3D = .{
 pub fn main() !void {
     var t: f32 = 0.0;
 
-    rl.SetConfigFlags(rl.FLAG_WINDOW_RESIZABLE);
-
-    // Setup
-    rl.InitWindow(screenWidth, screenHeight, APP_NAME);
-    defer rl.CloseWindow(); // Close window and OpenGL context
-
-    rl.InitAudioDevice();
-    defer rl.CloseAudioDevice();
-
-    rl.GuiSetAlpha(0.8);
-    rl.RayguiDark();
-    if (try processArgs()) |path| {
-        try music.startMusic(path.ptr);
-    }
-
-    rl.SetMasterVolume(Config.Audio.volume);
+    init.startup();
+    defer init.shutdown();
 
     // Main loop
     // Detects window close button or ESC key
@@ -125,13 +112,6 @@ fn processInput() void {
     if (@abs(wheelMove.x) > @abs(wheelMove.y)) {
         rot_offset += wheelMove.x;
     } else camera3d.position.z += wheelMove.y;
-}
-fn processArgs() !?[]const u8 {
-    var buffer: [256]u8 = @splat(0);
-    var fba = std.heap.FixedBufferAllocator.init(&buffer);
-    const allocator = fba.allocator();
-    var args = try std.process.argsWithAllocator(allocator);
-    return if (!args.skip()) null else args.next();
 }
 
 test "root" {
