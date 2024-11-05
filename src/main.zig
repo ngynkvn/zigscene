@@ -1,9 +1,11 @@
 const tracy = @import("tracy");
 
+const std = @import("std");
 pub const rl = @import("raylib.zig");
 pub const music = @import("audio/playback.zig");
 pub const processor = @import("audio/processor.zig");
 pub const graphics = @import("graphics.zig");
+pub const shader = @import("shader/shader.zig");
 pub const gui = @import("gui.zig");
 pub const debug = @import("core/debug.zig");
 pub const Config = @import("core/config.zig");
@@ -31,23 +33,24 @@ pub fn main() !void {
     try init.startup();
     defer init.shutdown();
 
+    // Init shader
+    shader.init();
+
     // Main loop
     // Detects window close button or ESC key
     while (!rl.WindowShouldClose()) {
         defer tracy.frameMarkNamed("zigscene");
         if (music.IsMusicStreamPlaying()) music.UpdateMusicStream();
         processInput();
+        const center = rl.GetWorldToScreen(.{}, camera3d);
 
         {
-            rl.BeginDrawing();
-            defer rl.EndDrawing();
             const ctx = tracy.traceNamed(@src(), "Renders");
             defer ctx.end();
 
-            const center = rl.GetWorldToScreen(.{}, camera3d);
-            rl.ClearBackground(rl.BLACK);
-            debug.render();
             // Drawing
+            rl.BeginTextureMode(shader.sceneTexture);
+            rl.ClearBackground(rl.BLACK);
             const ctx_2d = tracy.traceNamed(@src(), "2d");
             for (processor.curr_buffer, processor.curr_fft, 0..) |v, fv, i| {
                 graphics.WaveFormLine.render(.{ .y = center.y - 80 }, i, v);
@@ -57,7 +60,24 @@ pub fn main() !void {
             }
             ctx_2d.end();
             graphics.Bubble.render(camera3d, rot_offset, t);
+            rl.EndTextureMode();
+            rl.BeginDrawing();
+            rl.BeginShaderMode(shader.program);
+            // const time: f32 = @floatCast(rl.GetTime());
+            // rl.SetShaderValue(shader.program, shader.timeLoc, &time, rl.RL_SHADER_UNIFORM_FLOAT);
+            rl.DrawTextureRec(
+                shader.sceneTexture.texture,
+                .{
+                    .width = @floatFromInt(shader.sceneTexture.texture.width),
+                    .height = @floatFromInt(-shader.sceneTexture.texture.height),
+                },
+                .{},
+                rl.WHITE,
+            );
+            rl.EndShaderMode();
+            debug.render();
             gui.frame();
+            rl.EndDrawing();
             t += rl.GetFrameTime();
         }
     }
