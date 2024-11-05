@@ -64,7 +64,7 @@ fn processFrame(buffer: []const f32, len: usize) void {
         r = buffer[fi * 2 + 1];
         const mono = (l + r) * 0.5;
 
-        raw_sample[fi] = mono * 2;
+        raw_sample[fi] = mono;
 
         audio_buffer[fi] =
             (Config.Audio.attack * mono) +

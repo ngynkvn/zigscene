@@ -41,14 +41,12 @@ pub fn main() !void {
         {
             rl.BeginDrawing();
             defer rl.EndDrawing();
-            // Debug related visuals + controls
-            debug.frame();
             const ctx = tracy.traceNamed(@src(), "Renders");
             defer ctx.end();
 
             const center = rl.GetWorldToScreen(.{}, camera3d);
-
             rl.ClearBackground(rl.BLACK);
+            debug.render();
             // Drawing
             const ctx_2d = tracy.traceNamed(@src(), "2d");
             for (processor.curr_buffer, processor.curr_fft, 0..) |v, fv, i| {
@@ -59,7 +57,6 @@ pub fn main() !void {
             }
             ctx_2d.end();
             graphics.Bubble.render(camera3d, rot_offset, t);
-            debug.render();
             gui.frame();
             t += rl.GetFrameTime();
         }
@@ -108,6 +105,8 @@ fn processInput() void {
     if (@abs(wheelMove.x) > @abs(wheelMove.y)) {
         rot_offset += wheelMove.x;
     } else camera3d.position.z += wheelMove.y;
+
+    debug.frame();
 }
 
 test "root" {
