@@ -1,6 +1,6 @@
+const std = @import("std");
 const tracy = @import("tracy");
 
-const std = @import("std");
 pub const rl = @import("raylib.zig");
 pub const music = @import("audio/playback.zig");
 pub const processor = @import("audio/processor.zig");
@@ -10,11 +10,9 @@ pub const gui = @import("gui.zig");
 pub const debug = @import("core/debug.zig");
 pub const Config = @import("core/config.zig");
 pub const init = @import("core/init.zig");
+pub const event = @import("core/event.zig");
 
 pub var isFullScreen = false;
-pub var screenWidth: c_int = Config.Window.width;
-pub var screenHeight: c_int = Config.Window.height;
-
 var prevValue: f32 = 0;
 var rot_offset: f32 = 0.0;
 var camera3d: rl.Camera3D = .{
@@ -83,7 +81,13 @@ pub fn main() !void {
 }
 
 fn processInput() void {
-    if (rl.IsFileDropped()) try music.handleFile();
+    if (rl.IsFileDropped()) {
+        const files = rl.LoadDroppedFiles();
+        defer rl.UnloadDroppedFiles(files);
+        const file = files.paths[0];
+        const len = std.mem.len(file);
+        event.onFilenameInput(file[0..len]);
+    }
 
     if (rl.isKeyPressed(.C)) camera3d.projection = switch (camera3d.projection) {
         rl.CAMERA_PERSPECTIVE => rl.CAMERA_ORTHOGRAPHIC,
@@ -92,13 +96,13 @@ fn processInput() void {
     };
 
     if (rl.isKeyPressed(.ONE)) {
-        gui.to(.none);
+        event.onTabChange(.none);
     } else if (rl.isKeyPressed(.TWO)) {
-        gui.to(.audio);
+        event.onTabChange(.audio);
     } else if (rl.isKeyPressed(.THREE)) {
-        gui.to(.scalar);
+        event.onTabChange(.scalar);
     } else if (rl.isKeyPressed(.FOUR)) {
-        gui.to(.color);
+        event.onTabChange(.color);
     }
 
     // The key was not pressed before but it's down now
@@ -118,9 +122,7 @@ fn processInput() void {
 
     // TODO: Should think about an event system
     if (rl.IsWindowResized()) {
-        screenWidth = rl.GetScreenWidth();
-        screenHeight = rl.GetScreenHeight();
-        shader.resized(screenWidth, screenHeight);
+        event.onWindowResize(rl.GetScreenWidth(), rl.GetScreenHeight());
     }
     const wheelMove = rl.GetMouseWheelMoveV();
     if (@abs(wheelMove.x) > @abs(wheelMove.y)) {

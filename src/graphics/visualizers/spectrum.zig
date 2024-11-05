@@ -1,13 +1,17 @@
-const main = @import("../../main.zig");
 const processor = @import("../../audio/processor.zig");
 const rl = @import("../../raylib.zig");
 const cnv = @import("../../ext/convert.zig");
+
+var screenWidth: c_int = @import("../../core/config.zig").Window.width;
+pub fn onWindowResize(width: i32, _: i32) void {
+    screenWidth = width;
+}
 
 const ffi = cnv.ffi;
 
 pub const FFTSpectrum = struct {
     pub fn render(center: rl.Vector2, i: usize, v: f32) void {
-        const SPACING = ffi(f32, main.screenWidth) / ffi(f32, processor.curr_buffer.len);
+        const SPACING = ffi(f32, screenWidth) / ffi(f32, processor.curr_buffer.len);
         const x = ffi(f32, i) * SPACING;
         const y = v;
         // "plot" x and y

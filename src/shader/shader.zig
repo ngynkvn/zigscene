@@ -8,6 +8,12 @@ pub var amountLoc: c_int = undefined;
 
 pub var screenWidth: c_int = Config.Window.width;
 pub var screenHeight: c_int = Config.Window.height;
+pub fn onWindowResize(width: i32, height: i32) void {
+    screenWidth = width;
+    screenHeight = height;
+    rl.UnloadRenderTexture(sceneTexture);
+    sceneTexture = rl.LoadRenderTexture(screenWidth, screenHeight);
+}
 
 var fs = @embedFile("chromatic.fs.glsl");
 var vs = @embedFile("chromatic.vs.glsl");
@@ -18,11 +24,4 @@ pub fn init() void {
     program = rl.LoadShaderFromMemory(vs, fs);
     amountLoc = rl.rlGetLocationUniform(program.id, "amount");
     std.debug.assert(amountLoc != -1);
-}
-
-pub fn resized(sw: c_int, sh: c_int) void {
-    screenWidth = sw;
-    screenHeight = sh;
-    rl.UnloadRenderTexture(sceneTexture);
-    sceneTexture = rl.LoadRenderTexture(screenWidth, screenHeight);
 }

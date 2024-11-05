@@ -3,6 +3,7 @@ const std = @import("std");
 const rl = @import("../raylib.zig");
 const music = @import("../audio/playback.zig");
 const Config = @import("config.zig");
+const event = @import("event.zig");
 pub var screenWidth: c_int = Config.Window.width;
 pub var screenHeight: c_int = Config.Window.height;
 const APP_NAME = Config.Window.title;
@@ -18,8 +19,7 @@ pub fn startup() !void {
     rl.GuiSetAlpha(0.8);
     rl.RayguiDark();
     if (try processArgs()) |path| {
-        // TODO: an event system would let me decouple these direct calls into other modules
-        try music.startMusic(path.ptr);
+        event.onFilenameInput(path);
     }
 
     rl.SetMasterVolume(Config.Audio.volume);

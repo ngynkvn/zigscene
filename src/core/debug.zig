@@ -1,9 +1,13 @@
 const std = @import("std");
 const rl = @import("../raylib.zig");
-const main = @import("../main.zig");
 const processor = @import("../audio/processor.zig");
 const cnv = @import("../ext/convert.zig");
 const ffi = cnv.ffi;
+
+var screenWidth: c_int = @import("config.zig").Window.width;
+pub fn onWindowResize(width: i32, _: i32) void {
+    screenWidth = width;
+}
 
 const Rectangle = @import("../ext/structs.zig").Rectangle;
 
@@ -13,7 +17,7 @@ pub fn render() void {
     if (!visible) return;
     var txt = std.mem.zeroes([256]u8);
     const buf = std.fmt.bufPrintZ(txt[0..64], "{}", .{processor.on_beat}) catch txt[0..0];
-    rl.DrawText(buf.ptr, main.screenWidth - 100, 200, 24, rl.RAYWHITE);
+    rl.DrawText(buf.ptr, screenWidth - 100, 200, 24, rl.RAYWHITE);
     pos.height = 10 + 100 * processor.rms_energy;
     rl.DrawRectangleRec(pos, rl.RED);
     // timeseries beats

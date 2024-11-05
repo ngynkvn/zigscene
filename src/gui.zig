@@ -6,11 +6,13 @@ const config = @import("core/config.zig");
 
 const Rectangle = @import("ext/structs.zig").Rectangle;
 
-const Tab = enum(c_int) { none, audio, scalar, color };
-pub var active_tab: Tab = .scalar;
-pub var gui_xoffset: f32 = 0;
+pub const Tab = enum(c_int) { none, audio, scalar, color };
+var active_tab: Tab = .scalar;
+var gui_xoffset: f32 = 0;
+pub const onTabChange = to;
+
 /// Moves the gui state to the desired tab
-pub fn to(next: Tab) void {
+fn to(next: Tab) void {
     if (Layout.Scalars.editState != null or active_tab == next) return;
     active_tab = next;
     gui_xoffset = -300;

@@ -1,4 +1,3 @@
-const main = @import("../../main.zig");
 const processor = @import("../../audio/processor.zig");
 const rl = @import("../../raylib.zig");
 const cnv = @import("../../ext/convert.zig");
@@ -6,13 +5,15 @@ const cnv = @import("../../ext/convert.zig");
 const hsv = @import("../../ext/color.zig").Color.hsv.vec3;
 const ffi = cnv.ffi;
 
+var screenWidth: c_int = @import("../../core/config.zig").Window.width;
+
 pub const WaveFormLine = struct {
     const Config = @import("../../core/config.zig").Visualizer.WaveFormLine;
     pub fn render(center: rl.Vector2, i: usize, v: f32) void {
         const amplitude: f32 = Config.amplitude;
         const color1 = Config.color1;
         const color2 = Config.color2;
-        const SPACING = ffi(f32, main.screenWidth) / ffi(f32, processor.curr_buffer.len);
+        const SPACING = ffi(f32, screenWidth) / ffi(f32, processor.curr_buffer.len);
         const x = ffi(f32, i) * SPACING;
         const y = -(v * amplitude);
         // "plot" x and y
@@ -33,7 +34,7 @@ pub const WaveFormBar = struct {
     const color2 = &Config.color2;
 
     pub fn render(center: rl.Vector2, i: usize, v: f32) void {
-        const SPACING = ffi(f32, main.screenWidth) / ffi(f32, processor.curr_buffer.len);
+        const SPACING = ffi(f32, screenWidth) / ffi(f32, processor.curr_buffer.len);
         const x = ffi(f32, i) * SPACING;
         const y = (v * amplitude.*);
         const px = x;
@@ -47,3 +48,7 @@ pub const WaveFormBar = struct {
         }, c1, c2, c2, c1);
     }
 };
+
+pub fn onWindowResize(width: i32, _: i32) void {
+    screenWidth = width;
+}

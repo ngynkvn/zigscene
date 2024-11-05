@@ -6,16 +6,9 @@ pub var music = rl.Music{};
 var fnbuff: [256]u8 = @splat(0);
 pub var filename: []u8 = fnbuff[0..0];
 
-pub fn handleFile() !void {
-    const files = rl.LoadDroppedFiles();
-    defer rl.UnloadDroppedFiles(files);
-    const file = files.paths[0];
-    try startMusic(file);
-}
-
-pub fn startMusic(path: [*c]const u8) !void {
-    music = rl.LoadMusicStream(path);
-    const cfilename = rl.GetFileName(path);
+pub fn onFilenameInput(path: []const u8) void {
+    music = rl.LoadMusicStream(path.ptr);
+    const cfilename = rl.GetFileName(path.ptr);
     const clen = std.mem.len(cfilename);
     @memcpy(fnbuff[0..clen], cfilename[0..clen]);
     filename = fnbuff[0..clen];
