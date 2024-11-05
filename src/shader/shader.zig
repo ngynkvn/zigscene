@@ -12,6 +12,7 @@ pub var screenHeight: c_int = Config.Window.height;
 var fs = @embedFile("chromatic.fs.glsl");
 var vs = @embedFile("chromatic.vs.glsl");
 
+// TODO: make the shader program swappable and adjust options as needed
 pub fn init() void {
     sceneTexture = rl.LoadRenderTexture(screenWidth, screenHeight);
     program = rl.LoadShaderFromMemory(vs, fs);
