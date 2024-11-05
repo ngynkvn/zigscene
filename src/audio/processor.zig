@@ -1,6 +1,6 @@
 const std = @import("std");
 const tracy = @import("tracy");
-const Config = @import("zigscene").Config;
+const Config = @import("../core/config.zig");
 const cnv = @import("../ext/convert.zig");
 const fft = @import("analysis/fft.zig");
 const beat = @import("analysis/beat_detector.zig");

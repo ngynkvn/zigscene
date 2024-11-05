@@ -1,6 +1,6 @@
-const main = @import("zigscene");
-const processor = main.processor;
-const rl = main.rl;
+const main = @import("../../main.zig");
+const processor = @import("../../audio/processor.zig");
+const rl = @import("../../raylib.zig");
 const cnv = @import("../../ext/convert.zig");
 
 const ffi = cnv.ffi;

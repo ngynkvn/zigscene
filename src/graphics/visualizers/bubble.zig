@@ -7,7 +7,7 @@ const hsv = @import("../../ext/color.zig").Color.hsv.vec3;
 const ffi = cnv.ffi;
 
 pub const Bubble = struct {
-    const Config = @import("zigscene").Config.Visualizer.Bubble;
+    const Config = @import("../../core/config.zig").Visualizer.Bubble;
     // Radii
     pub fn render(camera3d: rl.Camera3D, rot_offset: f32, t: f32) void {
         var color1 = Config.color1;

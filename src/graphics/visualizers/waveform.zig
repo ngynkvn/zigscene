@@ -1,13 +1,13 @@
-const main = @import("zigscene");
-const processor = main.processor;
-const rl = main.rl;
+const main = @import("../../main.zig");
+const processor = @import("../../audio/processor.zig");
+const rl = @import("../../raylib.zig");
 const cnv = @import("../../ext/convert.zig");
 
 const hsv = @import("../../ext/color.zig").Color.hsv.vec3;
 const ffi = cnv.ffi;
 
 pub const WaveFormLine = struct {
-    const Config = @import("zigscene").Config.Visualizer.WaveFormLine;
+    const Config = @import("../../core/config.zig").Visualizer.WaveFormLine;
     pub fn render(center: rl.Vector2, i: usize, v: f32) void {
         const amplitude: f32 = Config.amplitude;
         const color1 = Config.color1;
@@ -26,7 +26,7 @@ pub const WaveFormLine = struct {
 };
 
 pub const WaveFormBar = struct {
-    const Config = @import("zigscene").Config.Visualizer.WaveFormBar;
+    const Config = @import("../../core/config.zig").Visualizer.WaveFormBar;
     const amplitude: *f32 = &Config.amplitude;
     const base_h: *f32 = &Config.base_h;
     const color1 = &Config.color1;

@@ -1,5 +1,5 @@
 const std = @import("std");
-const Config = @import("zigscene").Config;
+const Config = @import("../../core/config.zig");
 
 const cnv = @import("../../ext/convert.zig");
 const ffi = cnv.ffi;
