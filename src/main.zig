@@ -28,7 +28,7 @@ var camera3d: rl.Camera3D = .{
 pub fn main() !void {
     var t: f32 = 0.0;
 
-    init.startup();
+    try init.startup();
     defer init.shutdown();
 
     // Main loop

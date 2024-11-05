@@ -7,7 +7,7 @@ pub var screenWidth: c_int = Config.Window.width;
 pub var screenHeight: c_int = Config.Window.height;
 const APP_NAME = Config.Window.title;
 
-pub fn startup() void {
+pub fn startup() !void {
     rl.SetConfigFlags(rl.FLAG_WINDOW_RESIZABLE);
 
     // Setup
