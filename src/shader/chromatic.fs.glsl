@@ -12,15 +12,10 @@ uniform vec4 colDiffuse;
 out vec4 finalColor;
 
 // NOTE: Add here your custom variables
-uniform float time;
+uniform float amount;
 
 void main()
 {
-    float amount = 0.005;
-    // Texel color fetching from texture sampler
-    vec4 texelColor = texture(texture0, fragTexCoord);
-
-    // NOTE: Implement here your fragment shader code
     vec4 r = texture(texture0, vec2(fragTexCoord.x + amount, fragTexCoord.y));
     vec4 g = texture(texture0, fragTexCoord);
     vec4 b = texture(texture0, vec2(fragTexCoord.x - amount, fragTexCoord.y));
@@ -30,5 +25,5 @@ void main()
     //    times the tint color (colDiffuse)
     //    times the fragment color (interpolated vertex color)
     vec4 chroma = vec4(r.r, g.g, b.b, 1.0) + vec4(noise * 0.1);
-    finalColor = texelColor*colDiffuse*chroma;
+    finalColor = colDiffuse*chroma;
 }

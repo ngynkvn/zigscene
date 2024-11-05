@@ -63,8 +63,7 @@ pub fn main() !void {
             rl.EndTextureMode();
             rl.BeginDrawing();
             rl.BeginShaderMode(shader.program);
-            // const time: f32 = @floatCast(rl.GetTime());
-            // rl.SetShaderValue(shader.program, shader.timeLoc, &time, rl.RL_SHADER_UNIFORM_FLOAT);
+            rl.SetShaderValue(shader.program, shader.amountLoc, &Config.Shader.amount, rl.RL_SHADER_UNIFORM_FLOAT);
             rl.DrawTextureRec(
                 shader.sceneTexture.texture,
                 .{

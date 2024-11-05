@@ -90,6 +90,7 @@ const Layout = struct {
             .{ "WaveFormBar", &config.Visualizer.WaveFormBar.Scalars },
             .{ "Bubble", &config.Visualizer.Bubble.Scalars },
             .{ "Audio Controls", &config.Audio.Scalars },
+            .{ "Shader", &config.Shader.Scalars },
         };
     };
     const Colors = struct {

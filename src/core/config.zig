@@ -23,6 +23,13 @@ pub const Audio = struct {
     pub var release: f32 = 0.90;
 };
 
+pub const Shader = struct {
+    pub var amount: f32 = 0.005;
+    pub const Scalars = [_]controls.Scalar{
+        .{ "Chroma", &amount, .{ 0.0, 0.05 } },
+    };
+};
+
 pub const Visualizer = struct {
     pub const WaveFormLine = struct {
         pub const Scalars = [_]controls.Scalar{
