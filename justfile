@@ -21,7 +21,7 @@ flat-copy:
     #!/bin/bash
     rm -rf flat-copy
     mkdir -p flat-copy
-    find . -type f -name "*.zig" -not -path "./zig-cache/*" -not -path "./flat-copy/*" | while read -r file; do
+    fd . -t f -e "zig" -E "flat-copy" -E "tests" | while read -r file; do
         # Remove leading ./ from path
         clean_path=${file#./}
         # Copy file to flat directory with path encoded in name
