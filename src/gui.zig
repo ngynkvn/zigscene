@@ -31,7 +31,7 @@ pub fn frame() void {
     }
     text.print(" | [FPS:{d}]\x00", .{rl.GetFPS()}) catch unreachable;
     if (gui_xoffset < 0) {
-        gui_xoffset = @trunc(rl.Lerp(gui_xoffset, 0, 30 * rl.GetFrameTime()));
+        gui_xoffset = @trunc(std.math.lerp(gui_xoffset, 0, @min(0.3, 30 * rl.GetFrameTime())));
     }
     _ = rl.GuiStatusBar(base.translate(base.width * 4 + 5, 0).resize(800, base.height).into(), &Layout.txt);
 
@@ -50,7 +50,7 @@ const Layout = struct {
     pub const Base = Rectangle.from(5, 5, 16, 16);
     pub const Scalars = struct {
         var editState: ?usize = null;
-        const PanelSize = Base.translate(2, 20).resize(310, 700);
+        const PanelSize = Base.translate(2, 20).resize(280, 700);
         const LabelSize = Base.resize(200, 8);
         const label: []const u8 = "Scalars";
         const offset: usize = 24;
@@ -68,14 +68,14 @@ const Layout = struct {
                 inline for (group, 0..) |optinfo, fi| {
                     const fname, const fval, const frange = optinfo;
                     const j = nth_field + fi;
-                    _ = rl.GuiSlider(anchor.resize(150, 16).translate(100, y + fi * offset).into(), fname.ptr, "", fval, frange[0], frange[1]);
+                    _ = rl.GuiSlider(anchor.resize(120, 16).translate(100, y + fi * offset).into(), fname.ptr, "", fval, frange[0], frange[1]);
 
                     const buf = if (editState == j)
                         &editing_buffer
                     else
                         std.fmt.bufPrintZ(&value_buffer, tunable_fmt, .{fval.*}) catch unreachable;
 
-                    if (rl.GuiValueBoxFloat(anchor.resize(50, 16).translate(255, y + fi * offset).into(), "", buf.ptr, fval, editState == j) != 0) {
+                    if (rl.GuiValueBoxFloat(anchor.resize(50, 16).translate(225, y + fi * offset).into(), "", buf.ptr, fval, editState == j) != 0) {
                         editState = if (editState == j) null else j;
                         @memset(&value_buffer, 0);
                         _ = std.fmt.bufPrintZ(&value_buffer, "{d}", .{fval.*}) catch unreachable;
@@ -90,6 +90,7 @@ const Layout = struct {
             .{ "WaveFormBar", &config.Visualizer.WaveFormBar.Scalars },
             .{ "Bubble", &config.Visualizer.Bubble.Scalars },
             .{ "Audio Controls", &config.Audio.Scalars },
+            .{ "Shader", &config.Shader.Scalars },
         };
     };
     const Colors = struct {
@@ -122,8 +123,8 @@ const Layout = struct {
     };
     /// Length of values in value buffer (+1 for zero)
     /// It is expected that values shouldn't go over 1000 for the tunables.
-    const tunable_fmt = "{d:.3}";
-    const vlen = std.fmt.count(tunable_fmt, .{0}) + 10;
+    const tunable_fmt = "{d:7.3}";
+    const vlen = std.fmt.count(tunable_fmt, .{0}) + 5;
     var txt = [_]u8{0} ** 256;
     var value_buffer = [_]u8{0} ** vlen;
     var editing_buffer = [_]u8{0} ** vlen;
