@@ -115,10 +115,12 @@ fn processInput() void {
     }
     if (rl.isKeyDown(.LEFT)) rot_offset -= 100 * rl.GetFrameTime();
     if (rl.isKeyDown(.RIGHT)) rot_offset += 100 * rl.GetFrameTime();
+
+    // TODO: Should think about an event system
     if (rl.IsWindowResized()) {
-        const display = rl.GetCurrentMonitor();
-        screenWidth = rl.GetMonitorWidth(display);
-        screenHeight = rl.GetMonitorHeight(display);
+        screenWidth = rl.GetScreenWidth();
+        screenHeight = rl.GetScreenHeight();
+        shader.resized(screenWidth, screenHeight);
     }
     const wheelMove = rl.GetMouseWheelMoveV();
     if (@abs(wheelMove.x) > @abs(wheelMove.y)) {

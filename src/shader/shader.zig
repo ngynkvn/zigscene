@@ -18,3 +18,10 @@ pub fn init() void {
     amountLoc = rl.rlGetLocationUniform(program.id, "amount");
     std.debug.assert(amountLoc != -1);
 }
+
+pub fn resized(sw: c_int, sh: c_int) void {
+    screenWidth = sw;
+    screenHeight = sh;
+    rl.UnloadRenderTexture(sceneTexture);
+    sceneTexture = rl.LoadRenderTexture(screenWidth, screenHeight);
+}

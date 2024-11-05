@@ -31,7 +31,7 @@ pub fn frame() void {
     }
     text.print(" | [FPS:{d}]\x00", .{rl.GetFPS()}) catch unreachable;
     if (gui_xoffset < 0) {
-        gui_xoffset = @trunc(rl.Lerp(gui_xoffset, 0, 30 * rl.GetFrameTime()));
+        gui_xoffset = @trunc(std.math.lerp(gui_xoffset, 0, @min(0.3, 30 * rl.GetFrameTime())));
     }
     _ = rl.GuiStatusBar(base.translate(base.width * 4 + 5, 0).resize(800, base.height).into(), &Layout.txt);
 
@@ -123,8 +123,8 @@ const Layout = struct {
     };
     /// Length of values in value buffer (+1 for zero)
     /// It is expected that values shouldn't go over 1000 for the tunables.
-    const tunable_fmt = "{d:.3}";
-    const vlen = std.fmt.count(tunable_fmt, .{0}) + 10;
+    const tunable_fmt = "{d:7.3}";
+    const vlen = std.fmt.count(tunable_fmt, .{0}) + 5;
     var txt = [_]u8{0} ** 256;
     var value_buffer = [_]u8{0} ** vlen;
     var editing_buffer = [_]u8{0} ** vlen;
