@@ -10,7 +10,7 @@ pub const Window = struct {
 };
 
 pub const Audio = struct {
-    pub const buffer_size: usize = 256;
+    pub const buffer_size: usize = 1024;
     pub const sample_rate: u32 = 44100;
     pub const channels: u8 = 2;
     pub const volume: f32 = 0.40;
@@ -24,9 +24,9 @@ pub const Audio = struct {
 };
 
 pub const Shader = struct {
-    pub var amount: f32 = 0.005;
+    pub var amount: f32 = 0.001;
     pub const Scalars = [_]controls.Scalar{
-        .{ "Chroma", &amount, .{ 0.0, 0.05 } },
+        .{ "Chroma", &amount, .{ 0.0, 0.01 } },
     };
 };
 

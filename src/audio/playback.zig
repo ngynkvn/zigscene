@@ -12,8 +12,7 @@ pub fn onFilenameInput(path: []const u8) void {
     const clen = std.mem.len(cfilename);
     @memcpy(fnbuff[0..clen], cfilename[0..clen]);
     filename = fnbuff[0..clen];
-    std.log.info("samplesize = {}, samplerate = {}\n", .{ music.stream.sampleSize, music.stream.sampleRate });
-    rl.AttachAudioStreamProcessor(music.stream, processor.audioStreamCallback);
+    rl.AttachAudioMixedProcessor(processor.audioStreamCallback);
     rl.PlayMusicStream(music);
 }
 pub fn GetMusicTimePlayed() f32 {

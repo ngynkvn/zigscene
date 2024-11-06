@@ -29,10 +29,10 @@ pub var rms_energy: f32 = 0;
 /// Accepts a buffer of the stream + the length of the buffer
 /// The buffer is composed of PCM samples from the audio stream
 /// that were passed to raylib / miniaudio.h
-pub fn audioStreamCallback(ptr: ?*anyopaque, n: c_uint) callconv(.C) void {
+pub fn audioStreamCallback(ptr: ?*anyopaque, frames: c_uint) callconv(.C) void {
     const ctx = tracy.traceNamed(@src(), "audio_stream");
     defer ctx.end();
-    const buffer: []const f32 = @as([*]f32, @ptrCast(@alignCast(ptr)))[0..n];
+    const buffer: []const f32 = @as([*]f32, @ptrCast(@alignCast(ptr)))[0 .. frames * 2];
     processBuffer(buffer);
 }
 
