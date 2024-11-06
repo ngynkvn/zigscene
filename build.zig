@@ -31,6 +31,7 @@ pub fn build(b: *std.Build) !void {
     const raylib = b.dependency("raylib", .{
         .target = target,
         .optimize = optimize,
+        .linux_display_backend = .X11,
     });
 
     const run_option = b.step("web", "Build and run for web");

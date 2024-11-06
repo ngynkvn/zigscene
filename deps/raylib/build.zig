@@ -6,6 +6,7 @@ pub fn build(b: *std.Build) !void {
     const raylib = b.dependency("raylib", .{
         .target = target,
         .optimize = optimize,
+        .linux_display_backend = b.option(enum { X11, Wayland, Both }, "linux_display_backend", "Linux display backend to use") orelse .X11,
     });
     const libraylib = raylib.artifact("raylib");
     libraylib.step.name = "Compile Raylib";
