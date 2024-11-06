@@ -5,6 +5,7 @@ const cnv = @import("../ext/convert.zig");
 const ffi = cnv.ffi;
 const Rectangle = @import("../ext/structs.zig").Rectangle;
 const rl = @import("../raylib.zig");
+const shader = @import("../shader/shader.zig");
 var screenWidth: c_int = @import("config.zig").Window.width;
 
 pub fn onWindowResize(width: i32, _: i32) void {
@@ -21,19 +22,18 @@ pub fn render() void {
     pos.height = 10 + 100 * processor.rms_energy;
     rl.DrawRectangleRec(pos, rl.RED);
     // timeseries beats
-    const tsbeats = Rectangle.from(150, 64, 2, 10);
+    const tsbeats = Rectangle.from(10, 64, 1, 10);
     // Go past last written and scan from there
     const bi = processor.bi;
     for (1..processor.past_beats.len + 1) |b| {
         const i = (bi + b) % processor.past_beats.len;
         const value = processor.past_beats[i];
-        rl.DrawRectangleRec(tsbeats.translate(ffi(f32, b * 3), 0).into(), if (!value) rl.BLUE else rl.RED);
+        rl.DrawRectangleRec(tsbeats.translate(ffi(f32, b * 2), 0).into(), if (!value) rl.BLUE else rl.RED);
     }
 }
 
 pub fn frame() void {
     if (rl.isKeyPressed(.D)) visible = !visible;
-
     const mp = rl.GetMousePosition();
     const delta = rl.GetMouseDelta();
     const dragging = rl.IsMouseButtonDown(rl.MOUSE_LEFT_BUTTON) and
@@ -43,3 +43,31 @@ pub fn frame() void {
         pos.y += delta.y;
     }
 }
+
+// TODO: enum
+const TextureFilter = enum(c_int) {
+    Nearest = 0x2600,
+    Linear = 0x2601,
+    MipNearest = 0x2700,
+    NearestMipLinear = 0x2702,
+    LinearMipNearest = 0x2701,
+    MipLinear = 0x2703,
+    Anisotropic = 0x3000,
+};
+pub const RL_TEXTURE_FILTER_NEAREST = @as(c_int, 0x2600);
+pub const RL_TEXTURE_FILTER_LINEAR = @as(c_int, 0x2601);
+pub const RL_TEXTURE_FILTER_MIP_NEAREST = @as(c_int, 0x2700);
+pub const RL_TEXTURE_FILTER_NEAREST_MIP_LINEAR = @as(c_int, 0x2702);
+pub const RL_TEXTURE_FILTER_LINEAR_MIP_NEAREST = @as(c_int, 0x2701);
+pub const RL_TEXTURE_FILTER_MIP_LINEAR = @as(c_int, 0x2703);
+pub const RL_TEXTURE_FILTER_ANISOTROPIC = @as(c_int, 0x3000);
+const iter = [_]c_int{
+    RL_TEXTURE_FILTER_NEAREST,
+    RL_TEXTURE_FILTER_LINEAR,
+    RL_TEXTURE_FILTER_MIP_NEAREST,
+    RL_TEXTURE_FILTER_NEAREST_MIP_LINEAR,
+    RL_TEXTURE_FILTER_LINEAR_MIP_NEAREST,
+    RL_TEXTURE_FILTER_MIP_LINEAR,
+    RL_TEXTURE_FILTER_ANISOTROPIC,
+};
+var nextopt: usize = 0;

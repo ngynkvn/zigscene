@@ -89,7 +89,7 @@ pub const Visualizer = struct {
 
 // Camera Configuration
 pub const Camera = struct {
-    pub const fov: f32 = 65.0;
-    pub const initial_position: rl.Vector3 = .{ .x = 0.0, .y = 0.0, .z = 10.0 };
+    pub const fov: f32 = 45.0;
+    pub const initial_position: rl.Vector3 = .{ .x = 0.0, .y = 0.0, .z = 13.0 };
     pub const initial_target: rl.Vector3 = .{ .x = 0.0, .y = 0.0, .z = 0.0 };
 };

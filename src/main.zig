@@ -140,7 +140,6 @@ fn processInput() void {
     if (rl.isKeyDown(.LEFT)) rot_offset -= 100 * rl.GetFrameTime();
     if (rl.isKeyDown(.RIGHT)) rot_offset += 100 * rl.GetFrameTime();
 
-    // TODO: Should think about an event system
     if (rl.IsWindowResized()) {
         event.onWindowResize(rl.GetScreenWidth(), rl.GetScreenHeight());
     }

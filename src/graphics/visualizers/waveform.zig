@@ -22,8 +22,8 @@ pub const WaveFormLine = struct {
         const px = x + center.x;
         const py = y + center.y;
         // zig fmt: off
-        rl.DrawRectangleRec(.{ .x = px, .y = py,      .width = 1, .height = 2 }, hsv(color1).into());
-        rl.DrawRectangleRec(.{ .x = px, .y = py + 8,  .width = 1, .height = 2 }, hsv(color2).into());
+        rl.DrawRectangleRec(.{ .x = px, .y = py,      .width = SPACING, .height = 1 }, hsv(color1).into());
+        rl.DrawRectangleRec(.{ .x = px, .y = py + 8,  .width = SPACING, .height = 2 }, hsv(color2).into());
         // zig fmt: on
     }
 };
@@ -48,16 +48,16 @@ pub const WaveFormBar = struct {
         // TODO: configurable
         maxes[i] = @max(y + base_h.*, maxes[i]);
         maxes[i] *= 0.99;
-        rl.DrawRectangleRounded(.{
+        rl.DrawRectangleRec(.{
             .x = px,
             .y = center.y * 2 - maxes[i],
-            .width = 2,
+            .width = SPACING,
             .height = maxes[i],
-        }, 1, 10, rl.BLUE);
+        }, rl.BLUE);
         rl.DrawRectangleGradientEx(.{
             .x = px,
             .y = center.y * 2 - y - base_h.*,
-            .width = 2,
+            .width = SPACING,
             .height = y + base_h.*,
         }, c1, c2, c2, c1);
     }
