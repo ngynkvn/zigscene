@@ -78,9 +78,9 @@ pub const Visualizer = struct {
         pub var ring_radius: f32 = 3.25;
         pub var sphere_radius: f32 = 3;
         pub var height_ring: f32 = 0.1;
-        pub var effect: f32 = 0.3;
-        pub var color_scale: f32 = 30;
-        pub var bubble_color_scale: f32 = 30;
+        pub var effect: f32 = 0.5;
+        pub var color_scale: f32 = 45;
+        pub var bubble_color_scale: f32 = 40;
 
         pub var color1 = Vector3{ .x = 195, .y = 0.5, .z = 1 };
         pub var color2 = Vector3{ .x = 117, .y = 1, .z = 1 };

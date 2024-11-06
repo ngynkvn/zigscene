@@ -43,45 +43,65 @@ pub fn main() !void {
         const center = rl.GetWorldToScreen(.{}, camera3d);
 
         {
-            const ctx = tracy.traceNamed(@src(), "Renders");
-            defer ctx.end();
-
-            // Drawing
-            rl.BeginTextureMode(shader.sceneTexture);
-            rl.ClearBackground(rl.BLACK);
-            const ctx_2d = tracy.traceNamed(@src(), "2d");
-            for (processor.curr_buffer, processor.curr_fft, 0..) |v, fv, i| {
-                graphics.WaveFormLine.render(.{ .y = center.y - 80 }, i, v);
-                graphics.WaveFormBar.render(center, i, v);
-                graphics.WaveFormLine.render(.{ .y = center.y * 2 }, i, fv.magnitude() * 0.15);
-                graphics.FFTSpectrum.render(center, i, fv.magnitude());
+            const renderCtx = tracy.traceNamed(@src(), "Render");
+            defer renderCtx.end();
+            { // Begin texture rendering
+                rl.BeginTextureMode(shader.sceneTexture);
+                defer rl.EndTextureMode();
+                rl.ClearBackground(rl.BLACK);
+                { // Draw 2D Graphics
+                    const ctx = tracy.traceNamed(@src(), "2d");
+                    defer ctx.end();
+                    for (processor.curr_buffer, processor.curr_fft, 0..) |v, fv, i| {
+                        graphics.WaveFormLine.render(.{ .y = center.y - 80 }, i, v);
+                        graphics.WaveFormBar.render(center, i, v);
+                        graphics.WaveFormLine.render(.{ .y = center.y * 2 }, i, fv.magnitude() * 0.15);
+                        graphics.FFTSpectrum.render(center, i, fv.magnitude());
+                    }
+                }
+                { // Draw 3D graphics
+                    const ctx = tracy.traceNamed(@src(), "bubble");
+                    defer ctx.end();
+                    graphics.Bubble.render(camera3d, rot_offset, t);
+                }
             }
-            ctx_2d.end();
-            graphics.Bubble.render(camera3d, rot_offset, t);
-            rl.EndTextureMode();
-            rl.BeginDrawing();
-            rl.BeginShaderMode(shader.program);
-            rl.SetShaderValue(shader.program, shader.chromaFactorLoc, &Config.Shader.chroma_factor, rl.RL_SHADER_UNIFORM_FLOAT);
-            rl.SetShaderValue(shader.program, shader.noiseFactorLoc, &Config.Shader.noise_factor, rl.RL_SHADER_UNIFORM_FLOAT);
-            rl.DrawTextureRec(
-                shader.sceneTexture.texture,
-                .{
-                    .width = @floatFromInt(shader.sceneTexture.texture.width),
-                    .height = @floatFromInt(-shader.sceneTexture.texture.height),
-                },
-                .{},
-                rl.WHITE,
-            );
-            rl.EndShaderMode();
-            debug.render();
-            gui.frame();
-            rl.EndDrawing();
+            { // Begin draw
+                const drawCtx = tracy.traceNamed(@src(), "draw");
+                defer drawCtx.end();
+                rl.BeginDrawing();
+                defer rl.EndDrawing();
+                { // Begin shader drawing
+                    const ctx = tracy.traceNamed(@src(), "draw shader");
+                    defer ctx.end();
+                    rl.BeginShaderMode(shader.program);
+                    defer rl.EndShaderMode();
+                    rl.SetShaderValue(shader.program, shader.chromaFactorLoc, &Config.Shader.chroma_factor, rl.RL_SHADER_UNIFORM_FLOAT);
+                    rl.SetShaderValue(shader.program, shader.noiseFactorLoc, &Config.Shader.noise_factor, rl.RL_SHADER_UNIFORM_FLOAT);
+                    rl.DrawTextureRec(
+                        shader.sceneTexture.texture,
+                        .{
+                            .width = @floatFromInt(shader.sceneTexture.texture.width),
+                            .height = @floatFromInt(-shader.sceneTexture.texture.height),
+                        },
+                        .{},
+                        rl.WHITE,
+                    );
+                }
+                { // Begin Gui Render
+                    const ctx = tracy.traceNamed(@src(), "gui render");
+                    defer ctx.end();
+                    debug.render();
+                    gui.frame();
+                }
+            }
             t += rl.GetFrameTime();
         }
     }
 }
 
 fn processInput() void {
+    const ctx = @import("tracy").traceNamed(@src(), "input_processing");
+    defer ctx.end();
     if (rl.IsFileDropped()) {
         const files = rl.LoadDroppedFiles();
         defer rl.UnloadDroppedFiles(files);

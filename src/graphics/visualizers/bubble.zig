@@ -6,6 +6,10 @@ const cnv = @import("../../ext/convert.zig");
 const hsv = @import("../../ext/color.zig").Color.hsv.vec3;
 const ffi = cnv.ffi;
 
+comptime {
+    @setFloatMode(.optimized);
+}
+
 pub const Bubble = struct {
     const Config = @import("../../core/config.zig").Visualizer.Bubble;
     // Radii
@@ -46,7 +50,7 @@ pub const Bubble = struct {
 
             var col = color2;
             col.x += processor.rms_energy * color_scale + @abs(v) * 30;
-            rl.DrawCubeWires(.{}, 0.1, height_ring + @abs(v) * effect + processor.rms_energy * 0.2, 0.1, hsv(col).into());
+            rl.DrawCubeWires(.{}, 0.05, height_ring + @abs(v) * effect + processor.rms_energy * 0.2, 0.05, hsv(col).into());
             rl.rlPopMatrix();
         }
         rl.rlPopMatrix();

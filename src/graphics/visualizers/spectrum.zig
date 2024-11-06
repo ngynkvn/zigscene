@@ -2,6 +2,10 @@ const processor = @import("../../audio/processor.zig");
 const rl = @import("../../raylib.zig");
 const cnv = @import("../../ext/convert.zig");
 
+comptime {
+    @setFloatMode(.optimized);
+}
+
 var screenWidth: c_int = @import("../../core/config.zig").Window.width;
 pub fn onWindowResize(width: i32, _: i32) void {
     screenWidth = width;

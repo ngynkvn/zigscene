@@ -7,6 +7,10 @@ const ffi = cnv.ffi;
 
 var screenWidth: c_int = @import("../../core/config.zig").Window.width;
 
+comptime {
+    @setFloatMode(.optimized);
+}
+
 pub const WaveFormLine = struct {
     const Config = @import("../../core/config.zig").Visualizer.WaveFormLine;
     pub fn render(center: rl.Vector2, i: usize, v: f32) void {
