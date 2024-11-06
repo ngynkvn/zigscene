@@ -29,11 +29,14 @@ pub const WaveFormLine = struct {
 };
 
 pub const WaveFormBar = struct {
-    const Config = @import("../../core/config.zig").Visualizer.WaveFormBar;
-    const amplitude: *f32 = &Config.amplitude;
-    const base_h: *f32 = &Config.base_h;
-    const color1 = &Config.color1;
-    const color2 = &Config.color2;
+    const Config = @import("../../core/config.zig");
+    const N = Config.Audio.buffer_size;
+    const WaveConfig = Config.Visualizer.WaveFormBar;
+    const amplitude: *f32 = &WaveConfig.amplitude;
+    const base_h: *f32 = &WaveConfig.base_h;
+    const color1 = &WaveConfig.color1;
+    const color2 = &WaveConfig.color2;
+    var maxes: [N]f32 = @splat(0);
 
     pub fn render(center: rl.Vector2, i: usize, v: f32) void {
         const SPACING = ffi(f32, screenWidth) / ffi(f32, processor.curr_buffer.len);
@@ -42,6 +45,15 @@ pub const WaveFormBar = struct {
         const px = x;
         const c1 = hsv(color1.*).into();
         const c2 = hsv(color2.*).into();
+        // TODO: configurable
+        maxes[i] = @max(y + base_h.*, maxes[i]);
+        maxes[i] *= 0.99;
+        rl.DrawRectangleRounded(.{
+            .x = px,
+            .y = center.y * 2 - maxes[i],
+            .width = 2,
+            .height = maxes[i],
+        }, 1, 10, rl.BLUE);
         rl.DrawRectangleGradientEx(.{
             .x = px,
             .y = center.y * 2 - y - base_h.*,
