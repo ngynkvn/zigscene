@@ -1,10 +1,11 @@
 const std = @import("std");
-const rl = @import("../raylib.zig");
-const cnv = @import("../ext/convert.zig");
 
+const cnv = @import("../ext/convert.zig");
+const ffi = cnv.ffi;
+const iff = cnv.iff;
+const rgb = cnv.rgb;
+const rl = @import("../raylib.zig");
 const BASE_COLOR_DISABLED = rl.BASE_COLOR_DISABLED;
-//const BORDER = rl.BORDER;
-const BORDER = 0;
 const BORDER_COLOR_DISABLED = rl.BORDER_COLOR_DISABLED;
 const BORDER_WIDTH = rl.BORDER_WIDTH;
 const COLORPICKER = rl.COLORPICKER;
@@ -14,18 +15,6 @@ const MOUSE_BUTTON_LEFT = rl.MOUSE_BUTTON_LEFT;
 const STATE_DISABLED = rl.STATE_DISABLED;
 const STATE_FOCUSED = rl.STATE_FOCUSED;
 const STATE_PRESSED = rl.STATE_PRESSED;
-// const guiAlpha = rl.guiAlpha;
-// TODO: rl.GuiSetAlpha
-const guiAlpha = 0.8;
-var guiControlExclusiveMode = false;
-// const guiControlExclusiveMode = rl.guiControlExclusiveMode;
-pub var guiControlExclusiveRec: Rectangle = Rectangle{ .x = 0, .y = 0, .width = 0, .height = 0 };
-// const guiControlExclusiveRec = rl.guiControlExclusiveRec;
-
-const ffi = cnv.ffi;
-const iff = cnv.iff;
-const rgb = cnv.rgb;
-
 const CheckCollisionPointRec = rl.CheckCollisionPointRec;
 const Fade = rl.Fade;
 const GetColor = rl.GetColor;
@@ -34,10 +23,19 @@ const GuiGetState = rl.GuiGetState;
 const GuiGetStyle = rl.GuiGetStyle;
 const GuiIsLocked = rl.GuiIsLocked;
 const IsMouseButtonDown = rl.IsMouseButtonDown;
-
 const Color = rl.Color;
 const Rectangle = rl.Rectangle;
 const Vector2 = rl.Vector2;
+
+//const BORDER = rl.BORDER;
+const BORDER = 0;
+// const guiAlpha = rl.guiAlpha;
+// TODO: rl.GuiSetAlpha
+const guiAlpha = 0.8;
+var guiControlExclusiveMode = false;
+// const guiControlExclusiveMode = rl.guiControlExclusiveMode;
+pub var guiControlExclusiveRec: Rectangle = Rectangle{ .x = 0, .y = 0, .width = 0, .height = 0 };
+// const guiControlExclusiveRec = rl.guiControlExclusiveRec;
 
 pub fn GuiColorBarHueH(bounds: Rectangle, text: [*c]const u8, hue: [*c]f32) c_int {
     _ = text; // TODO: Draw text

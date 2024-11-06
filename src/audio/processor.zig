@@ -1,11 +1,12 @@
 const std = @import("std");
-const Config = @import("../core/config.zig");
-const cnv = @import("../ext/convert.zig");
-const fft = @import("analysis/fft.zig");
-const beat = @import("analysis/beat_detector.zig");
-const ffi = cnv.ffi;
 
+const Config = @import("../core/config.zig");
 const N = Config.Audio.buffer_size;
+const cnv = @import("../ext/convert.zig");
+const ffi = cnv.ffi;
+const beat = @import("analysis/beat_detector.zig");
+const fft = @import("analysis/fft.zig");
+
 /// Currently loaded audio buffer data
 var audio_buffer = std.mem.zeroes([N]f32);
 var raw_sample = std.mem.zeroes([N]f32);

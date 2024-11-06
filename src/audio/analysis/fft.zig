@@ -1,12 +1,11 @@
 const std = @import("std");
-const Config = @import("../../core/config.zig");
 
+const Config = @import("../../core/config.zig");
+const N = Config.Audio.buffer_size;
 const cnv = @import("../../ext/convert.zig");
 const ffi = cnv.ffi;
 
 pub const ComplexF32 = std.math.Complex(f32);
-const N = Config.Audio.buffer_size;
-
 /// https://en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm
 pub fn fft(values: []ComplexF32) void {
     const len = values.len;

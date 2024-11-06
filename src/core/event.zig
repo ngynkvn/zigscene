@@ -1,7 +1,7 @@
-const gui = @import("../gui.zig");
-const graphics = @import("../graphics.zig");
-const shader = @import("../shader/shader.zig");
 const music = @import("../audio/playback.zig");
+const graphics = @import("../graphics.zig");
+const gui = @import("../gui.zig");
+const shader = @import("../shader/shader.zig");
 const debug = @import("debug.zig");
 
 pub inline fn onFilenameInput(filename: []const u8) void {
