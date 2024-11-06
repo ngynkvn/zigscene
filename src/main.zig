@@ -119,10 +119,8 @@ fn processInput() void {
     if (rl.isKeyPressed(.ONE)) {
         event.onTabChange(.none);
     } else if (rl.isKeyPressed(.TWO)) {
-        event.onTabChange(.audio);
-    } else if (rl.isKeyPressed(.THREE)) {
         event.onTabChange(.scalar);
-    } else if (rl.isKeyPressed(.FOUR)) {
+    } else if (rl.isKeyPressed(.THREE)) {
         event.onTabChange(.color);
     }
 

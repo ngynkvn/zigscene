@@ -6,7 +6,7 @@ const config = @import("core/config.zig");
 
 const Rectangle = @import("ext/structs.zig").Rectangle;
 
-pub const Tab = enum(c_int) { none, audio, scalar, color };
+pub const Tab = enum(c_int) { none, scalar, color };
 var active_tab: Tab = .scalar;
 var gui_xoffset: f32 = 0;
 pub const onTabChange = to;
@@ -18,6 +18,8 @@ fn to(next: Tab) void {
     gui_xoffset = -300;
 }
 
+var draggingSlider = false;
+
 pub fn frame() void {
     if (gui_xoffset < 0) {
         gui_xoffset = @trunc(std.math.lerp(gui_xoffset, 0, @min(0.3, 30 * rl.GetFrameTime())));
@@ -26,21 +28,27 @@ pub fn frame() void {
     const grouptxt = std.fmt.comptimePrint("#{}#;#{}#;#{}#", .{ rl.ICON_ARROW_LEFT, rl.ICON_FX, rl.ICON_COLOR_PICKER });
     _ = rl.GuiToggleGroup(base.into(), grouptxt, @ptrCast(&active_tab));
 
-    var fbs = std.io.fixedBufferStream(&Layout.txt);
-    const text = fbs.writer();
-    _ = text.write(playback.filename) catch unreachable;
-    if (rl.IsMusicValid(playback.music)) {
-        const mtp = playback.GetMusicTimePlayed();
-        const mtl = playback.GetMusicTimeLength();
-        text.print("| {d:7.2}s/{d:7.2}s", .{ mtp, mtl }) catch unreachable;
-    }
-    text.print(" | [FPS:{d}]\x00", .{rl.GetFPS()}) catch unreachable;
     const guiStatusBar = base.translate(base.width * 4 + 10, 0).resize(800, base.height).into();
+    if (rl.IsMusicValid(playback.music)) {
+        var mtp = playback.GetMusicTimePlayed();
+        const mtl = playback.GetMusicTimeLength();
+        var fbs = std.io.fixedBufferStream(&Layout.txt);
+        const text = fbs.writer();
+        _ = text.write(playback.filename) catch unreachable;
+        text.print(" |{d:7.2}s/{d:7.2}s", .{ mtp, mtl }) catch unreachable;
+        if (rl.GuiSliderBar(guiStatusBar, null, null, &mtp, 0, mtl) != 0) {
+            draggingSlider = true;
+            rl.PauseMusicStream(playback.music);
+            rl.SeekMusicStream(playback.music, mtp);
+        } else if (draggingSlider) { // was dragging, now released
+            rl.ResumeMusicStream(playback.music);
+        }
+    }
     const musicOn = rl.IsMusicStreamPlaying(playback.music) or !rl.IsMusicValid(playback.music);
     var playIconBuffer: [16]u8 = @splat(0);
     const playIconTxt = std.fmt.bufPrintZ(&playIconBuffer, "#{}#", .{if (musicOn) rl.ICON_PLAYER_PLAY else rl.ICON_PLAYER_PAUSE}) catch unreachable;
     _ = rl.GuiStatusBar(guiStatusBar, &Layout.txt);
-    if (rl.GuiButton(base.translate(base.width * 3 + 10, 0).into(), playIconTxt) != 0 and rl.IsMusicValid(playback.music)) {
+    if (rl.GuiButton(base.translate(base.width * 3 + 8, 0).into(), playIconTxt) != 0 and rl.IsMusicValid(playback.music)) {
         if (rl.IsMusicStreamPlaying(playback.music)) {
             rl.PauseMusicStream(playback.music);
         } else {
@@ -53,7 +61,6 @@ pub fn frame() void {
             const PanelSize = Layout.Base.translate(-310 - gui_xoffset, 20).resize(300, 700);
             _ = rl.GuiPanel(PanelSize.into(), "");
         },
-        .audio => {},
         .scalar => Layout.Scalars.draw(),
         .color => Layout.Colors.draw(),
     }
