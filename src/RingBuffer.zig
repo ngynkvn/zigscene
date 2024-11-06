@@ -1,7 +1,7 @@
-const std = @import("std");
 const Allocator = @import("std").mem.Allocator;
 const assert = @import("std").debug.assert;
 const copyForwards = @import("std").mem.copyForwards;
+const std = @import("std");
 
 pub fn RingBuffer(comptime T: type) type {
     return struct {

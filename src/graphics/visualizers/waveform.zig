@@ -1,11 +1,9 @@
 const processor = @import("../../audio/processor.zig");
-const rl = @import("../../raylib.zig");
-const cnv = @import("../../ext/convert.zig");
-
-const hsv = @import("../../ext/color.zig").Color.hsv.vec3;
-const ffi = cnv.ffi;
-
 var screenWidth: c_int = @import("../../core/config.zig").Window.width;
+const hsv = @import("../../ext/color.zig").Color.hsv.vec3;
+const cnv = @import("../../ext/convert.zig");
+const ffi = cnv.ffi;
+const rl = @import("../../raylib.zig");
 
 comptime {
     @setFloatMode(.optimized);

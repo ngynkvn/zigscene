@@ -1,12 +1,13 @@
 //! Init sequence for the GUI / Window
 const std = @import("std");
-const rl = @import("../raylib.zig");
+
 const music = @import("../audio/playback.zig");
+const rl = @import("../raylib.zig");
 const Config = @import("config.zig");
-const event = @import("event.zig");
 pub var screenWidth: c_int = Config.Window.width;
 pub var screenHeight: c_int = Config.Window.height;
 const APP_NAME = Config.Window.title;
+const event = @import("event.zig");
 
 pub fn startup() !void {
     rl.SetConfigFlags(rl.FLAG_WINDOW_RESIZABLE);

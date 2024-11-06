@@ -1,8 +1,9 @@
-const rl = @import("../raylib.zig");
 const std = @import("std");
-
 const math = std.math;
 const atan2 = math.atan2;
+
+const rl = @import("../raylib.zig");
+
 fn feql(x: f32, y: f32) bool {
     return @abs(x - x) <= @max(1, @abs(x), @abs(x)) and
         @abs(y - y) <= @max(1, @abs(y), @abs(y));

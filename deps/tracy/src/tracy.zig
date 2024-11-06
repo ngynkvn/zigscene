@@ -1,12 +1,13 @@
-const c = @import("tracy-c");
 const std = @import("std");
+
+const c = @import("tracy-c");
 const options = @import("options");
+pub const tracy_allocation = options.tracy_allocation;
+pub const tracy_callstack = options.tracy_callstack;
 
 comptime {
     if (!options.tracy_enable) @compileError("This module should not have been included if -Dtracy_enable was not set.");
 }
-pub const tracy_allocation = options.tracy_allocation;
-pub const tracy_callstack = options.tracy_callstack;
 const callstack_depth = 10;
 
 pub inline fn frameMarkNamed(comptime name: [:0]const u8) void {

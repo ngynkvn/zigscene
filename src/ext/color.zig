@@ -1,8 +1,9 @@
 const std = @import("std");
+
 const rl = @import("../raylib.zig");
 const cnv = @import("convert.zig");
-const Vector3 = @import("vector.zig").Vector3;
 const iff = cnv.iff;
+const Vector3 = @import("vector.zig").Vector3;
 
 const M = @This();
 

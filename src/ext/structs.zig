@@ -1,4 +1,5 @@
 const rl = @import("../raylib.zig");
+
 pub const Rectangle = extern struct {
     x: f32,
     y: f32,

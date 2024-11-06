@@ -1,17 +1,16 @@
 const processor = @import("../../audio/processor.zig");
-const rl = @import("../../raylib.zig");
+var screenWidth: c_int = @import("../../core/config.zig").Window.width;
 const cnv = @import("../../ext/convert.zig");
+const ffi = cnv.ffi;
+const rl = @import("../../raylib.zig");
 
 comptime {
     @setFloatMode(.optimized);
 }
 
-var screenWidth: c_int = @import("../../core/config.zig").Window.width;
 pub fn onWindowResize(width: i32, _: i32) void {
     screenWidth = width;
 }
-
-const ffi = cnv.ffi;
 
 pub const FFTSpectrum = struct {
     pub fn render(center: rl.Vector2, i: usize, v: f32) void {

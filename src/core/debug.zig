@@ -1,15 +1,15 @@
 const std = @import("std");
-const rl = @import("../raylib.zig");
+
 const processor = @import("../audio/processor.zig");
 const cnv = @import("../ext/convert.zig");
 const ffi = cnv.ffi;
-
+const Rectangle = @import("../ext/structs.zig").Rectangle;
+const rl = @import("../raylib.zig");
 var screenWidth: c_int = @import("config.zig").Window.width;
+
 pub fn onWindowResize(width: i32, _: i32) void {
     screenWidth = width;
 }
-
-const Rectangle = @import("../ext/structs.zig").Rectangle;
 
 var pos: rl.Rectangle = .{ .x = 300, .y = 300, .width = 10, .height = 10 };
 var visible = false;

@@ -1,10 +1,10 @@
 const std = @import("std");
-const processor = @import("../../audio/processor.zig");
-const rl = @import("../../raylib.zig");
-const cnv = @import("../../ext/convert.zig");
 
+const processor = @import("../../audio/processor.zig");
 const hsv = @import("../../ext/color.zig").Color.hsv.vec3;
+const cnv = @import("../../ext/convert.zig");
 const ffi = cnv.ffi;
+const rl = @import("../../raylib.zig");
 
 comptime {
     @setFloatMode(.optimized);

@@ -1,10 +1,10 @@
 const std = @import("std");
-const rl = @import("raylib.zig");
-const playback = @import("audio/playback.zig");
-const controls = @import("gui/controls.zig");
-const config = @import("core/config.zig");
 
+const playback = @import("audio/playback.zig");
+const config = @import("core/config.zig");
 const Rectangle = @import("ext/structs.zig").Rectangle;
+const controls = @import("gui/controls.zig");
+const rl = @import("raylib.zig");
 
 pub const Tab = enum(c_int) { none, scalar, color };
 var active_tab: Tab = .scalar;
