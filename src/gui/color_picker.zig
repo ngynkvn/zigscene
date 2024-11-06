@@ -5,6 +5,7 @@ const ffi = cnv.ffi;
 const iff = cnv.iff;
 const rgb = cnv.rgb;
 const rl = @import("../raylib.zig");
+const rg = @import("../raygui.zig");
 const BASE_COLOR_DISABLED = rl.BASE_COLOR_DISABLED;
 const BORDER_COLOR_DISABLED = rl.BORDER_COLOR_DISABLED;
 const BORDER_WIDTH = rl.BORDER_WIDTH;
@@ -19,9 +20,9 @@ const CheckCollisionPointRec = rl.CheckCollisionPointRec;
 const Fade = rl.Fade;
 const GetColor = rl.GetColor;
 const GetMousePosition = rl.GetMousePosition;
-const GuiGetState = rl.GuiGetState;
-const GuiGetStyle = rl.GuiGetStyle;
-const GuiIsLocked = rl.GuiIsLocked;
+const GuiGetState = rg.GuiGetState;
+const GuiGetStyle = rg.GuiGetStyle;
+const GuiIsLocked = rg.GuiIsLocked;
 const IsMouseButtonDown = rl.IsMouseButtonDown;
 const Color = rl.Color;
 const Rectangle = rl.Rectangle;
@@ -30,7 +31,7 @@ const Vector2 = rl.Vector2;
 //const BORDER = rl.BORDER;
 const BORDER = 0;
 // const guiAlpha = rl.guiAlpha;
-// TODO: rl.GuiSetAlpha
+// TODO: rg.GuiSetAlpha
 const guiAlpha = 0.8;
 var guiControlExclusiveMode = false;
 // const guiControlExclusiveMode = rl.guiControlExclusiveMode;
@@ -130,7 +131,7 @@ pub fn GuiDrawRectangle(rec: Rectangle, borderWidth: c_int, borderColor: Color, 
     }
 }
 
-// const GuiFade = rl.GuiFade;
+// const GuiFade = rg.GuiFade;
 pub fn GuiFade(color: Color, alpha: f32) Color {
     const a = std.math.clamp(alpha, 0, 1);
     return .{ .r = color.r, .g = color.g, .b = color.b, .a = iff(u8, ffi(f32, color.a) * a) };

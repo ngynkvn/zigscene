@@ -5,6 +5,7 @@ const config = @import("core/config.zig");
 const Rectangle = @import("ext/structs.zig").Rectangle;
 const controls = @import("gui/controls.zig");
 const rl = @import("raylib.zig");
+const rg = @import("raygui.zig");
 
 pub const Tab = enum(c_int) { none, scalar, color };
 var active_tab: Tab = .scalar;
@@ -21,49 +22,85 @@ fn to(next: Tab) void {
 var draggingSlider = false;
 
 pub fn frame() void {
-    if (gui_xoffset < 0) {
-        gui_xoffset = @trunc(std.math.lerp(gui_xoffset, 0, @min(0.3, 30 * rl.GetFrameTime())));
-    }
+    updatePanelAnimation();
+
     const base = Layout.Base;
-    const grouptxt = std.fmt.comptimePrint("#{}#;#{}#;#{}#", .{ rl.ICON_ARROW_LEFT, rl.ICON_FX, rl.ICON_COLOR_PICKER });
-    _ = rl.GuiToggleGroup(base.into(), grouptxt, @ptrCast(&active_tab));
+    renderTabControls(base);
+    renderMusicControls(base);
 
-    const guiStatusBar = base.translate(base.width * 4 + 10, 0).resize(800, base.height).into();
-    if (rl.IsMusicValid(playback.music)) {
-        var mtp = playback.GetMusicTimePlayed();
-        const mtl = playback.GetMusicTimeLength();
-        var fbs = std.io.fixedBufferStream(&Layout.txt);
-        const text = fbs.writer();
-        _ = text.write(playback.filename) catch unreachable;
-        text.print(" |{d:7.2}s/{d:7.2}s", .{ mtp, mtl }) catch unreachable;
-        if (rl.GuiSliderBar(guiStatusBar, null, null, &mtp, 0, mtl) != 0) {
-            draggingSlider = true;
-            rl.PauseMusicStream(playback.music);
-            rl.SeekMusicStream(playback.music, mtp);
-        } else if (draggingSlider) { // was dragging, now released
-            rl.ResumeMusicStream(playback.music);
-        }
-    }
-    const musicOn = rl.IsMusicStreamPlaying(playback.music) or !rl.IsMusicValid(playback.music);
-    var playIconBuffer: [16]u8 = @splat(0);
-    const playIconTxt = std.fmt.bufPrintZ(&playIconBuffer, "#{}#", .{if (musicOn) rl.ICON_PLAYER_PLAY else rl.ICON_PLAYER_PAUSE}) catch unreachable;
-    _ = rl.GuiStatusBar(guiStatusBar, &Layout.txt);
-    if (rl.GuiButton(base.translate(base.width * 3 + 8, 0).into(), playIconTxt) != 0 and rl.IsMusicValid(playback.music)) {
-        if (rl.IsMusicStreamPlaying(playback.music)) {
-            rl.PauseMusicStream(playback.music);
-        } else {
-            rl.ResumeMusicStream(playback.music);
-        }
-    }
-
+    // Render active tab
     switch (active_tab) {
         .none => {
             const PanelSize = Layout.Base.translate(-310 - gui_xoffset, 20).resize(300, 700);
-            _ = rl.GuiPanel(PanelSize.into(), "");
+            _ = rg.GuiPanel(PanelSize, "");
         },
         .scalar => Layout.Scalars.draw(),
         .color => Layout.Colors.draw(),
     }
+}
+
+const PlaybackControl = union(enum) {
+    play,
+    pause,
+    drag: f32,
+};
+fn handlePlaybackControl(c: PlaybackControl) void {
+    switch (c) {
+        .play => rl.ResumeMusicStream(playback.music),
+        .pause => rl.PauseMusicStream(playback.music),
+        .drag => |time| {
+            rl.PauseMusicStream(playback.music);
+            rl.SeekMusicStream(playback.music, time);
+        },
+    }
+}
+
+fn renderMusicControls(base: Rectangle) void {
+    if (!rl.IsMusicValid(playback.music)) return;
+    const guiStatusBar = base.translate(base.width * 4 + 10, 0).resize(800, base.height);
+
+    // Progress bar and time display
+    var mtp = playback.GetMusicTimePlayed();
+    const mtl = playback.GetMusicTimeLength();
+    var fbs = std.io.fixedBufferStream(&Layout.txt);
+    const text = fbs.writer();
+    _ = text.write(playback.filename) catch unreachable;
+    text.print(" |{d:7.2}s/{d:7.2}s", .{ mtp, mtl }) catch unreachable;
+    _ = rg.GuiStatusBar(guiStatusBar, &Layout.txt);
+    if (rg.GuiSliderBar(guiStatusBar, null, null, &mtp, 0, mtl)) {
+        draggingSlider = true;
+        handlePlaybackControl(.{ .drag = mtp });
+    } else if (draggingSlider) { // was dragging, now released
+        draggingSlider = false;
+        handlePlaybackControl(.play);
+    }
+
+    renderPlaybackButton(base);
+}
+
+fn renderPlaybackButton(base: Rectangle) void {
+    const musicOn = rl.IsMusicStreamPlaying(playback.music) or !rl.IsMusicValid(playback.music);
+    var playIconBuffer: [16]u8 = @splat(0);
+    const playIconTxt = std.fmt.bufPrintZ(&playIconBuffer, "#{}#", .{if (musicOn) rl.ICON_PLAYER_PLAY else rl.ICON_PLAYER_PAUSE}) catch unreachable;
+    if (rg.GuiButton(base.translate(base.width * 3 + 8, 0), playIconTxt)) {
+        if (!rl.IsMusicValid(playback.music)) return;
+        if (rl.IsMusicStreamPlaying(playback.music)) {
+            handlePlaybackControl(.pause);
+        } else {
+            handlePlaybackControl(.play);
+        }
+    }
+}
+
+fn updatePanelAnimation() void {
+    if (gui_xoffset < 0) {
+        gui_xoffset = @trunc(std.math.lerp(gui_xoffset, 0, @min(0.3, 30 * rl.GetFrameTime())));
+    }
+}
+
+fn renderTabControls(base: Rectangle) void {
+    const grouptxt = std.fmt.comptimePrint("#{}#;#{}#;#{}#", .{ rl.ICON_ARROW_LEFT, rl.ICON_FX, rl.ICON_COLOR_PICKER });
+    _ = rg.GuiToggleGroup(base, grouptxt, @ptrCast(&active_tab));
 }
 
 const Layout = struct {
@@ -78,24 +115,24 @@ const Layout = struct {
         fn draw() void {
             const anchor = PanelSize.translate(gui_xoffset, 0);
             const label_rect = LabelSize.translate(gui_xoffset, 0);
-            _ = rl.GuiPanel(anchor.into(), label.ptr);
+            _ = rg.GuiPanel(anchor, label.ptr);
             comptime var nth_field = 0;
             // TODO: refactor this is such a mess
             inline for (Fields, 0..) |sf, gi| {
                 const name, const group = sf;
                 const y = initialOffset + offset * nth_field + offset * gi;
-                _ = rl.GuiLabel(label_rect.translate(5, y).into(), name.ptr);
+                _ = rg.GuiLabel(label_rect.translate(5, y), name.ptr);
                 inline for (group, 0..) |optinfo, fi| {
                     const fname, const fval, const frange = optinfo;
                     const j = nth_field + fi;
-                    _ = rl.GuiSlider(anchor.resize(120, 16).translate(100, y + fi * offset).into(), fname.ptr, "", fval, frange[0], frange[1]);
+                    _ = rg.GuiSlider(anchor.resize(120, 16).translate(100, y + fi * offset), fname.ptr, "", fval, frange[0], frange[1]);
 
                     const buf = if (editState == j)
                         &editing_buffer
                     else
                         std.fmt.bufPrintZ(&value_buffer, tunable_fmt, .{fval.*}) catch unreachable;
 
-                    if (rl.GuiValueBoxFloat(anchor.resize(50, 16).translate(225, y + fi * offset).into(), "", buf.ptr, fval, editState == j) != 0) {
+                    if (rg.GuiValueBoxFloat(anchor.resize(50, 16).translate(225, y + fi * offset), "", buf.ptr, fval, editState == j)) {
                         editState = if (editState == j) null else j;
                         @memset(&value_buffer, 0);
                         _ = std.fmt.bufPrintZ(&value_buffer, "{d}", .{fval.*}) catch unreachable;
@@ -119,13 +156,13 @@ const Layout = struct {
         fn draw() void {
             const anchor = Base.translate(gui_xoffset + 2, 20).resize(200, 700);
             const panel = anchor.resize(slider_w, 16);
-            _ = rl.GuiPanel(anchor.into(), "Colors");
+            _ = rg.GuiPanel(anchor, "Colors");
 
             comptime var yoff: f32 = 32;
             inline for (Fields) |info| {
                 const name, const cfg = info;
                 comptime var i: usize = 0;
-                _ = rl.GuiLabel(anchor.resize(200, 8).translate(5, yoff).into(), name.ptr);
+                _ = rg.GuiLabel(anchor.resize(200, 8).translate(5, yoff), name.ptr);
                 inline for (cfg) |optinfo| {
                     const fname, const fval = optinfo;
                     _ = rl.GuiColorBarHueH(panel.translate(40, offset + yoff).into(), fname.ptr, fval);
