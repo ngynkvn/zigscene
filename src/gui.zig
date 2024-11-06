@@ -19,23 +19,34 @@ fn to(next: Tab) void {
 }
 
 pub fn frame() void {
+    if (gui_xoffset < 0) {
+        gui_xoffset = @trunc(std.math.lerp(gui_xoffset, 0, @min(0.3, 30 * rl.GetFrameTime())));
+    }
     const base = Layout.Base;
-    const grouptxt = std.fmt.comptimePrint("#{}#;#{}#;#{}#;#{}#", .{ rl.ICON_ARROW_LEFT, rl.ICON_FILETYPE_AUDIO, rl.ICON_FX, rl.ICON_COLOR_PICKER });
+    const grouptxt = std.fmt.comptimePrint("#{}#;#{}#;#{}#", .{ rl.ICON_ARROW_LEFT, rl.ICON_FX, rl.ICON_COLOR_PICKER });
     _ = rl.GuiToggleGroup(base.into(), grouptxt, @ptrCast(&active_tab));
 
     var fbs = std.io.fixedBufferStream(&Layout.txt);
     const text = fbs.writer();
-    text.print("#{}# | {s}", .{ rl.ICON_PLAYER_PLAY, playback.filename }) catch unreachable;
-    if (playback.IsMusicStreamPlaying()) {
+    _ = text.write(playback.filename) catch unreachable;
+    if (rl.IsMusicValid(playback.music)) {
         const mtp = playback.GetMusicTimePlayed();
         const mtl = playback.GetMusicTimeLength();
-        text.print(" | {d:7.2}s/{d:7.2}s", .{ mtp, mtl }) catch unreachable;
+        text.print("| {d:7.2}s/{d:7.2}s", .{ mtp, mtl }) catch unreachable;
     }
     text.print(" | [FPS:{d}]\x00", .{rl.GetFPS()}) catch unreachable;
-    if (gui_xoffset < 0) {
-        gui_xoffset = @trunc(std.math.lerp(gui_xoffset, 0, @min(0.3, 30 * rl.GetFrameTime())));
+    const guiStatusBar = base.translate(base.width * 4 + 10, 0).resize(800, base.height).into();
+    const musicOn = rl.IsMusicStreamPlaying(playback.music) or !rl.IsMusicValid(playback.music);
+    var playIconBuffer: [16]u8 = @splat(0);
+    const playIconTxt = std.fmt.bufPrintZ(&playIconBuffer, "#{}#", .{if (musicOn) rl.ICON_PLAYER_PLAY else rl.ICON_PLAYER_PAUSE}) catch unreachable;
+    _ = rl.GuiStatusBar(guiStatusBar, &Layout.txt);
+    if (rl.GuiButton(base.translate(base.width * 3 + 10, 0).into(), playIconTxt) != 0 and rl.IsMusicValid(playback.music)) {
+        if (rl.IsMusicStreamPlaying(playback.music)) {
+            rl.PauseMusicStream(playback.music);
+        } else {
+            rl.ResumeMusicStream(playback.music);
+        }
     }
-    _ = rl.GuiStatusBar(base.translate(base.width * 4 + 5, 0).resize(800, base.height).into(), &Layout.txt);
 
     switch (active_tab) {
         .none => {
