@@ -16,7 +16,7 @@ var visible = false;
 pub fn render() void {
     if (!visible) return;
     var txt = std.mem.zeroes([256]u8);
-    const buf = std.fmt.bufPrintZ(txt[0..64], "{}", .{processor.on_beat}) catch txt[0..0];
+    const buf = std.fmt.bufPrintZ(txt[0..64], "{d:4}", .{rl.GetFPS()}) catch txt[0..0];
     rl.DrawText(buf.ptr, screenWidth - 100, 200, 24, rl.RAYWHITE);
     pos.height = 10 + 100 * processor.rms_energy;
     rl.DrawRectangleRec(pos, rl.RED);
@@ -32,9 +32,8 @@ pub fn render() void {
 }
 
 pub fn frame() void {
-    if (rl.isKeyPressed(.D)) {
-        visible = !visible;
-    }
+    if (rl.isKeyPressed(.D)) visible = !visible;
+
     const mp = rl.GetMousePosition();
     const delta = rl.GetMouseDelta();
     const dragging = rl.IsMouseButtonDown(rl.MOUSE_LEFT_BUTTON) and
