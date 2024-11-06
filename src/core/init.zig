@@ -3,6 +3,7 @@ const std = @import("std");
 
 const music = @import("../audio/playback.zig");
 const rl = @import("../raylib.zig");
+const rg = @import("../raygui.zig");
 const Config = @import("config.zig");
 pub var screenWidth: c_int = Config.Window.width;
 pub var screenHeight: c_int = Config.Window.height;
@@ -17,7 +18,7 @@ pub fn startup() !void {
 
     rl.InitAudioDevice();
 
-    rl.GuiSetAlpha(0.8);
+    rg.GuiSetAlpha(0.8);
     rl.RayguiDark();
     if (try processArgs()) |path| {
         event.onFilenameInput(path);
