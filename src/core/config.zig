@@ -24,9 +24,11 @@ pub const Audio = struct {
 };
 
 pub const Shader = struct {
-    pub var amount: f32 = 0.001;
+    pub var chroma_factor: f32 = 0.001;
+    pub var noise_factor: f32 = 0.005;
     pub const Scalars = [_]controls.Scalar{
-        .{ "Chroma", &amount, .{ 0.0, 0.01 } },
+        .{ "Chroma", &chroma_factor, .{ 0.0, 0.01 } },
+        .{ "Noise", &noise_factor, .{ 0.0, 0.5 } },
     };
 };
 
@@ -76,7 +78,7 @@ pub const Visualizer = struct {
         pub var ring_radius: f32 = 3.25;
         pub var sphere_radius: f32 = 3;
         pub var height_ring: f32 = 0.1;
-        pub var effect: f32 = 0.5;
+        pub var effect: f32 = 0.3;
         pub var color_scale: f32 = 30;
         pub var bubble_color_scale: f32 = 30;
 

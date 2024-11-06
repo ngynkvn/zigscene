@@ -4,7 +4,8 @@ pub const Config = @import("../core/config.zig");
 
 pub var sceneTexture: rl.RenderTexture2D = undefined;
 pub var program: rl.Shader = undefined;
-pub var amountLoc: c_int = undefined;
+pub var chromaFactorLoc: c_int = undefined;
+pub var noiseFactorLoc: c_int = undefined;
 
 pub var screenWidth: c_int = Config.Window.width;
 pub var screenHeight: c_int = Config.Window.height;
@@ -22,6 +23,8 @@ var vs = @embedFile("chromatic.vs.glsl");
 pub fn init() void {
     sceneTexture = rl.LoadRenderTexture(screenWidth, screenHeight);
     program = rl.LoadShaderFromMemory(vs, fs);
-    amountLoc = rl.rlGetLocationUniform(program.id, "amount");
-    std.debug.assert(amountLoc != -1);
+    chromaFactorLoc = rl.rlGetLocationUniform(program.id, "chromaFactor");
+    noiseFactorLoc = rl.rlGetLocationUniform(program.id, "noiseFactor");
+    std.debug.assert(chromaFactorLoc != -1);
+    std.debug.assert(noiseFactorLoc != -1);
 }

@@ -61,7 +61,8 @@ pub fn main() !void {
             rl.EndTextureMode();
             rl.BeginDrawing();
             rl.BeginShaderMode(shader.program);
-            rl.SetShaderValue(shader.program, shader.amountLoc, &Config.Shader.amount, rl.RL_SHADER_UNIFORM_FLOAT);
+            rl.SetShaderValue(shader.program, shader.chromaFactorLoc, &Config.Shader.chroma_factor, rl.RL_SHADER_UNIFORM_FLOAT);
+            rl.SetShaderValue(shader.program, shader.noiseFactorLoc, &Config.Shader.noise_factor, rl.RL_SHADER_UNIFORM_FLOAT);
             rl.DrawTextureRec(
                 shader.sceneTexture.texture,
                 .{
