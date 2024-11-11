@@ -1,5 +1,6 @@
 const std = @import("std");
 
+pub const playback = @import("../audio/playback.zig");
 pub const rl = @import("../raylib.zig");
 pub const Config = @import("config.zig");
 pub const debug = @import("debug.zig");
@@ -55,6 +56,15 @@ pub fn processInput() void {
     if (rl.isKeyPressed(.F)) {
         if (!rl.IsWindowState(rl.FLAG_BORDERLESS_WINDOWED_MODE)) rl.SetWindowPosition(0, 0);
         rl.ToggleBorderlessWindowed();
+    }
+    if (rl.isKeyPressed(.P)) {
+        if (rl.IsMusicValid(playback.music)) {
+            if (rl.IsMusicStreamPlaying(playback.music)) {
+                rl.PauseMusicStream(playback.music);
+            } else {
+                rl.PlayMusicStream(playback.music);
+            }
+        }
     }
     if (rl.isKeyDown(.LEFT)) rot_offset -= 100 * rl.GetFrameTime();
     if (rl.isKeyDown(.RIGHT)) rot_offset += 100 * rl.GetFrameTime();
