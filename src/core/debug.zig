@@ -5,7 +5,6 @@ const cnv = @import("../ext/convert.zig");
 const ffi = cnv.ffi;
 const Rectangle = @import("../ext/structs.zig").Rectangle;
 const rl = @import("../raylib.zig");
-const shader = @import("../shader/shader.zig");
 var screenWidth: c_int = @import("config.zig").Window.width;
 
 pub fn onWindowResize(width: i32, _: i32) void {
@@ -45,15 +44,6 @@ pub fn frame() void {
 }
 
 // TODO: enum
-const TextureFilter = enum(c_int) {
-    Nearest = 0x2600,
-    Linear = 0x2601,
-    MipNearest = 0x2700,
-    NearestMipLinear = 0x2702,
-    LinearMipNearest = 0x2701,
-    MipLinear = 0x2703,
-    Anisotropic = 0x3000,
-};
 pub const RL_TEXTURE_FILTER_NEAREST = @as(c_int, 0x2600);
 pub const RL_TEXTURE_FILTER_LINEAR = @as(c_int, 0x2601);
 pub const RL_TEXTURE_FILTER_MIP_NEAREST = @as(c_int, 0x2700);
@@ -61,13 +51,3 @@ pub const RL_TEXTURE_FILTER_NEAREST_MIP_LINEAR = @as(c_int, 0x2702);
 pub const RL_TEXTURE_FILTER_LINEAR_MIP_NEAREST = @as(c_int, 0x2701);
 pub const RL_TEXTURE_FILTER_MIP_LINEAR = @as(c_int, 0x2703);
 pub const RL_TEXTURE_FILTER_ANISOTROPIC = @as(c_int, 0x3000);
-const iter = [_]c_int{
-    RL_TEXTURE_FILTER_NEAREST,
-    RL_TEXTURE_FILTER_LINEAR,
-    RL_TEXTURE_FILTER_MIP_NEAREST,
-    RL_TEXTURE_FILTER_NEAREST_MIP_LINEAR,
-    RL_TEXTURE_FILTER_LINEAR_MIP_NEAREST,
-    RL_TEXTURE_FILTER_MIP_LINEAR,
-    RL_TEXTURE_FILTER_ANISOTROPIC,
-};
-var nextopt: usize = 0;

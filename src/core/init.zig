@@ -1,7 +1,6 @@
 //! Init sequence for the GUI / Window
 const std = @import("std");
 
-const music = @import("../audio/playback.zig");
 const rl = @import("../raylib.zig");
 const Config = @import("config.zig");
 pub var screenWidth: c_int = Config.Window.width;
