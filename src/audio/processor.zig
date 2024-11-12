@@ -9,11 +9,13 @@ const fft = @import("analysis/fft.zig");
 
 /// Currently loaded audio buffer data
 var audio_buffer = std.mem.zeroes([N]f32);
+var raw_windowed_buffer = std.mem.zeroes([N]f32);
 var raw_sample = std.mem.zeroes([N]f32);
 
 // Buffer states
 pub var raw_buffer: []f32 = &raw_sample;
 pub var curr_buffer: []f32 = &audio_buffer;
+pub var curr_windowed_buffer: []f32 = &audio_buffer;
 pub var curr_fft: []fft.ComplexF32 = &fft_buffer;
 
 /// Currently loaded buffer for fft data
@@ -42,6 +44,7 @@ fn processBuffer(buffer: []const f32) void {
     const curr_len = buffer.len / 2;
 
     processFrame(buffer, curr_len);
+    processWindowed(curr_len);
     fft.fft(fft_buffer[0..curr_len]);
     past_beats[bi] = beat.process(buffer);
     bi = (bi + 1) % N;
@@ -76,4 +79,16 @@ fn processFrame(buffer: []const f32, len: usize) void {
 
     const ool: f32 = 1 / ffi(f32, len);
     rms_energy = 0.65 * rms_energy + 0.90 * @sqrt(rms * ool);
+}
+
+fn processWindowed(len: usize) void {
+    var it = std.mem.window(f32, audio_buffer[0..len], 2, 2);
+    var i: usize = 0;
+    while (it.next()) |window| {
+        var sum: f32 = 0;
+        for (window) |w| sum += w;
+        raw_windowed_buffer[i] = sum / @as(f32, @floatFromInt(window.len));
+        i += 1;
+    }
+    curr_windowed_buffer = raw_windowed_buffer[0..i];
 }

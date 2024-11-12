@@ -34,7 +34,7 @@ pub const Bubble = struct {
         }
         rl.rlPushMatrix();
         rl.rlRotatef(t * 32, 0.1, 0.1, 1);
-        const tsteps = 2 * std.math.pi / @as(f32, @floatFromInt(processor.curr_buffer.len));
+        const tsteps = std.math.tau / @as(f32, @floatFromInt(processor.curr_buffer.len));
         for (processor.curr_buffer, 0..) |v, i| {
             const r = r_ring +
                 (effect * processor.rms_energy) +
