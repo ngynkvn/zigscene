@@ -5,10 +5,10 @@ on:
 
 jobs:
   # TODO: multiple architectures
-  build-release-macos:
+  build-release-macos-aarch64:
     runs-on: macos-14
     env:
-      RELEASE_NAME: zigscene-macos
+      RELEASE_NAME: zigscene-macos-aarch64
     permissions:
       contents: write
 
@@ -32,10 +32,10 @@ jobs:
         with:
           files: zig-out/bin/${{env.RELEASE_NAME}}
 
-  build-release-linux:
+  build-release-linux-x86_64:
     runs-on: ubuntu-latest
     env:
-      RELEASE_NAME: zigscene-linux
+      RELEASE_NAME: zigscene-linux-x86_64
     permissions:
       contents: write
 
