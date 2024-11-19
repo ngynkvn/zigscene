@@ -50,6 +50,8 @@ pub const Bubble = struct {
 
             var col = color2;
             col.x += processor.rms_energy * color_scale + @abs(v) * 30;
+            //rl.DrawLine3D(.{}, .{ .y = height_ring + @abs(v) * effect + processor.rms_energy * 0.2 }, hsv(col).into());
+            //rl.DrawCube(.{}, 0.05, height_ring + @abs(v) * effect + processor.rms_energy * 0.2, 0.05, hsv(col).into());
             rl.DrawCubeWires(.{}, 0.05, height_ring + @abs(v) * effect + processor.rms_energy * 0.2, 0.05, hsv(col).into());
             rl.rlPopMatrix();
         }
