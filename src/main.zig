@@ -1,4 +1,3 @@
-
 const tracy = @import("tracy");
 
 const music = @import("audio/playback.zig");
@@ -17,6 +16,8 @@ pub var isFullScreen = false;
 pub fn main() !void {
     var t: f32 = 0.0;
 
+    // TODO: Live reloading for application changes
+    // input hotkey
     try init.startup();
     defer init.shutdown();
 
@@ -37,7 +38,7 @@ pub fn main() !void {
             { // Begin texture rendering
                 rl.BeginTextureMode(shader.sceneTexture);
                 defer rl.EndTextureMode();
-                rl.ClearBackground(rl.BLACK);
+                rl.ClearBackground(.{});
                 { // Draw 2D Graphics
                     const ctx = tracy.traceNamed(@src(), "2d");
                     defer ctx.end();
@@ -59,6 +60,8 @@ pub fn main() !void {
                 defer drawCtx.end();
                 rl.BeginDrawing();
                 defer rl.EndDrawing();
+                // We need to double clear in case the background has transparency
+                rl.ClearBackground(.{ .a = @intFromFloat(@round(Config.Shader.alpha_factor * 255)) });
                 { // Begin shader drawing
                     const ctx = tracy.traceNamed(@src(), "draw shader");
                     defer ctx.end();

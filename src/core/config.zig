@@ -26,9 +26,11 @@ pub const Audio = struct {
 pub const Shader = struct {
     pub var chroma_factor: f32 = 0.001;
     pub var noise_factor: f32 = 0.005;
+    pub var alpha_factor: f32 = 0.0;
     pub const Scalars = [_]controls.Scalar{
         .{ "Chroma", &chroma_factor, .{ 0.0, 0.01 } },
         .{ "Noise", &noise_factor, .{ 0.0, 0.5 } },
+        .{ "Alpha", &alpha_factor, .{ 0.0, 1.0 } },
     };
 };
 
@@ -53,11 +55,13 @@ pub const Visualizer = struct {
         pub var Colors = [_]controls.Color{
             .{ "color1", &color1.x },
             .{ "color2", &color2.x },
+            .{ "color3", &trail_color.x },
         };
         pub var amplitude: f32 = 50;
         pub var base_h: f32 = 20;
         pub var color1 = Vector3{ .x = 250, .y = 1, .z = 0.94 };
         pub var color2 = Vector3{ .x = 270, .y = 1, .z = 0.9 };
+        pub var trail_color = Vector3{ .x = 210, .y = 1, .z = 0.473 };
     };
 
     pub const Bubble = struct {

@@ -9,7 +9,8 @@ const APP_NAME = Config.Window.title;
 const event = @import("event.zig");
 
 pub fn startup() !void {
-    rl.SetConfigFlags(rl.FLAG_WINDOW_RESIZABLE);
+    // TODO: Options menu
+    rl.SetConfigFlags(rl.FLAG_WINDOW_RESIZABLE | rl.FLAG_WINDOW_TRANSPARENT | rl.FLAG_WINDOW_TOPMOST);
 
     // Setup
     rl.InitWindow(screenWidth, screenHeight, APP_NAME);

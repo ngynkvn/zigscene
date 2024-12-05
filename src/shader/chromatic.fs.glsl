@@ -11,7 +11,6 @@ uniform vec4 colDiffuse;
 // Output fragment color
 out vec4 finalColor;
 
-// NOTE: Add here your custom variables
 uniform float chromaFactor;
 uniform float noiseFactor;
 
@@ -25,6 +24,6 @@ void main()
     // final color is the color from the texture 
     //    times the tint color (colDiffuse)
     //    times the fragment color (interpolated vertex color)
-    vec4 chroma = vec4(r.r, g.g, b.b, 1.0) + vec4(noise * noiseFactor);
+    vec4 chroma = vec4(r.r, g.g, b.b, + r.a + g.a + b.a) + vec4(noise * noiseFactor);
     finalColor = colDiffuse*chroma;
 }

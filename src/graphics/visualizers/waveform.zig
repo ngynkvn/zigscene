@@ -36,6 +36,7 @@ pub const WaveFormBar = struct {
     const base_h: *f32 = &WaveConfig.base_h;
     const color1 = &WaveConfig.color1;
     const color2 = &WaveConfig.color2;
+    const trail_color = &WaveConfig.trail_color;
     var maxes: [N]f32 = @splat(0);
 
     pub fn render(center: rl.Vector2, i: usize, v: f32) void {
@@ -53,7 +54,7 @@ pub const WaveFormBar = struct {
             .y = center.y * 2 - maxes[i],
             .width = SPACING,
             .height = maxes[i],
-        }, rl.BLUE);
+        }, hsv(trail_color.*).into());
         rl.DrawRectangleGradientEx(.{
             .x = px,
             .y = center.y * 2 - y - base_h.*,
