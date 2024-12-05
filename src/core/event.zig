@@ -24,3 +24,8 @@ pub inline fn onWindowResize(width: i32, height: i32) void {
         module.onWindowResize(width, height);
     }
 }
+
+pub const Direction = enum { horizontal, vertical };
+pub inline fn onSwipe(dir: Direction, amount: f32) void {
+    gui.onSwipe(dir, amount);
+}

@@ -2,6 +2,7 @@ const std = @import("std");
 
 const playback = @import("audio/playback.zig");
 const config = @import("core/config.zig");
+const Direction = @import("core/event.zig").Direction;
 const Rectangle = @import("ext/structs.zig").Rectangle;
 const controls = @import("gui/controls.zig");
 const rl = @import("raylib.zig");
@@ -69,6 +70,11 @@ pub fn frame() void {
 
 const Layout = struct {
     pub const Base = Rectangle.from(5, 5, 16, 16);
+    /// An input is always aware of where it's positioned, and reacts to IO (mouse / keyboard)
+    pub const ValueInput = struct {
+        base: Rectangle,
+    };
+
     pub const Scalars = struct {
         var editState: ?usize = null;
         const PanelSize = Base.translate(2, 20).resize(280, 700);
@@ -152,3 +158,11 @@ const Layout = struct {
     //                          \__/ ⬋ please be nice to him
     //                         [0..0]
 };
+
+pub fn onSwipe(dir: Direction, amount: f32) void {
+    switch (dir) {
+        .horizontal => {},
+        .vertical => {},
+    }
+    _ = amount;
+}

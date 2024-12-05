@@ -74,8 +74,12 @@ pub fn processInput() void {
     }
     const wheelMove = rl.GetMouseWheelMoveV();
     if (@abs(wheelMove.x) > @abs(wheelMove.y)) {
+        event.onSwipe(.horizontal, wheelMove.x);
         rot_offset += wheelMove.x;
-    } else camera3d.position.z += wheelMove.y;
+    } else {
+        event.onSwipe(.vertical, wheelMove.y);
+        camera3d.position.z += wheelMove.y;
+    }
 
     debug.frame();
 }
