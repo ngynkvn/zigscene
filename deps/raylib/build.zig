@@ -22,7 +22,7 @@ pub fn build(b: *std.Build) !void {
     // Lest some other poor soul stumble upon here...
     // You CANNOT link and reference static functions apparently.
     // Create a wrapper function instead calling the static function
-    // I wasted so much time on this :|
+    // I wasted so much time on this (｡•́︿•̀｡)
     var raygui_c = b.addWriteFile("raygui.c",
         \\#define RAYGUI_IMPLEMENTATION
         \\#include "raygui.h"
