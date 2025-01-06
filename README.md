@@ -2,11 +2,9 @@
 
 Audio visualization experiment using zig and raylib.
 
-Built against `0.14.0-dev.1983+6bf52b050
-`
+Built against `0.14.0-dev.2605+136c5a916`
 
 ## Usage
-
 
 `zig build run`, then drag and drop an audio file onto the window.
 
@@ -19,4 +17,3 @@ Built against `0.14.0-dev.1983+6bf52b050
     <img src="https://github.com/user-attachments/assets/4e427ed1-1396-4c51-a5fe-27ca09f74000" alt="example" style="width: 46%;"/>
 
 </div>
-
