@@ -56,10 +56,6 @@ pub fn build(b: *std.Build) !void {
     translate_c.addIncludePath(raylib.path("src"));
     translate_c.addIncludePath(raygui.path("src"));
     translate_c.addIncludePath(raygui.path("styles/dark"));
-    if (target.result.isWasm()) if (b.sysroot) |sysroot| {
-        const cache_include = b.pathResolve(&.{ sysroot, "cache", "sysroot", "include" });
-        translate_c.addIncludePath(.{ .cwd_relative = cache_include });
-    };
 
     const module = translate_c.addModule("raylib");
     module.linkLibrary(libraylib);
