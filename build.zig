@@ -1,7 +1,5 @@
 const std = @import("std");
 
-const emcc = @import("deps/build/emcc.zig");
-
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
