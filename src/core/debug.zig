@@ -12,12 +12,17 @@ pub fn onWindowResize(width: i32, _: i32) void {
 }
 
 var pos: rl.Rectangle = .{ .x = 300, .y = 300, .width = 10, .height = 10 };
-var visible = false;
+var visible = true;
+var txt = std.mem.zeroes([256]u8);
 pub fn render() void {
     if (!visible) return;
-    var txt = std.mem.zeroes([256]u8);
-    const buf = std.fmt.bufPrintZ(txt[0..64], "{d:4}", .{rl.GetFPS()}) catch txt[0..0];
-    rl.DrawText(buf.ptr, screenWidth - 100, 200, 24, rl.RAYWHITE);
+    {
+        const buf = std.fmt.bufPrintZ(txt[0..64], "{d:4}", .{rl.GetFPS()}) catch txt[0..0];
+        rl.DrawText(buf.ptr, screenWidth - 100, 200, 24, rl.RAYWHITE);
+    }
+    {
+        rl.DrawText(MouseState.state().ptr, screenWidth - 400, 300, 24, rl.RAYWHITE);
+    }
     pos.height = 10 + 100 * processor.rms_energy;
     rl.DrawRectangleRec(pos, rl.RED);
     // timeseries beats
@@ -31,10 +36,43 @@ pub fn render() void {
     }
 }
 
+pub const MouseState = struct {
+    var LeftDown: bool = false;
+    var RightDown: bool = false;
+    var Position: rl.Vector2 = undefined;
+    var Delta: rl.Vector2 = undefined;
+    var _buf = std.mem.zeroes([256]u8);
+    const fmt =
+        \\LeftDown: {}
+        \\RightDown: {}
+        \\Position:
+        \\    x: {d:4.2}
+        \\    y: {d:4.2}
+        \\Delta:
+        \\    x: {d:4.2}
+        \\    y: {d:4.2}
+    ;
+    fn state() []const u8 {
+        const buf = std.fmt.bufPrintZ(&_buf, fmt, .{
+            LeftDown,
+            RightDown,
+            Position.x,
+            Position.y,
+            Delta.x,
+            Delta.y,
+        }) catch _buf[0..0];
+        return buf;
+    }
+};
+
 pub fn frame() void {
     if (rl.isKeyPressed(.D)) visible = !visible;
-    const mp = rl.GetMousePosition();
-    const delta = rl.GetMouseDelta();
+    MouseState.LeftDown = rl.IsMouseButtonDown(rl.MOUSE_BUTTON_LEFT);
+    MouseState.RightDown = rl.IsMouseButtonDown(rl.MOUSE_BUTTON_RIGHT);
+    MouseState.Position = rl.GetMousePosition();
+    MouseState.Delta = rl.GetMouseDelta();
+    const mp = MouseState.Position;
+    const delta = MouseState.Delta;
     const dragging = rl.IsMouseButtonDown(rl.MOUSE_LEFT_BUTTON) and
         (rl.CheckCollisionPointRec(mp, pos) or rl.CheckCollisionPointRec(.{ .x = mp.x - delta.x, .y = mp.y - delta.y }, pos));
     if (dragging) {
