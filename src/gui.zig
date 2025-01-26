@@ -79,9 +79,14 @@ pub fn frame() void {
                     group_ctx.begin(20);
                     inline for (group) |optinfo| {
                         const fname, const fval, const frange = optinfo;
-                        // const field_idx = nth_field;
 
-                        ctx.slider(fname.ptr, fval, frange[0], frange[1]);
+                        ctx.slider(fval, .{
+                            .text = fname,
+                            .bounds = ctx.nextRow(24),
+                            .min = frange[0],
+                            .max = frange[1],
+                            .valueBox = true,
+                        });
                         // if(ctx.valueBox(fval, Layout.Scalars.editState == field_idx)){
                         //     Layout.Scalars.editState = if (Layout.Scalars.editState == field_idx) null else field_idx;
                         //     @memset(&Layout.value_buffer, 0);
