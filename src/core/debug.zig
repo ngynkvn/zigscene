@@ -77,7 +77,7 @@ pub fn frame() void {
     MouseState.Delta = rl.GetMouseDelta();
     const mp = MouseState.Position;
     const delta = MouseState.Delta;
-    const dragging = rl.IsMouseButtonDown(rl.MOUSE_LEFT_BUTTON) and
+    const dragging = rl.IsMouseButtonDown(rl.MOUSE_BUTTON_LEFT) and
         (rl.CheckCollisionPointRec(mp, pos) or rl.CheckCollisionPointRec(.{ .x = mp.x - delta.x, .y = mp.y - delta.y }, pos));
     if (dragging) {
         pos.x += delta.x;

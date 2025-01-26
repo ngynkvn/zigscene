@@ -39,16 +39,8 @@ pub fn build(b: *std.Build) !void {
     libraylib.addIncludePath(raygui.path("src"));
     libraylib.addIncludePath(raygui.path("styles/dark"));
 
-    const file = b.addWriteFile("raylib.gen.c",
-        \\#include "raylib.h"
-        \\#include "raymath.h"
-        \\#include "rlgl.h"
-        \\#include "raygui.h"
-        \\void RayguiDark(void);
-    );
-    file.step.name = "Generate c file for zig translation";
     const translate_c = b.addTranslateC(.{
-        .root_source_file = file.getDirectory().path(b, "raylib.gen.c"),
+        .root_source_file = b.path("raylib.gen.c"),
         .target = target,
         .optimize = optimize,
     });
