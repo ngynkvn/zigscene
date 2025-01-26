@@ -9,8 +9,7 @@ pub const event = @import("event.zig");
 var prevValue: f32 = 0;
 pub var rot_offset: f32 = 0.0;
 
-// TODO: Move to Camera namespace
-pub var camera3d: rl.Camera3D = .{
+pub var camera: rl.Camera3D = .{
     // zig fmt: off
     .position   = Config.Camera.initial_position,       // Camera position
     .target     = Config.Camera.initial_target,         // Camera looking at point
@@ -20,9 +19,44 @@ pub var camera3d: rl.Camera3D = .{
     // zig fmt: on
 };
 
+pub const MouseState = struct {
+    var LeftDown: bool = false;
+    var RightDown: bool = false;
+    var Position: rl.Vector2 = undefined;
+    var Delta: rl.Vector2 = undefined;
+    var _buf = std.mem.zeroes([256]u8);
+    const fmt =
+        \\M-LeftDown: {}
+        \\M-RightDown: {}
+        \\Position:
+        \\    x: {d:4.2}
+        \\    y: {d:4.2}
+        \\Delta:
+        \\    x: {d:4.2}
+        \\    y: {d:4.2}
+    ;
+    pub fn state() []const u8 {
+        const buf = std.fmt.bufPrintZ(&_buf, fmt, .{
+            LeftDown,
+            RightDown,
+            Position.x,
+            Position.y,
+            Delta.x,
+            Delta.y,
+        }) catch _buf[0..0];
+        return buf;
+    }
+};
+
 pub fn processInput() void {
     const ctx = @import("tracy").traceNamed(@src(), "input_processing");
     defer ctx.end();
+
+    MouseState.LeftDown = rl.IsMouseButtonDown(rl.MOUSE_BUTTON_LEFT);
+    MouseState.RightDown = rl.IsMouseButtonDown(rl.MOUSE_BUTTON_RIGHT);
+    MouseState.Position = rl.GetMousePosition();
+    MouseState.Delta = rl.GetMouseDelta();
+
     if (rl.IsFileDropped()) {
         const files = rl.LoadDroppedFiles();
         defer rl.UnloadDroppedFiles(files);
@@ -31,7 +65,7 @@ pub fn processInput() void {
         event.onFilenameInput(file[0..len]);
     }
 
-    if (rl.isKeyPressed(.C)) camera3d.projection = switch (camera3d.projection) {
+    if (rl.isKeyPressed(.C)) camera.projection = switch (camera.projection) {
         rl.CAMERA_PERSPECTIVE => rl.CAMERA_ORTHOGRAPHIC,
         rl.CAMERA_ORTHOGRAPHIC => rl.CAMERA_PERSPECTIVE,
         else => unreachable,
@@ -78,7 +112,7 @@ pub fn processInput() void {
         rot_offset += wheelMove.x;
     } else {
         event.onSwipe(.vertical, wheelMove.y);
-        camera3d.position.z += wheelMove.y;
+        camera.position.z += wheelMove.y;
     }
 
     debug.frame();

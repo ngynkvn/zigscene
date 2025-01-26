@@ -1,4 +1,5 @@
 const std = @import("std");
+
 const rl = @import("../raylib.zig");
 
 pub const Window = struct {
@@ -8,6 +9,7 @@ pub const Window = struct {
     drag_start: ?rl.Vector2 = null,
     visible: bool = true,
     resize_target: bool = false,
+    drag_target: bool = false,
 
     const DragState = enum {
         None,
@@ -37,12 +39,30 @@ pub const Window = struct {
             .width = self.bounds.width,
             .height = 30,
         };
+        if (rl.CheckCollisionPointRec(mouse_pos, self.bounds)) {
+            rl.DrawRectangleLines(
+                @intFromFloat(self.bounds.x - 1),
+                @intFromFloat(self.bounds.y - 1),
+                @intFromFloat(self.bounds.width + 2),
+                @intFromFloat(self.bounds.height + 2),
+                rl.RED,
+            );
+        }
 
-        if (rl.IsMouseButtonPressed(rl.MOUSE_LEFT_BUTTON) and
-            rl.CheckCollisionPointRec(mouse_pos, title_bar))
-        {
-            self.dragging = .Dragging;
-            self.drag_start = mouse_pos;
+        if (rl.CheckCollisionPointRec(mouse_pos, title_bar)) {
+            if (!self.drag_target) {
+                rl.SetMouseCursor(rl.MOUSE_CURSOR_POINTING_HAND);
+            }
+            self.drag_target = true;
+            if (rl.IsMouseButtonPressed(rl.MOUSE_LEFT_BUTTON)) {
+                self.dragging = .Dragging;
+                self.drag_start = mouse_pos;
+            }
+        } else {
+            if (self.drag_target) {
+                rl.SetMouseCursor(rl.MOUSE_CURSOR_DEFAULT);
+            }
+            self.drag_target = false;
         }
 
         // Check if mouse is on corner of window
@@ -53,8 +73,10 @@ pub const Window = struct {
             .height = 20,
         };
         if (rl.CheckCollisionPointRec(mouse_pos, corner)) {
+            if (!self.resize_target) {
+                rl.SetMouseCursor(rl.MOUSE_CURSOR_RESIZE_NWSE);
+            }
             self.resize_target = true;
-            rl.SetMouseCursor(rl.MOUSE_CURSOR_RESIZE_NWSE);
             if (rl.IsMouseButtonPressed(rl.MOUSE_LEFT_BUTTON)) {
                 self.dragging = .Resizing;
                 self.drag_start = mouse_pos;
