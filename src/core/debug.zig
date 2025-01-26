@@ -1,4 +1,5 @@
 const std = @import("std");
+const Window = @import("../ui/window.zig").Window;
 
 const processor = @import("../audio/processor.zig");
 const cnv = @import("../ext/convert.zig");
@@ -14,26 +15,29 @@ pub fn onWindowResize(width: i32, _: i32) void {
 var pos: rl.Rectangle = .{ .x = 300, .y = 300, .width = 10, .height = 10 };
 var visible = true;
 var txt = std.mem.zeroes([256]u8);
+var debug_window = Window.init(400, 400, 400, 300, "Debug Info");
+
 pub fn render() void {
     if (!visible) return;
-    {
-        const buf = std.fmt.bufPrintZ(txt[0..64], "{d:4}", .{rl.GetFPS()}) catch txt[0..0];
-        rl.DrawText(buf.ptr, screenWidth - 100, 200, 24, rl.RAYWHITE);
+
+    if (debug_window.begin()) |ctx| {
+        const bounds = ctx.bounds();
+        const buf = std.fmt.bufPrintZ(txt[0..64], "FPS: {d:4}", .{rl.GetFPS()}) catch txt[0..0];
+        _ = rl.GuiLabel(rl.Rectangle{ .x = bounds.x, .y = bounds.y, .width = bounds.width, .height = 24 }, buf.ptr);
+        _ = rl.GuiLabel(rl.Rectangle{ .x = bounds.x, .y = bounds.y + 80, .width = bounds.width, .height = 120 }, MouseState.state().ptr);
     }
-    {
-        rl.DrawText(MouseState.state().ptr, screenWidth - 400, 300, 24, rl.RAYWHITE);
-    }
-    pos.height = 10 + 100 * processor.rms_energy;
-    rl.DrawRectangleRec(pos, rl.RED);
-    // timeseries beats
-    const tsbeats = Rectangle.from(10, 64, 1, 10);
-    // Go past last written and scan from there
-    const bi = processor.bi;
-    for (1..processor.past_beats.len + 1) |b| {
-        const i = (bi + b) % processor.past_beats.len;
-        const value = processor.past_beats[i];
-        rl.DrawRectangleRec(tsbeats.translate(ffi(f32, b * 2), 0).into(), if (!value) rl.BLUE else rl.RED);
-    }
+
+    // pos.height = 10 + 100 * processor.rms_energy;
+    // rl.DrawRectangleRec(pos, rl.RED);
+    // // timeseries beats
+    // const tsbeats = Rectangle.from(10, 64, 1, 10);
+    // // Go past last written and scan from there
+    // const bi = processor.bi;
+    // for (1..processor.past_beats.len + 1) |b| {
+    //     const i = (bi + b) % processor.past_beats.len;
+    //     const value = processor.past_beats[i];
+    //     rl.DrawRectangleRec(tsbeats.translate(ffi(f32, b * 2), 0).into(), if (!value) rl.BLUE else rl.RED);
+    // }
 }
 
 pub const MouseState = struct {
@@ -66,7 +70,7 @@ pub const MouseState = struct {
 };
 
 pub fn frame() void {
-    if (rl.isKeyPressed(.D)) visible = !visible;
+    if (rl.isKeyPressed(.D)) debug_window.toggle();
     MouseState.LeftDown = rl.IsMouseButtonDown(rl.MOUSE_BUTTON_LEFT);
     MouseState.RightDown = rl.IsMouseButtonDown(rl.MOUSE_BUTTON_RIGHT);
     MouseState.Position = rl.GetMousePosition();
