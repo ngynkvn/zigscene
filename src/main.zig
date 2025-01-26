@@ -4,7 +4,7 @@ const music = @import("audio/playback.zig");
 const processor = @import("audio/processor.zig");
 const Config = @import("core/config.zig");
 const debug = @import("core/debug.zig");
-const init = @import("core/init.zig");
+const apprt = @import("core/apprt.zig");
 const shader = @import("shader/shader.zig");
 const input = @import("core/input.zig");
 const graphics = @import("graphics.zig");
@@ -16,10 +16,8 @@ pub var isFullScreen = false;
 pub fn main() !void {
     var t: f32 = 0.0;
 
-    // TODO: Live reloading for application changes
-    // input hotkey
-    try init.startup();
-    defer init.shutdown();
+    var app = try apprt.App.init();
+    defer app.deinit();
 
     // Init shader
     shader.init();
@@ -28,8 +26,8 @@ pub fn main() !void {
     // Detects window close button or ESC key
     while (!rl.WindowShouldClose()) {
         defer tracy.frameMarkNamed("zigscene");
-        if (music.IsMusicStreamPlaying()) music.UpdateMusicStream();
-        input.processInput();
+        app.processMusic();
+        app.processInput();
         const center = rl.GetWorldToScreen(.{}, input.camera3d);
 
         {
