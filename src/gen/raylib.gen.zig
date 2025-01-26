@@ -4,6 +4,7 @@ const vector = @import("../ext/vector.zig");
 pub const Vector4 = vector.Vector4;
 pub const Vector3 = vector.Vector3;
 pub const Vector2 = vector.Vector2;
+pub extern fn Get_TextWidth([*c]const u8) c_int;
 
 pub const __builtin_fabs = @import("std").zig.c_builtins.__builtin_fabs;
 pub const __builtin_fabsf = @import("std").zig.c_builtins.__builtin_fabsf;

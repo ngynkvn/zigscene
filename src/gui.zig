@@ -111,7 +111,6 @@ pub fn frame() void {
                     inline for (cfg) |optinfo| {
                         const fname, const fval = optinfo;
                         const row = ctx.nextRow(16);
-                        _ = rl.GuiLabel(row.with(.{ .x = row.x }), fname.ptr);
                         _ = rl.GuiColorBarHueH(row.with(.{ .width = 120 }), fname.ptr, fval);
                     }
                     group_ctx.end();

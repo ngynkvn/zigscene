@@ -23,17 +23,13 @@ pub fn build(b: *std.Build) !void {
     // You CANNOT link and reference static functions apparently.
     // Create a wrapper function instead calling the static function
     // I wasted so much time on this (｡•́︿•̀｡)
-    var raygui_c = b.addWriteFile("raygui.c",
-        \\#define RAYGUI_IMPLEMENTATION
-        \\#include "raygui.h"
-        \\#include "style_dark.h"
-        \\void RayguiDark(void){ GuiLoadStyleDark(); };
-    );
+    const raygui_c = b.addWriteFiles();
+    const cfile = raygui_c.addCopyFile(b.path("raygui.c"), "raygui.c");
     raygui_c.step.name = "Generate raygui implementation";
 
     libraylib.installHeader(raygui.path("src/raygui.h"), "raygui.h");
     libraylib.addCSourceFile(.{
-        .file = raygui_c.getDirectory().path(b, "raygui.c"),
+        .file = cfile,
     });
     libraylib.addIncludePath(raylib.path("src"));
     libraylib.addIncludePath(raygui.path("src"));

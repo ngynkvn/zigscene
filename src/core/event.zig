@@ -4,25 +4,26 @@ const gui = @import("../gui.zig");
 const shader = @import("../shader/shader.zig");
 const debug = @import("debug.zig");
 
-pub inline fn onFilenameInput(filename: []const u8) void {
-    const modules = .{music};
-    inline for (modules) |module| {
-        module.onFilenameInput(filename);
+const EventHandler = struct {
+    fn dispatch(comptime modules: anytype, comptime handler: []const u8, args: anytype) void {
+        inline for (modules) |module| {
+            if (@hasDecl(module, handler)) {
+                @call(.auto, @field(module, handler), args);
+            }
+        }
     }
+};
+
+pub inline fn onFilenameInput(filename: []const u8) void {
+    EventHandler.dispatch(.{music}, "onFilenameInput", .{filename});
 }
 
 pub inline fn onTabChange(tab: gui.Tab) void {
-    const modules = .{gui};
-    inline for (modules) |module| {
-        module.onTabChange(tab);
-    }
+    EventHandler.dispatch(.{gui}, "onTabChange", .{tab});
 }
 
 pub inline fn onWindowResize(width: i32, height: i32) void {
-    const modules = .{ graphics, shader, debug };
-    inline for (modules) |module| {
-        module.onWindowResize(width, height);
-    }
+    EventHandler.dispatch(.{ graphics, shader, debug }, "onWindowResize", .{ width, height });
 }
 
 pub const Direction = enum { horizontal, vertical };

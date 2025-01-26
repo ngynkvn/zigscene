@@ -38,7 +38,8 @@ pub var guiControlExclusiveRec: Rectangle = Rectangle{ .x = 0, .y = 0, .width = 
 // const guiControlExclusiveRec = rl.guiControlExclusiveRec;
 
 pub fn GuiColorBarHueH(bounds: Rectangle, text: [*c]const u8, hue: [*c]f32) c_int {
-    _ = text; // TODO: Draw text
+    const width = rl.Get_TextWidth(text);
+    _ = rl.GuiLabel(bounds.with(.{ .x = bounds.x - @as(f32, @floatFromInt(width)) - 4 }), text);
     var state: c_int = GuiGetState();
 
     const selector_height = @as(f32, @floatFromInt(GuiGetStyle(COLORPICKER, HUEBAR_SELECTOR_HEIGHT)));
@@ -130,7 +131,6 @@ pub fn GuiDrawRectangle(rec: Rectangle, borderWidth: c_int, borderColor: Color, 
     }
 }
 
-// const GuiFade = rl.GuiFade;
 pub fn GuiFade(color: Color, alpha: f32) Color {
     const a = std.math.clamp(alpha, 0, 1);
     return .{ .r = color.r, .g = color.g, .b = color.b, .a = iff(u8, ffi(f32, color.a) * a) };
