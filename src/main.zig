@@ -1,3 +1,4 @@
+const std = @import("std");
 const tracy = @import("tracy");
 
 const music = @import("audio/playback.zig");
@@ -14,14 +15,14 @@ const rl = @import("raylib.zig");
 pub var isFullScreen = false;
 
 pub fn main() !void {
-    var t: f32 = 0.0;
-
-    var app = try apprt.App.init();
+    var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
+    var app = try apprt.App.init(allocator);
     defer app.deinit();
 
     // Init shader
     shader.init();
-
     // Main loop
     // Detects window close button or ESC key
     while (!rl.WindowShouldClose()) {
@@ -29,7 +30,6 @@ pub fn main() !void {
         app.processMusic();
         app.processInput();
         const center = rl.GetWorldToScreen(.{}, input.camera3d);
-
         {
             const renderCtx = tracy.traceNamed(@src(), "Render");
             defer renderCtx.end();
@@ -50,7 +50,7 @@ pub fn main() !void {
                 { // Draw 3D graphics
                     const ctx = tracy.traceNamed(@src(), "bubble");
                     defer ctx.end();
-                    graphics.Bubble.render(input.camera3d, input.rot_offset, t);
+                    graphics.Bubble.render(input.camera3d, input.rot_offset, app.t);
                 }
             }
             { // Begin draw
@@ -84,8 +84,8 @@ pub fn main() !void {
                     gui.frame();
                 }
             }
-            t += rl.GetFrameTime();
         }
+        app.t += rl.GetFrameTime();
     }
 }
 

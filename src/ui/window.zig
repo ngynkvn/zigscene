@@ -4,9 +4,16 @@ const rl = @import("../raylib.zig");
 pub const Window = struct {
     bounds: rl.Rectangle,
     title: []const u8,
-    dragging: bool = false,
+    dragging: DragState = .None,
     drag_start: ?rl.Vector2 = null,
     visible: bool = true,
+    resize_target: bool = false,
+
+    const DragState = enum {
+        None,
+        Dragging,
+        Resizing,
+    };
 
     pub fn init(x: f32, y: f32, width: f32, height: f32, title: []const u8) Window {
         return .{
@@ -34,19 +41,48 @@ pub const Window = struct {
         if (rl.IsMouseButtonPressed(rl.MOUSE_LEFT_BUTTON) and
             rl.CheckCollisionPointRec(mouse_pos, title_bar))
         {
-            self.dragging = true;
+            self.dragging = .Dragging;
             self.drag_start = mouse_pos;
         }
 
+        // Check if mouse is on corner of window
+        const corner = rl.Rectangle{
+            .x = self.bounds.x + self.bounds.width - 20,
+            .y = self.bounds.y + self.bounds.height - 20,
+            .width = 20,
+            .height = 20,
+        };
+        if (rl.CheckCollisionPointRec(mouse_pos, corner)) {
+            self.resize_target = true;
+            rl.SetMouseCursor(rl.MOUSE_CURSOR_RESIZE_NWSE);
+            if (rl.IsMouseButtonPressed(rl.MOUSE_LEFT_BUTTON)) {
+                self.dragging = .Resizing;
+                self.drag_start = mouse_pos;
+            }
+        } else {
+            if (self.resize_target) {
+                rl.SetMouseCursor(rl.MOUSE_CURSOR_DEFAULT);
+            }
+            self.resize_target = false;
+        }
+
         if (rl.IsMouseButtonReleased(rl.MOUSE_LEFT_BUTTON)) {
-            self.dragging = false;
+            self.dragging = .None;
             self.drag_start = null;
         }
 
-        if (self.dragging) {
-            const delta = rl.GetMouseDelta();
-            self.bounds.x += delta.x;
-            self.bounds.y += delta.y;
+        switch (self.dragging) {
+            .Resizing => {
+                const delta = rl.GetMouseDelta();
+                self.bounds.width += delta.x;
+                self.bounds.height += delta.y;
+            },
+            .Dragging => {
+                const delta = rl.GetMouseDelta();
+                self.bounds.x += delta.x;
+                self.bounds.y += delta.y;
+            },
+            .None => {},
         }
     }
 
