@@ -15,8 +15,8 @@ pub fn onWindowResize(width: i32, _: i32) void {
 var pos: rl.Rectangle = .{ .x = 300, .y = 300, .width = 10, .height = 10 };
 var visible = true;
 var txt = std.mem.zeroes([256]u8);
-var debug_window = Window.init(400, 400, 400, 300, "Debug Info");
-var debug_window2 = Window.init(200, 200, 200, 200, "Debug2");
+var debug_window = Window.init(700, 400, 400, 300, "Debug Info");
+var debug_window2 = Window.init(500, 200, 200, 200, "Debug2");
 
 pub fn render() void {
     if (!visible) return;
