@@ -1,11 +1,12 @@
 const std = @import("std");
-const Window = @import("../ui/window.zig").Window;
 
 const processor = @import("../audio/processor.zig");
+const input = @import("../core/input.zig");
 const cnv = @import("../ext/convert.zig");
 const ffi = cnv.ffi;
 const Rectangle = @import("../ext/structs.zig").Rectangle;
 const rl = @import("../raylib.zig");
+const Window = @import("../ui/window.zig").Window;
 var screenWidth: c_int = @import("config.zig").Window.width;
 
 pub fn onWindowResize(width: i32, _: i32) void {
@@ -28,7 +29,7 @@ pub fn render() void {
             std.fmt.fmtDuration(@intFromFloat(rl.GetFrameTime() * std.time.ns_per_ms)),
         }) catch txt[0..0];
         _ = rl.GuiLabel(rl.Rectangle{ .x = bounds.x, .y = bounds.y, .width = bounds.width, .height = 24 }, buf.ptr);
-        _ = rl.GuiLabel(rl.Rectangle{ .x = bounds.x, .y = bounds.y + 80, .width = bounds.width, .height = 120 }, MouseState.state().ptr);
+        _ = rl.GuiLabel(rl.Rectangle{ .x = bounds.x, .y = bounds.y + 80, .width = bounds.width, .height = 120 }, input.MouseState.state().ptr);
     }
     if (debug_window2.begin()) |ctx| {
         _ = ctx;
@@ -47,49 +48,8 @@ pub fn render() void {
     // }
 }
 
-pub const MouseState = struct {
-    var LeftDown: bool = false;
-    var RightDown: bool = false;
-    var Position: rl.Vector2 = undefined;
-    var Delta: rl.Vector2 = undefined;
-    var _buf = std.mem.zeroes([256]u8);
-    const fmt =
-        \\LeftDown: {}
-        \\RightDown: {}
-        \\Position:
-        \\    x: {d:4.2}
-        \\    y: {d:4.2}
-        \\Delta:
-        \\    x: {d:4.2}
-        \\    y: {d:4.2}
-    ;
-    fn state() []const u8 {
-        const buf = std.fmt.bufPrintZ(&_buf, fmt, .{
-            LeftDown,
-            RightDown,
-            Position.x,
-            Position.y,
-            Delta.x,
-            Delta.y,
-        }) catch _buf[0..0];
-        return buf;
-    }
-};
-
 pub fn frame() void {
     if (rl.isKeyPressed(.D)) debug_window.toggle();
-    MouseState.LeftDown = rl.IsMouseButtonDown(rl.MOUSE_BUTTON_LEFT);
-    MouseState.RightDown = rl.IsMouseButtonDown(rl.MOUSE_BUTTON_RIGHT);
-    MouseState.Position = rl.GetMousePosition();
-    MouseState.Delta = rl.GetMouseDelta();
-    const mp = MouseState.Position;
-    const delta = MouseState.Delta;
-    const dragging = rl.IsMouseButtonDown(rl.MOUSE_BUTTON_LEFT) and
-        (rl.CheckCollisionPointRec(mp, pos) or rl.CheckCollisionPointRec(.{ .x = mp.x - delta.x, .y = mp.y - delta.y }, pos));
-    if (dragging) {
-        pos.x += delta.x;
-        pos.y += delta.y;
-    }
 }
 
 // TODO: enum
