@@ -6,14 +6,14 @@ const Direction = @import("core/event.zig").Direction;
 const Rectangle = @import("ext/structs.zig").Rectangle;
 const controls = @import("gui/controls.zig");
 const rl = @import("raylib.zig");
+const Panel = @import("ui/panel.zig").Panel;
 
 pub const Tab = enum(c_int) { none, scalar, color };
 var active_tab: Tab = .scalar;
 var gui_xoffset: f32 = 0;
-pub const onTabChange = to;
 
 /// Moves the gui state to the desired tab
-fn to(next: Tab) void {
+pub fn onTabChange(next: Tab) void {
     if (Layout.Scalars.editState != null or active_tab == next) return;
     active_tab = next;
     gui_xoffset = -300;
@@ -21,42 +21,8 @@ fn to(next: Tab) void {
 
 var draggingSlider = false;
 
-pub const UIContext = struct {
-    bounds: Rectangle,
-    current_y: f32,
-
-    pub fn init(bounds: Rectangle) UIContext {
-        return .{
-            .bounds = bounds,
-            .current_y = bounds.y,
-        };
-    }
-
-    pub fn nextRow(self: *UIContext, height: f32) Rectangle {
-        const result = self.bounds.resize(self.bounds.width, height).translate(0, self.current_y - self.bounds.y);
-        self.current_y += height;
-        return result;
-    }
-
-    pub fn label(self: *UIContext, text: [*c]const u8) void {
-        _ = rl.GuiLabel(self.nextRow(24).into(), text);
-    }
-
-    pub fn slider(self: *UIContext, text: [*c]const u8, value: *f32, min: f32, max: f32) void {
-        const row = self.nextRow(24);
-        _ = rl.GuiSlider(row.resize(120, 16).translate(100, 0).into(), text, "", value, min, max);
-    }
-
-    pub fn valueBox(self: *UIContext, value: *f32, editing: bool) bool {
-        const row = self.nextRow(24);
-        const buf = if (editing)
-            &Layout.editing_buffer
-        else
-            std.fmt.bufPrintZ(&Layout.value_buffer, Layout.tunable_fmt, .{value.*}) catch unreachable;
-
-        return rl.GuiValueBoxFloat(row.resize(50, 16).translate(225, 0).into(), "", buf.ptr, value, editing) != 0;
-    }
-};
+var scalar_panel = Panel.init(7, 24, 280, 700, "Scalars");
+var color_panel = Panel.init(7, 24, 200, 700, "Colors");
 
 pub fn frame() void {
     if (gui_xoffset < 0) {
@@ -100,8 +66,52 @@ pub fn frame() void {
             const panel_bounds = Layout.Base.translate(-310 - gui_xoffset, 20).resize(300, 700);
             _ = rl.GuiPanel(panel_bounds.into(), "");
         },
-        .scalar => Layout.Scalars.draw(),
-        .color => Layout.Colors.draw(),
+        .scalar => {
+            scalar_panel.bounds.x = gui_xoffset + 2;
+            if (scalar_panel.begin()) {
+                var ctx = scalar_panel.context();
+                comptime var nth_field: usize = 0;
+                inline for (Layout.Scalars.Fields) |sf| {
+                    const name, const group = sf;
+                    ctx.label(name.ptr);
+
+                    var group_ctx = ctx.group();
+                    group_ctx.begin(20);
+                    inline for (group) |optinfo| {
+                        const fname, const fval, const frange = optinfo;
+                        // const field_idx = nth_field;
+
+                        ctx.slider(fname.ptr, fval, frange[0], frange[1]);
+                        // if(ctx.valueBox(fval, Layout.Scalars.editState == field_idx)){
+                        //     Layout.Scalars.editState = if (Layout.Scalars.editState == field_idx) null else field_idx;
+                        //     @memset(&Layout.value_buffer, 0);
+                        //     _ = std.fmt.bufPrintZ(&Layout.value_buffer, "{d}", .{fval.*}) catch unreachable;
+                        //     @memcpy(&Layout.editing_buffer, &Layout.value_buffer);
+                        // }
+                        nth_field += 1;
+                    }
+                    group_ctx.end();
+                }
+            }
+        },
+        .color => {
+            color_panel.bounds.x = gui_xoffset + 2;
+            if (color_panel.begin()) {
+                var ctx = scalar_panel.context();
+                inline for (Layout.Colors.Fields) |info| {
+                    const name, const cfg = info;
+                    ctx.label(name.ptr);
+
+                    var group_ctx = ctx.group();
+                    group_ctx.begin(40);
+                    inline for (cfg) |optinfo| {
+                        const fname, const fval = optinfo;
+                        _ = rl.GuiColorBarHueH(ctx.nextRow(24), fname.ptr, fval);
+                    }
+                    group_ctx.end();
+                }
+            }
+        },
     }
 }
 
@@ -119,33 +129,6 @@ const Layout = struct {
         const label: []const u8 = "Scalars";
         const offset: usize = 24;
         const initialOffset = 60;
-        fn draw() void {
-            const anchor = PanelSize.translate(gui_xoffset, 0);
-            _ = rl.GuiPanel(anchor.into(), "Scalars");
-
-            var ctx = UIContext.init(anchor.translate(5, 40));
-            comptime var nth_field: usize = 0;
-
-            inline for (Fields) |sf| {
-                const name, const group = sf;
-                ctx.label(name.ptr);
-
-                inline for (group) |optinfo| {
-                    const fname, const fval, const frange = optinfo;
-                    const field_idx = nth_field;
-
-                    ctx.slider(fname.ptr, fval, frange[0], frange[1]);
-                    if (ctx.valueBox(fval, editState == field_idx)) {
-                        editState = if (editState == field_idx) null else field_idx;
-                        @memset(&value_buffer, 0);
-                        _ = std.fmt.bufPrintZ(&value_buffer, "{d}", .{fval.*}) catch unreachable;
-                        @memcpy(&editing_buffer, &value_buffer);
-                    }
-                    nth_field += 1;
-                }
-                ctx.current_y += 24; // Add spacing between groups
-            }
-        }
         const Fields = [_]struct { []const u8, []const controls.Scalar }{
             .{ "WaveFormLine", &config.Visualizer.WaveFormLine.Scalars },
             .{ "WaveFormBar", &config.Visualizer.WaveFormBar.Scalars },
@@ -157,23 +140,6 @@ const Layout = struct {
     const Colors = struct {
         const slider_w = 100;
         const offset = 24;
-        fn draw() void {
-            const anchor = Base.translate(gui_xoffset + 2, 20).resize(200, 700);
-            _ = rl.GuiPanel(anchor.into(), "Colors");
-
-            var ctx = UIContext.init(anchor.translate(5, 40));
-
-            inline for (Fields) |info| {
-                const name, const cfg = info;
-                ctx.label(name.ptr);
-
-                inline for (cfg) |optinfo| {
-                    const fname, const fval = optinfo;
-                    _ = rl.GuiColorBarHueH(ctx.nextRow(24).resize(100, 16).translate(40, 0).into(), fname.ptr, fval);
-                }
-                ctx.current_y += 24; // Add spacing between groups
-            }
-        }
         const Fields = [_]struct { []const u8, []const controls.Color }{
             .{ "WaveFormLine", &config.Visualizer.WaveFormLine.Colors },
             .{ "WaveFormBar", &config.Visualizer.WaveFormBar.Colors },
