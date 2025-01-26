@@ -70,30 +70,29 @@ pub fn frame() void {
             scalar_panel.bounds.x = gui_xoffset + 2;
             if (scalar_panel.begin()) {
                 var ctx = scalar_panel.context();
-                comptime var nth_field: usize = 0;
                 inline for (Layout.Scalars.Fields) |sf| {
                     const name, const group = sf;
                     ctx.label(name.ptr);
 
                     var group_ctx = ctx.group();
-                    group_ctx.begin(20);
+                    group_ctx.begin(92);
                     inline for (group) |optinfo| {
                         const fname, const fval, const frange = optinfo;
 
                         ctx.slider(fval, .{
                             .text = fname,
-                            .bounds = ctx.nextRow(24),
+                            .bounds = ctx.nextRow(16).with(.{ .width = 120 }),
                             .min = frange[0],
                             .max = frange[1],
                             .valueBox = true,
                         });
+                        // TODO:
                         // if(ctx.valueBox(fval, Layout.Scalars.editState == field_idx)){
                         //     Layout.Scalars.editState = if (Layout.Scalars.editState == field_idx) null else field_idx;
                         //     @memset(&Layout.value_buffer, 0);
                         //     _ = std.fmt.bufPrintZ(&Layout.value_buffer, "{d}", .{fval.*}) catch unreachable;
                         //     @memcpy(&Layout.editing_buffer, &Layout.value_buffer);
                         // }
-                        nth_field += 1;
                     }
                     group_ctx.end();
                 }
@@ -111,7 +110,9 @@ pub fn frame() void {
                     group_ctx.begin(40);
                     inline for (cfg) |optinfo| {
                         const fname, const fval = optinfo;
-                        _ = rl.GuiColorBarHueH(ctx.nextRow(24), fname.ptr, fval);
+                        const row = ctx.nextRow(16);
+                        _ = rl.GuiLabel(row.with(.{ .x = 4 }), fname.ptr);
+                        _ = rl.GuiColorBarHueH(row.with(.{ .width = 120 }), fname.ptr, fval);
                     }
                     group_ctx.end();
                 }
@@ -158,8 +159,10 @@ const Layout = struct {
     var txt = [_]u8{0} ** 256;
     var value_buffer = [_]u8{0} ** vlen;
     var editing_buffer = [_]u8{0} ** vlen;
-    //                          \__/ ⬋ please be nice to him
-    //                         [0..0]
+    //        ⬋ please be nice to him
+    //   /\_/\
+    // =(• . •)=
+    //  /     \
 };
 
 pub fn onSwipe(dir: Direction, amount: f32) void {

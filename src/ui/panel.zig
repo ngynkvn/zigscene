@@ -77,10 +77,10 @@ pub const Panel = struct {
             _ = rl.GuiSlider(so.bounds, so.text.ptr, null, value, so.min, so.max);
             if (so.valueBox) {
                 const adj = rl.Rectangle{
-                    .x = so.bounds.x + so.bounds.width,
+                    .x = so.bounds.x + so.bounds.width + 2,
                     .y = so.bounds.y,
                     .width = 48,
-                    .height = 24,
+                    .height = 16,
                 };
                 const buf = std.fmt.bufPrintZ(&value_buffer, tunable_fmt, .{value.*}) catch unreachable;
                 _ = rl.GuiValueBoxFloat(adj, "", buf.ptr, value, so.editing);
