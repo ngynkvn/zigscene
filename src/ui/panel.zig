@@ -23,10 +23,10 @@ pub const Panel = struct {
         return .{ .root = self };
     }
 
-    pub fn begin(self: *Panel) ?Context {
-        if (!self.visible) return null;
+    pub fn begin(self: *Panel) bool {
+        if (!self.visible) return false;
         _ = rl.GuiPanel(self.bounds, self.title.ptr);
-        return self.context();
+        return true;
     }
 
     pub const Context = struct {
@@ -39,7 +39,7 @@ pub const Panel = struct {
             const rt = self.root.bounds;
             return .{
                 .x = rt.x + pad,
-                .y = rt.y + pad,
+                .y = rt.y + pad + 24,
                 .width = rt.width - (pad * 2),
                 .height = rt.height - (pad * 2),
             };
@@ -47,7 +47,7 @@ pub const Panel = struct {
 
         pub fn nextRow(self: *Context, height: f32) rl.Rectangle {
             const b = self.bounds();
-            const result = .{
+            const result: rl.Rectangle = .{
                 .x = b.x + self.current_x,
                 .y = b.y + self.current_y,
                 .width = b.width,
@@ -66,7 +66,9 @@ pub const Panel = struct {
         }
 
         pub fn slider(self: *Context, text: [*c]const u8, value: *f32, min: f32, max: f32) void {
-            const row = self.nextRow(24);
+            var row = self.nextRow(16);
+            row.width = 120;
+            row.x += 60;
             _ = rl.GuiSlider(row, text, "", value, min, max);
         }
 
