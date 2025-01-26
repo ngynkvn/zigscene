@@ -15,9 +15,6 @@ pub const Vector2 = extern struct {
     pub fn from(t: anytype) Vector2 {
         return .{ .x = t.x, .y = t.y };
     }
-    pub fn c(self: Vector2) rl.Vector2 {
-        return @bitCast(self);
-    }
     pub fn zero() Vector2 {
         return .{ .x = 0.0, .y = 0.0 };
     }
