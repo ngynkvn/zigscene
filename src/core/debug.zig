@@ -16,6 +16,7 @@ var pos: rl.Rectangle = .{ .x = 300, .y = 300, .width = 10, .height = 10 };
 var visible = true;
 var txt = std.mem.zeroes([256]u8);
 var debug_window = Window.init(400, 400, 400, 300, "Debug Info");
+var debug_window2 = Window.init(200, 200, 200, 200, "Debug2");
 
 pub fn render() void {
     if (!visible) return;
@@ -25,6 +26,9 @@ pub fn render() void {
         const buf = std.fmt.bufPrintZ(txt[0..64], "FPS: {d:4}", .{rl.GetFPS()}) catch txt[0..0];
         _ = rl.GuiLabel(rl.Rectangle{ .x = bounds.x, .y = bounds.y, .width = bounds.width, .height = 24 }, buf.ptr);
         _ = rl.GuiLabel(rl.Rectangle{ .x = bounds.x, .y = bounds.y + 80, .width = bounds.width, .height = 120 }, MouseState.state().ptr);
+    }
+    if (debug_window2.begin()) |ctx| {
+        _ = ctx;
     }
 
     // pos.height = 10 + 100 * processor.rms_energy;

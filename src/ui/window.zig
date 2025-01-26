@@ -70,11 +70,12 @@ pub const Window = struct {
     pub fn begin(self: *Window) ?Context {
         if (!self.visible) return null;
         self.update();
-
-        return if (rl.GuiWindowBox(self.bounds, self.title.ptr) == 0)
-            self.context()
-        else
-            null;
+        if (rl.GuiWindowBox(self.bounds, self.title.ptr) == 0) {
+            return self.context();
+        } else {
+            self.visible = !self.visible;
+            return null;
+        }
     }
 
     pub fn toggle(self: *Window) void {
