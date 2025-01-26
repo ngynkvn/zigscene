@@ -10,8 +10,9 @@ const APP_NAME = Config.Window.title;
 
 const event = @import("event.zig");
 pub const App = struct {
-    //! Init sequence for the GUI / Window
-    pub fn init() !App {
+    t: f32 = 0,
+    // Init sequence for the GUI / Window
+    pub fn init(_: std.mem.Allocator) !App {
         // TODO: Options menu
         rl.SetConfigFlags(rl.FLAG_WINDOW_RESIZABLE | rl.FLAG_WINDOW_TRANSPARENT | rl.FLAG_WINDOW_TOPMOST);
 

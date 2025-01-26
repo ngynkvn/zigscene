@@ -23,7 +23,10 @@ pub fn render() void {
 
     if (debug_window.begin()) |ctx| {
         const bounds = ctx.bounds();
-        const buf = std.fmt.bufPrintZ(txt[0..64], "FPS: {d:4}", .{rl.GetFPS()}) catch txt[0..0];
+        const buf = std.fmt.bufPrintZ(txt[0..64], "FPS: {d:4} ({d:4.2})", .{
+            rl.GetFPS(),
+            std.fmt.fmtDuration(@intFromFloat(rl.GetFrameTime() * std.time.ns_per_ms)),
+        }) catch txt[0..0];
         _ = rl.GuiLabel(rl.Rectangle{ .x = bounds.x, .y = bounds.y, .width = bounds.width, .height = 24 }, buf.ptr);
         _ = rl.GuiLabel(rl.Rectangle{ .x = bounds.x, .y = bounds.y + 80, .width = bounds.width, .height = 120 }, MouseState.state().ptr);
     }
