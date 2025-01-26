@@ -40,7 +40,7 @@ pub fn render() void {
     // for (1..processor.past_beats.len + 1) |b| {
     //     const i = (bi + b) % processor.past_beats.len;
     //     const value = processor.past_beats[i];
-    //     rl.DrawRectangleRec(tsbeats.translate(ffi(f32, b * 2), 0).into(), if (!value) rl.BLUE else rl.RED);
+    //     rl.DrawRectangleRec(tsbeats.translate(ffi(f32, b * 2), 0), if (!value) rl.BLUE else rl.RED);
     // }
 }
 

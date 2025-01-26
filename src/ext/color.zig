@@ -3,7 +3,7 @@ const std = @import("std");
 const rl = @import("../raylib.zig");
 const cnv = @import("convert.zig");
 const iff = cnv.iff;
-const Vector3 = @import("vector.zig").Vector3;
+const Vector3 = rl.Vector3;
 
 const M = @This();
 
@@ -15,9 +15,7 @@ pub const Color = extern struct {
     pub fn from(arr: [4]u8) Color {
         return .{ .r = arr[0], .g = arr[1], .b = arr[2], .a = arr[3] };
     }
-    pub fn into(self: Color) rl.Color {
-        return @bitCast(self);
-    }
+
     pub const hsv = struct {
         /// Convert from Vector3 as .{.x = hue, .y = saturation, .z = value}
         pub fn vec3(v: Vector3) Color {
@@ -107,13 +105,13 @@ test "fromHSV = HsvToColor" {
                 const v: f32 = @floatFromInt(z);
                 const raylib_hsv = ColorFromHSV(h, s / 10, v / 10);
                 const color = Color.hsv.from(h, s / 10, v / 10);
-                try std.testing.expectEqualDeep(raylib_hsv, color.into());
+                try std.testing.expectEqualDeep(raylib_hsv, color);
 
                 // make sure layout is the same
                 const rl_bytes = std.mem.asBytes(&raylib_hsv);
                 const c_bytes = std.mem.asBytes(&color);
                 try std.testing.expectEqualSlices(u8, rl_bytes, c_bytes);
-                try std.testing.expectEqualDeep(raylib_hsv, Color.hsv.from(h, s / 10, v / 10).into());
+                try std.testing.expectEqualDeep(raylib_hsv, Color.hsv.from(h, s / 10, v / 10));
                 try std.testing.expectEqualDeep(color, Color.hsv.rl(.{ .x = h, .y = s / 10, .z = v / 10 }));
             }
         }

@@ -29,7 +29,7 @@ pub const Bubble = struct {
             rl.rlPushMatrix();
             rl.rlRotatef(t * 32, 1, 1, 1);
             color1.x += processor.rms_energy * bubble_color_scale;
-            rl.DrawSphereWires(.{}, r_sphere + processor.rms_energy * effect, 10, 10, hsv(color1).into());
+            rl.DrawSphereWires(.{}, r_sphere + processor.rms_energy * effect, 10, 10, hsv(color1));
             rl.rlPopMatrix();
         }
         rl.rlPushMatrix();
@@ -50,7 +50,7 @@ pub const Bubble = struct {
 
             var col = color2;
             col.x += processor.rms_energy * color_scale + @abs(v) * 30;
-            rl.DrawCubeWires(.{}, 0.05, height_ring + @abs(v) * effect + processor.rms_energy * 0.2, 0.05, hsv(col).into());
+            rl.DrawCubeWires(.{}, 0.05, height_ring + @abs(v) * effect + processor.rms_energy * 0.2, 0.05, hsv(col));
             rl.rlPopMatrix();
         }
         rl.rlPopMatrix();
