@@ -21,8 +21,8 @@ pub fn onTabChange(next: Tab) void {
 
 var draggingSlider = false;
 
-var scalar_panel = Panel.init(7, 24, 280, 700, "Scalars");
-var color_panel = Panel.init(7, 24, 200, 700, "Colors");
+var scalar_panel = Panel.init(8, 24, 280, 700, "Scalars");
+var color_panel = Panel.init(8, 24, 200, 700, "Colors");
 
 pub fn frame() void {
     if (gui_xoffset < 0) {
@@ -67,7 +67,7 @@ pub fn frame() void {
             _ = rl.GuiPanel(panel_bounds, "");
         },
         .scalar => {
-            scalar_panel.bounds.x = gui_xoffset + 2;
+            scalar_panel.bounds.x = gui_xoffset;
             if (scalar_panel.begin()) {
                 var ctx = scalar_panel.context();
                 inline for (Layout.Scalars.Fields) |sf| {
@@ -99,9 +99,9 @@ pub fn frame() void {
             }
         },
         .color => {
-            color_panel.bounds.x = gui_xoffset + 2;
+            color_panel.bounds.x = gui_xoffset;
             if (color_panel.begin()) {
-                var ctx = scalar_panel.context();
+                var ctx = color_panel.context();
                 inline for (Layout.Colors.Fields) |info| {
                     const name, const cfg = info;
                     ctx.label(name.ptr);
@@ -111,7 +111,7 @@ pub fn frame() void {
                     inline for (cfg) |optinfo| {
                         const fname, const fval = optinfo;
                         const row = ctx.nextRow(16);
-                        _ = rl.GuiLabel(row.with(.{ .x = 4 }), fname.ptr);
+                        _ = rl.GuiLabel(row.with(.{ .x = row.x }), fname.ptr);
                         _ = rl.GuiColorBarHueH(row.with(.{ .width = 120 }), fname.ptr, fval);
                     }
                     group_ctx.end();
