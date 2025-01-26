@@ -28,7 +28,7 @@ pub fn frame() void {
     if (gui_xoffset < 0) {
         gui_xoffset = @trunc(std.math.lerp(gui_xoffset, 0, @min(0.3, 30 * rl.GetFrameTime())));
     }
-    const base = Layout.Base;
+    const base = Rectangle.from(5, 5, 16, 16);
     const grouptxt = std.fmt.comptimePrint("#{}#;#{}#;#{}#", .{ rl.ICON_ARROW_LEFT, rl.ICON_FX, rl.ICON_COLOR_PICKER });
     _ = rl.GuiToggleGroup(base, grouptxt, @ptrCast(&active_tab));
 
@@ -63,7 +63,7 @@ pub fn frame() void {
 
     switch (active_tab) {
         .none => {
-            const panel_bounds = Layout.Base.translate(-310 - gui_xoffset, 20).resize(300, 700);
+            const panel_bounds = base.translate(-310 - gui_xoffset, 20).resize(300, 700);
             _ = rl.GuiPanel(panel_bounds, "");
         },
         .scalar => {
@@ -122,19 +122,8 @@ pub fn frame() void {
 }
 
 const Layout = struct {
-    pub const Base = Rectangle.from(5, 5, 16, 16);
-    /// An input is always aware of where it's positioned, and reacts to IO (mouse / keyboard)
-    pub const ValueInput = struct {
-        base: Rectangle,
-    };
-
     pub const Scalars = struct {
         var editState: ?usize = null;
-        const PanelSize = Base.translate(2, 20).resize(280, 700);
-        const LabelSize = Base.resize(200, 8);
-        const label: []const u8 = "Scalars";
-        const offset: usize = 24;
-        const initialOffset = 60;
         const Fields = [_]struct { []const u8, []const controls.Scalar }{
             .{ "WaveFormLine", &config.Visualizer.WaveFormLine.Scalars },
             .{ "WaveFormBar", &config.Visualizer.WaveFormBar.Scalars },
@@ -144,8 +133,6 @@ const Layout = struct {
         };
     };
     const Colors = struct {
-        const slider_w = 100;
-        const offset = 24;
         const Fields = [_]struct { []const u8, []const controls.Color }{
             .{ "WaveFormLine", &config.Visualizer.WaveFormLine.Colors },
             .{ "WaveFormBar", &config.Visualizer.WaveFormBar.Colors },
