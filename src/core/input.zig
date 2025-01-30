@@ -20,20 +20,26 @@ pub var camera: rl.Camera3D = .{
 };
 
 pub const MouseState = struct {
-    var LeftDown: bool = false;
-    var RightDown: bool = false;
-    var Position: rl.Vector2 = undefined;
-    var Delta: rl.Vector2 = undefined;
+    pub var LeftDown: bool = false;
+    pub var RightDown: bool = false;
+    pub var Position: rl.Vector2 = undefined;
+    pub var Delta: rl.Vector2 = undefined;
+    pub var PrevDelta: rl.Vector2 = undefined;
+    pub var MouseWheel: rl.Vector2 = undefined;
+    pub var PrevMouseWheel: rl.Vector2 = undefined;
     var _buf = std.mem.zeroes([256]u8);
     const fmt =
         \\M-LeftDown: {}
         \\M-RightDown: {}
         \\Position:
-        \\    x: {d:4.2}
-        \\    y: {d:4.2}
+        \\  x: {d:4.2}
+        \\  y: {d:4.2}
         \\Delta:
-        \\    x: {d:4.2}
-        \\    y: {d:4.2}
+        \\  x: {d:4.2}
+        \\  y: {d:4.2}
+        \\Scroll:
+        \\  x: {d:4.2}
+        \\  y: {d:4.2}
     ;
     pub fn state() []const u8 {
         const buf = std.fmt.bufPrintZ(&_buf, fmt, .{
@@ -41,8 +47,10 @@ pub const MouseState = struct {
             RightDown,
             Position.x,
             Position.y,
-            Delta.x,
-            Delta.y,
+            PrevDelta.x,
+            PrevDelta.y,
+            PrevMouseWheel.x,
+            PrevMouseWheel.y,
         }) catch _buf[0..0];
         return buf;
     }
@@ -56,6 +64,13 @@ pub fn processInput() void {
     MouseState.RightDown = rl.IsMouseButtonDown(rl.MOUSE_BUTTON_RIGHT);
     MouseState.Position = rl.GetMousePosition();
     MouseState.Delta = rl.GetMouseDelta();
+    if (!MouseState.Delta.equals(.{})) {
+        MouseState.PrevDelta = MouseState.Delta;
+    }
+    MouseState.MouseWheel = rl.GetMouseWheelMoveV();
+    if (!MouseState.MouseWheel.equals(.{})) {
+        MouseState.PrevMouseWheel = MouseState.MouseWheel;
+    }
 
     if (rl.IsFileDropped()) {
         const files = rl.LoadDroppedFiles();

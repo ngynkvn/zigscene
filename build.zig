@@ -16,6 +16,7 @@ pub fn build(b: *std.Build) !void {
         "tracy_allocation",
         "Include allocation information with Tracy data. Does nothing if -Dtracy is not provided",
     ) orelse tracy_enable;
+    const style = b.option([]const u8, "raygui style", "raygui style") orelse "dark";
 
     const tracy = b.dependency("tracy", .{
         .target = target,
@@ -39,10 +40,14 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
     exe.root_module.addOptions("options", opts);
-
     b.installArtifact(exe);
+
+    const styles = raylib.namedLazyPath("raygui-styles");
     exe.root_module.addImport("raylib", raylib.module("raylib"));
     exe.root_module.addImport("tracy", tracy_mod);
+    exe.root_module.addAnonymousImport("rgs", .{
+        .root_source_file = styles.path(b, try std.fmt.allocPrint(b.allocator, "{[0]s}/style_{[0]s}.rgs", .{style})),
+    });
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
     if (b.args) |args| {

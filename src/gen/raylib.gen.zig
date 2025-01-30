@@ -5640,7 +5640,10 @@ pub const ICON_253: c_int = 253;
 pub const ICON_254: c_int = 254;
 pub const ICON_255: c_int = 255;
 pub const GuiIconName = c_uint;
+
 pub extern fn RayguiDark() void;
+pub extern fn RayguiLoadStyle([*c]const u8, usize) void;
+
 pub const __llvm__ = @as(c_int, 1);
 pub const __clang__ = @as(c_int, 1);
 pub const __clang_major__ = @as(c_int, 19);

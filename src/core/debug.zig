@@ -17,7 +17,7 @@ var pos: rl.Rectangle = .{ .x = 300, .y = 300, .width = 10, .height = 10 };
 var visible = true;
 var txt = std.mem.zeroes([256]u8);
 var debug_window = Window.init(700, 400, 400, 300, "Debug Info");
-var debug_window2 = Window.init(500, 200, 200, 200, "Debug2");
+pub var debug_window2 = Window.init(500, 200, 200, 200, "Debug2");
 
 pub fn render() void {
     if (!visible) return;
@@ -30,6 +30,7 @@ pub fn render() void {
         }) catch txt[0..0];
         _ = rl.GuiLabel(rl.Rectangle{ .x = bounds.x, .y = bounds.y, .width = bounds.width, .height = 24 }, buf.ptr);
         _ = rl.GuiLabel(rl.Rectangle{ .x = bounds.x, .y = bounds.y + 80, .width = bounds.width, .height = 120 }, input.MouseState.state().ptr);
+        rl.DrawRay(.{ .position = .{ .x = bounds.x, .y = bounds.y }, .direction = rl.Vector3.from(input.MouseState.PrevDelta) }, rl.RED);
     }
     if (debug_window2.begin()) |ctx| {
         _ = ctx;
