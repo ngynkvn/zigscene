@@ -14,10 +14,8 @@ pub const __builtin_object_size = @import("std").zig.c_builtins.__builtin_object
 pub const __builtin_nanf = @import("std").zig.c_builtins.__builtin_nanf;
 pub const __builtin_huge_valf = @import("std").zig.c_builtins.__builtin_huge_valf;
 pub const __builtin_inff = @import("std").zig.c_builtins.__builtin_inff;
-pub const __has_builtin = @import("std").zig.c_builtins.__has_builtin;
 
 pub const __builtin_va_list = [*c]u8;
-pub const __gnuc_va_list = __builtin_va_list;
 pub const va_list = __builtin_va_list;
 
 pub const Quaternion = Vector4;
@@ -1188,13 +1186,7 @@ pub const struct_float16 = extern struct {
     v: [16]f32 = @import("std").mem.zeroes([16]f32),
 };
 pub const float16 = struct_float16;
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:598:3: warning: TODO implement translation of stmt class GCCAsmStmtClass
-
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:595:36: warning: unable to translate function, demoted to extern
 pub extern fn __debugbreak() void;
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:619:3: warning: TODO implement translation of stmt class GCCAsmStmtClass
-
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:616:60: warning: unable to translate function, demoted to extern
 pub extern fn __fastfail(arg_code: c_uint) noreturn;
 pub extern fn __mingw_get_crt_info() [*c]const u8;
 pub const rsize_t = usize;
@@ -1203,7 +1195,6 @@ pub const wchar_t = c_ushort;
 pub const wint_t = c_ushort;
 pub const wctype_t = c_ushort;
 pub const errno_t = c_int;
-pub const __time32_t = c_long;
 pub const __time64_t = c_longlong;
 pub const time_t = __time64_t;
 pub const struct_threadlocaleinfostruct = extern struct {
@@ -1219,8 +1210,6 @@ pub const struct_localeinfo_struct = extern struct {
     locinfo: pthreadlocinfo = @import("std").mem.zeroes(pthreadlocinfo),
     mbcinfo: pthreadmbcinfo = @import("std").mem.zeroes(pthreadmbcinfo),
 };
-pub const _locale_tstruct = struct_localeinfo_struct;
-pub const _locale_t = [*c]struct_localeinfo_struct;
 pub const struct_tagLC_ID = extern struct {
     wLanguage: c_ushort = @import("std").mem.zeroes(c_ushort),
     wCountry: c_ushort = @import("std").mem.zeroes(c_ushort),
@@ -1251,7 +1240,7 @@ pub const union___mingw_flt_type_t = extern union {
     val: c_uint,
 };
 pub const __mingw_flt_type_t = union___mingw_flt_type_t;
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/math.h:135:11: warning: struct demoted to opaque type - has bitfield
+
 const struct_unnamed_2 = opaque {};
 pub const union___mingw_ldbl_type_t = extern union {
     x: c_longdouble,
@@ -1316,9 +1305,6 @@ pub extern fn finite(f64) c_int;
 pub extern fn fpclass(f64) c_int;
 pub const float_t = f32;
 pub const double_t = f64;
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/math.h:401:25: warning: local variable has opaque type
-
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/math.h:399:28: warning: unable to translate function, demoted to extern
 pub extern fn __fpclassifyl(arg_x: c_longdouble) callconv(.c) c_int;
 pub fn __fpclassifyf(arg_x: f32) callconv(.c) c_int {
     var x = arg_x;
@@ -1378,9 +1364,7 @@ pub fn __isnanf(arg__x: f32) callconv(.c) c_int {
     i = @as(c_uint, @bitCast(@as(c_int, 2139095040))) -% i;
     return @as(c_int, @bitCast(i >> @intCast(31)));
 }
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/math.h:555:25: warning: local variable has opaque type
 
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/math.h:552:28: warning: unable to translate function, demoted to extern
 pub extern fn __isnanl(arg__x: c_longdouble) callconv(.c) c_int;
 pub fn __signbit(arg_x: f64) callconv(.c) c_int {
     var x = arg_x;
@@ -1398,9 +1382,7 @@ pub fn __signbitf(arg_x: f32) callconv(.c) c_int {
     hlp.x = x;
     return @intFromBool((hlp.val & @as(c_uint, 2147483648)) != @as(c_uint, @bitCast(@as(c_int, 0))));
 }
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/math.h:625:25: warning: local variable has opaque type
 
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/math.h:623:28: warning: unable to translate function, demoted to extern
 pub extern fn __signbitl(arg_x: c_longdouble) callconv(.c) c_int;
 pub extern fn sinf(_X: f32) f32;
 pub extern fn sinl(c_longdouble) c_longdouble;
@@ -5623,459 +5605,47 @@ pub const ICON_254: c_int = 254;
 pub const ICON_255: c_int = 255;
 pub const GuiIconName = c_uint;
 
-pub const __llvm__ = @as(c_int, 1);
-pub const __clang__ = @as(c_int, 1);
-pub const __clang_major__ = @as(c_int, 19);
-pub const __clang_minor__ = @as(c_int, 1);
-pub const __clang_patchlevel__ = @as(c_int, 0);
-pub const __clang_version__ = "19.1.0 (https://github.com/ziglang/zig-bootstrap 3f9c0f8f8b6e09280507d5445f6c971ec7776f10)";
 pub const __GNUC__ = @as(c_int, 4);
 pub const __GNUC_MINOR__ = @as(c_int, 2);
-pub const __GNUC_PATCHLEVEL__ = @as(c_int, 1);
-pub const __GXX_ABI_VERSION = @as(c_int, 1002);
-pub const __ATOMIC_RELAXED = @as(c_int, 0);
-pub const __ATOMIC_CONSUME = @as(c_int, 1);
-pub const __ATOMIC_ACQUIRE = @as(c_int, 2);
-pub const __ATOMIC_RELEASE = @as(c_int, 3);
-pub const __ATOMIC_ACQ_REL = @as(c_int, 4);
-pub const __ATOMIC_SEQ_CST = @as(c_int, 5);
-pub const __MEMORY_SCOPE_SYSTEM = @as(c_int, 0);
-pub const __MEMORY_SCOPE_DEVICE = @as(c_int, 1);
-pub const __MEMORY_SCOPE_WRKGRP = @as(c_int, 2);
-pub const __MEMORY_SCOPE_WVFRNT = @as(c_int, 3);
-pub const __MEMORY_SCOPE_SINGLE = @as(c_int, 4);
-pub const __OPENCL_MEMORY_SCOPE_WORK_ITEM = @as(c_int, 0);
-pub const __OPENCL_MEMORY_SCOPE_WORK_GROUP = @as(c_int, 1);
-pub const __OPENCL_MEMORY_SCOPE_DEVICE = @as(c_int, 2);
-pub const __OPENCL_MEMORY_SCOPE_ALL_SVM_DEVICES = @as(c_int, 3);
-pub const __OPENCL_MEMORY_SCOPE_SUB_GROUP = @as(c_int, 4);
-pub const __FPCLASS_SNAN = @as(c_int, 0x0001);
-pub const __FPCLASS_QNAN = @as(c_int, 0x0002);
-pub const __FPCLASS_NEGINF = @as(c_int, 0x0004);
-pub const __FPCLASS_NEGNORMAL = @as(c_int, 0x0008);
-pub const __FPCLASS_NEGSUBNORMAL = @as(c_int, 0x0010);
-pub const __FPCLASS_NEGZERO = @as(c_int, 0x0020);
-pub const __FPCLASS_POSZERO = @as(c_int, 0x0040);
-pub const __FPCLASS_POSSUBNORMAL = @as(c_int, 0x0080);
-pub const __FPCLASS_POSNORMAL = @as(c_int, 0x0100);
-pub const __FPCLASS_POSINF = @as(c_int, 0x0200);
-pub const __PRAGMA_REDEFINE_EXTNAME = @as(c_int, 1);
-pub const __VERSION__ = "Clang 19.1.0 (https://github.com/ziglang/zig-bootstrap 3f9c0f8f8b6e09280507d5445f6c971ec7776f10)";
-pub const __GXX_TYPEINFO_EQUALITY_INLINE = @as(c_int, 0);
-pub const __OBJC_BOOL_IS_BOOL = @as(c_int, 0);
-pub const __CONSTANT_CFSTRINGS__ = @as(c_int, 1);
-pub const __SEH__ = @as(c_int, 1);
-pub const __clang_literal_encoding__ = "UTF-8";
-pub const __clang_wide_literal_encoding__ = "UTF-16";
-pub const __OPTIMIZE__ = @as(c_int, 1);
-pub const __ORDER_LITTLE_ENDIAN__ = @as(c_int, 1234);
-pub const __ORDER_BIG_ENDIAN__ = @as(c_int, 4321);
-pub const __ORDER_PDP_ENDIAN__ = @as(c_int, 3412);
-pub const __BYTE_ORDER__ = __ORDER_LITTLE_ENDIAN__;
-pub const __LITTLE_ENDIAN__ = @as(c_int, 1);
-pub const __CHAR_BIT__ = @as(c_int, 8);
-pub const __BOOL_WIDTH__ = @as(c_int, 8);
-pub const __SHRT_WIDTH__ = @as(c_int, 16);
-pub const __INT_WIDTH__ = @as(c_int, 32);
-pub const __LONG_WIDTH__ = @as(c_int, 32);
-pub const __LLONG_WIDTH__ = @as(c_int, 64);
-pub const __BITINT_MAXWIDTH__ = @import("std").zig.c_translation.promoteIntLiteral(c_int, 8388608, .decimal);
-pub const __SCHAR_MAX__ = @as(c_int, 127);
-pub const __SHRT_MAX__ = @as(c_int, 32767);
-pub const __INT_MAX__ = @import("std").zig.c_translation.promoteIntLiteral(c_int, 2147483647, .decimal);
-pub const __LONG_MAX__ = @as(c_long, 2147483647);
-pub const __LONG_LONG_MAX__ = @as(c_longlong, 9223372036854775807);
-pub const __WCHAR_MAX__ = @import("std").zig.c_translation.promoteIntLiteral(c_int, 65535, .decimal);
-pub const __WCHAR_WIDTH__ = @as(c_int, 16);
-pub const __WINT_MAX__ = @import("std").zig.c_translation.promoteIntLiteral(c_int, 65535, .decimal);
-pub const __WINT_WIDTH__ = @as(c_int, 16);
-pub const __INTMAX_MAX__ = @as(c_longlong, 9223372036854775807);
-pub const __INTMAX_WIDTH__ = @as(c_int, 64);
-pub const __SIZE_MAX__ = @as(c_ulonglong, 18446744073709551615);
-pub const __SIZE_WIDTH__ = @as(c_int, 64);
-pub const __UINTMAX_MAX__ = @as(c_ulonglong, 18446744073709551615);
-pub const __UINTMAX_WIDTH__ = @as(c_int, 64);
-pub const __PTRDIFF_MAX__ = @as(c_longlong, 9223372036854775807);
-pub const __PTRDIFF_WIDTH__ = @as(c_int, 64);
-pub const __INTPTR_MAX__ = @as(c_longlong, 9223372036854775807);
-pub const __INTPTR_WIDTH__ = @as(c_int, 64);
-pub const __UINTPTR_MAX__ = @as(c_ulonglong, 18446744073709551615);
-pub const __UINTPTR_WIDTH__ = @as(c_int, 64);
-pub const __SIZEOF_DOUBLE__ = @as(c_int, 8);
-pub const __SIZEOF_FLOAT__ = @as(c_int, 4);
-pub const __SIZEOF_INT__ = @as(c_int, 4);
-pub const __SIZEOF_LONG__ = @as(c_int, 4);
-pub const __SIZEOF_LONG_DOUBLE__ = @as(c_int, 16);
-pub const __SIZEOF_LONG_LONG__ = @as(c_int, 8);
-pub const __SIZEOF_POINTER__ = @as(c_int, 8);
-pub const __SIZEOF_SHORT__ = @as(c_int, 2);
-pub const __SIZEOF_PTRDIFF_T__ = @as(c_int, 8);
-pub const __SIZEOF_SIZE_T__ = @as(c_int, 8);
-pub const __SIZEOF_WCHAR_T__ = @as(c_int, 2);
-pub const __SIZEOF_WINT_T__ = @as(c_int, 2);
-pub const __SIZEOF_INT128__ = @as(c_int, 16);
-pub const __INTMAX_TYPE__ = c_longlong;
-pub const __INTMAX_FMTd__ = "lld";
-pub const __INTMAX_FMTi__ = "lli";
-pub const __INTMAX_C_SUFFIX__ = @compileError("unable to translate macro: undefined identifier `LL`");
-// (no file):96:9
-pub const __UINTMAX_TYPE__ = c_ulonglong;
-pub const __UINTMAX_FMTo__ = "llo";
-pub const __UINTMAX_FMTu__ = "llu";
-pub const __UINTMAX_FMTx__ = "llx";
-pub const __UINTMAX_FMTX__ = "llX";
-pub const __UINTMAX_C_SUFFIX__ = @compileError("unable to translate macro: undefined identifier `ULL`");
-// (no file):102:9
-pub const __PTRDIFF_TYPE__ = c_longlong;
-pub const __PTRDIFF_FMTd__ = "lld";
-pub const __PTRDIFF_FMTi__ = "lli";
-pub const __INTPTR_TYPE__ = c_longlong;
-pub const __INTPTR_FMTd__ = "lld";
-pub const __INTPTR_FMTi__ = "lli";
-pub const __SIZE_TYPE__ = c_ulonglong;
-pub const __SIZE_FMTo__ = "llo";
-pub const __SIZE_FMTu__ = "llu";
-pub const __SIZE_FMTx__ = "llx";
-pub const __SIZE_FMTX__ = "llX";
-pub const __WCHAR_TYPE__ = c_ushort;
-pub const __WINT_TYPE__ = c_ushort;
-pub const __SIG_ATOMIC_MAX__ = @import("std").zig.c_translation.promoteIntLiteral(c_int, 2147483647, .decimal);
-pub const __SIG_ATOMIC_WIDTH__ = @as(c_int, 32);
-pub const __CHAR16_TYPE__ = c_ushort;
-pub const __CHAR32_TYPE__ = c_uint;
-pub const __UINTPTR_TYPE__ = c_ulonglong;
-pub const __UINTPTR_FMTo__ = "llo";
-pub const __UINTPTR_FMTu__ = "llu";
-pub const __UINTPTR_FMTx__ = "llx";
-pub const __UINTPTR_FMTX__ = "llX";
-pub const __FLT16_DENORM_MIN__ = @as(f16, 5.9604644775390625e-8);
-pub const __FLT16_NORM_MAX__ = @as(f16, 6.5504e+4);
-pub const __FLT16_HAS_DENORM__ = @as(c_int, 1);
-pub const __FLT16_DIG__ = @as(c_int, 3);
-pub const __FLT16_DECIMAL_DIG__ = @as(c_int, 5);
-pub const __FLT16_EPSILON__ = @as(f16, 9.765625e-4);
-pub const __FLT16_HAS_INFINITY__ = @as(c_int, 1);
-pub const __FLT16_HAS_QUIET_NAN__ = @as(c_int, 1);
-pub const __FLT16_MANT_DIG__ = @as(c_int, 11);
-pub const __FLT16_MAX_10_EXP__ = @as(c_int, 4);
-pub const __FLT16_MAX_EXP__ = @as(c_int, 16);
-pub const __FLT16_MAX__ = @as(f16, 6.5504e+4);
-pub const __FLT16_MIN_10_EXP__ = -@as(c_int, 4);
-pub const __FLT16_MIN_EXP__ = -@as(c_int, 13);
-pub const __FLT16_MIN__ = @as(f16, 6.103515625e-5);
-pub const __FLT_DENORM_MIN__ = @as(f32, 1.40129846e-45);
-pub const __FLT_NORM_MAX__ = @as(f32, 3.40282347e+38);
-pub const __FLT_HAS_DENORM__ = @as(c_int, 1);
-pub const __FLT_DIG__ = @as(c_int, 6);
-pub const __FLT_DECIMAL_DIG__ = @as(c_int, 9);
-pub const __FLT_EPSILON__ = @as(f32, 1.19209290e-7);
-pub const __FLT_HAS_INFINITY__ = @as(c_int, 1);
-pub const __FLT_HAS_QUIET_NAN__ = @as(c_int, 1);
-pub const __FLT_MANT_DIG__ = @as(c_int, 24);
-pub const __FLT_MAX_10_EXP__ = @as(c_int, 38);
-pub const __FLT_MAX_EXP__ = @as(c_int, 128);
-pub const __FLT_MAX__ = @as(f32, 3.40282347e+38);
-pub const __FLT_MIN_10_EXP__ = -@as(c_int, 37);
-pub const __FLT_MIN_EXP__ = -@as(c_int, 125);
-pub const __FLT_MIN__ = @as(f32, 1.17549435e-38);
-pub const __DBL_DENORM_MIN__ = @as(f64, 4.9406564584124654e-324);
-pub const __DBL_NORM_MAX__ = @as(f64, 1.7976931348623157e+308);
-pub const __DBL_HAS_DENORM__ = @as(c_int, 1);
-pub const __DBL_DIG__ = @as(c_int, 15);
-pub const __DBL_DECIMAL_DIG__ = @as(c_int, 17);
-pub const __DBL_EPSILON__ = @as(f64, 2.2204460492503131e-16);
-pub const __DBL_HAS_INFINITY__ = @as(c_int, 1);
-pub const __DBL_HAS_QUIET_NAN__ = @as(c_int, 1);
-pub const __DBL_MANT_DIG__ = @as(c_int, 53);
-pub const __DBL_MAX_10_EXP__ = @as(c_int, 308);
-pub const __DBL_MAX_EXP__ = @as(c_int, 1024);
-pub const __DBL_MAX__ = @as(f64, 1.7976931348623157e+308);
-pub const __DBL_MIN_10_EXP__ = -@as(c_int, 307);
-pub const __DBL_MIN_EXP__ = -@as(c_int, 1021);
-pub const __DBL_MIN__ = @as(f64, 2.2250738585072014e-308);
-pub const __LDBL_DENORM_MIN__ = @as(c_longdouble, 3.64519953188247460253e-4951);
-pub const __LDBL_NORM_MAX__ = @as(c_longdouble, 1.18973149535723176502e+4932);
-pub const __LDBL_HAS_DENORM__ = @as(c_int, 1);
-pub const __LDBL_DIG__ = @as(c_int, 18);
-pub const __LDBL_DECIMAL_DIG__ = @as(c_int, 21);
-pub const __LDBL_EPSILON__ = @as(c_longdouble, 1.08420217248550443401e-19);
-pub const __LDBL_HAS_INFINITY__ = @as(c_int, 1);
-pub const __LDBL_HAS_QUIET_NAN__ = @as(c_int, 1);
-pub const __LDBL_MANT_DIG__ = @as(c_int, 64);
-pub const __LDBL_MAX_10_EXP__ = @as(c_int, 4932);
-pub const __LDBL_MAX_EXP__ = @as(c_int, 16384);
-pub const __LDBL_MAX__ = @as(c_longdouble, 1.18973149535723176502e+4932);
-pub const __LDBL_MIN_10_EXP__ = -@as(c_int, 4931);
-pub const __LDBL_MIN_EXP__ = -@as(c_int, 16381);
-pub const __LDBL_MIN__ = @as(c_longdouble, 3.36210314311209350626e-4932);
-pub const __POINTER_WIDTH__ = @as(c_int, 64);
-pub const __BIGGEST_ALIGNMENT__ = @as(c_int, 16);
-pub const __WCHAR_UNSIGNED__ = @as(c_int, 1);
-pub const __WINT_UNSIGNED__ = @as(c_int, 1);
-pub const __INT8_TYPE__ = i8;
-pub const __INT8_FMTd__ = "hhd";
-pub const __INT8_FMTi__ = "hhi";
-pub const __INT8_C_SUFFIX__ = "";
-pub const __INT16_TYPE__ = c_short;
-pub const __INT16_FMTd__ = "hd";
-pub const __INT16_FMTi__ = "hi";
-pub const __INT16_C_SUFFIX__ = "";
-pub const __INT32_TYPE__ = c_int;
-pub const __INT32_FMTd__ = "d";
-pub const __INT32_FMTi__ = "i";
-pub const __INT32_C_SUFFIX__ = "";
-pub const __INT64_TYPE__ = c_longlong;
-pub const __INT64_FMTd__ = "lld";
-pub const __INT64_FMTi__ = "lli";
-pub const __INT64_C_SUFFIX__ = @compileError("unable to translate macro: undefined identifier `LL`");
-// (no file):204:9
-pub const __UINT8_TYPE__ = u8;
-pub const __UINT8_FMTo__ = "hho";
-pub const __UINT8_FMTu__ = "hhu";
-pub const __UINT8_FMTx__ = "hhx";
-pub const __UINT8_FMTX__ = "hhX";
-pub const __UINT8_C_SUFFIX__ = "";
-pub const __UINT8_MAX__ = @as(c_int, 255);
-pub const __INT8_MAX__ = @as(c_int, 127);
-pub const __UINT16_TYPE__ = c_ushort;
-pub const __UINT16_FMTo__ = "ho";
-pub const __UINT16_FMTu__ = "hu";
-pub const __UINT16_FMTx__ = "hx";
-pub const __UINT16_FMTX__ = "hX";
-pub const __UINT16_C_SUFFIX__ = "";
-pub const __UINT16_MAX__ = @import("std").zig.c_translation.promoteIntLiteral(c_int, 65535, .decimal);
-pub const __INT16_MAX__ = @as(c_int, 32767);
-pub const __UINT32_TYPE__ = c_uint;
-pub const __UINT32_FMTo__ = "o";
-pub const __UINT32_FMTu__ = "u";
-pub const __UINT32_FMTx__ = "x";
-pub const __UINT32_FMTX__ = "X";
-pub const __UINT32_C_SUFFIX__ = @compileError("unable to translate macro: undefined identifier `U`");
-// (no file):226:9
-pub const __UINT32_MAX__ = @import("std").zig.c_translation.promoteIntLiteral(c_uint, 4294967295, .decimal);
-pub const __INT32_MAX__ = @import("std").zig.c_translation.promoteIntLiteral(c_int, 2147483647, .decimal);
-pub const __UINT64_TYPE__ = c_ulonglong;
-pub const __UINT64_FMTo__ = "llo";
-pub const __UINT64_FMTu__ = "llu";
-pub const __UINT64_FMTx__ = "llx";
-pub const __UINT64_FMTX__ = "llX";
-pub const __UINT64_C_SUFFIX__ = @compileError("unable to translate macro: undefined identifier `ULL`");
-// (no file):234:9
-pub const __UINT64_MAX__ = @as(c_ulonglong, 18446744073709551615);
-pub const __INT64_MAX__ = @as(c_longlong, 9223372036854775807);
-pub const __INT_LEAST8_TYPE__ = i8;
-pub const __INT_LEAST8_MAX__ = @as(c_int, 127);
-pub const __INT_LEAST8_WIDTH__ = @as(c_int, 8);
-pub const __INT_LEAST8_FMTd__ = "hhd";
-pub const __INT_LEAST8_FMTi__ = "hhi";
-pub const __UINT_LEAST8_TYPE__ = u8;
-pub const __UINT_LEAST8_MAX__ = @as(c_int, 255);
-pub const __UINT_LEAST8_FMTo__ = "hho";
-pub const __UINT_LEAST8_FMTu__ = "hhu";
-pub const __UINT_LEAST8_FMTx__ = "hhx";
-pub const __UINT_LEAST8_FMTX__ = "hhX";
-pub const __INT_LEAST16_TYPE__ = c_short;
-pub const __INT_LEAST16_MAX__ = @as(c_int, 32767);
-pub const __INT_LEAST16_WIDTH__ = @as(c_int, 16);
-pub const __INT_LEAST16_FMTd__ = "hd";
-pub const __INT_LEAST16_FMTi__ = "hi";
-pub const __UINT_LEAST16_TYPE__ = c_ushort;
-pub const __UINT_LEAST16_MAX__ = @import("std").zig.c_translation.promoteIntLiteral(c_int, 65535, .decimal);
-pub const __UINT_LEAST16_FMTo__ = "ho";
-pub const __UINT_LEAST16_FMTu__ = "hu";
-pub const __UINT_LEAST16_FMTx__ = "hx";
-pub const __UINT_LEAST16_FMTX__ = "hX";
-pub const __INT_LEAST32_TYPE__ = c_int;
-pub const __INT_LEAST32_MAX__ = @import("std").zig.c_translation.promoteIntLiteral(c_int, 2147483647, .decimal);
-pub const __INT_LEAST32_WIDTH__ = @as(c_int, 32);
-pub const __INT_LEAST32_FMTd__ = "d";
-pub const __INT_LEAST32_FMTi__ = "i";
-pub const __UINT_LEAST32_TYPE__ = c_uint;
-pub const __UINT_LEAST32_MAX__ = @import("std").zig.c_translation.promoteIntLiteral(c_uint, 4294967295, .decimal);
-pub const __UINT_LEAST32_FMTo__ = "o";
-pub const __UINT_LEAST32_FMTu__ = "u";
-pub const __UINT_LEAST32_FMTx__ = "x";
-pub const __UINT_LEAST32_FMTX__ = "X";
-pub const __INT_LEAST64_TYPE__ = c_longlong;
-pub const __INT_LEAST64_MAX__ = @as(c_longlong, 9223372036854775807);
-pub const __INT_LEAST64_WIDTH__ = @as(c_int, 64);
-pub const __INT_LEAST64_FMTd__ = "lld";
-pub const __INT_LEAST64_FMTi__ = "lli";
-pub const __UINT_LEAST64_TYPE__ = c_ulonglong;
-pub const __UINT_LEAST64_MAX__ = @as(c_ulonglong, 18446744073709551615);
-pub const __UINT_LEAST64_FMTo__ = "llo";
-pub const __UINT_LEAST64_FMTu__ = "llu";
-pub const __UINT_LEAST64_FMTx__ = "llx";
-pub const __UINT_LEAST64_FMTX__ = "llX";
-pub const __INT_FAST8_TYPE__ = i8;
-pub const __INT_FAST8_MAX__ = @as(c_int, 127);
-pub const __INT_FAST8_WIDTH__ = @as(c_int, 8);
-pub const __INT_FAST8_FMTd__ = "hhd";
-pub const __INT_FAST8_FMTi__ = "hhi";
-pub const __UINT_FAST8_TYPE__ = u8;
-pub const __UINT_FAST8_MAX__ = @as(c_int, 255);
-pub const __UINT_FAST8_FMTo__ = "hho";
-pub const __UINT_FAST8_FMTu__ = "hhu";
-pub const __UINT_FAST8_FMTx__ = "hhx";
-pub const __UINT_FAST8_FMTX__ = "hhX";
-pub const __INT_FAST16_TYPE__ = c_short;
-pub const __INT_FAST16_MAX__ = @as(c_int, 32767);
-pub const __INT_FAST16_WIDTH__ = @as(c_int, 16);
-pub const __INT_FAST16_FMTd__ = "hd";
-pub const __INT_FAST16_FMTi__ = "hi";
-pub const __UINT_FAST16_TYPE__ = c_ushort;
-pub const __UINT_FAST16_MAX__ = @import("std").zig.c_translation.promoteIntLiteral(c_int, 65535, .decimal);
-pub const __UINT_FAST16_FMTo__ = "ho";
-pub const __UINT_FAST16_FMTu__ = "hu";
-pub const __UINT_FAST16_FMTx__ = "hx";
-pub const __UINT_FAST16_FMTX__ = "hX";
-pub const __INT_FAST32_TYPE__ = c_int;
-pub const __INT_FAST32_MAX__ = @import("std").zig.c_translation.promoteIntLiteral(c_int, 2147483647, .decimal);
-pub const __INT_FAST32_WIDTH__ = @as(c_int, 32);
-pub const __INT_FAST32_FMTd__ = "d";
-pub const __INT_FAST32_FMTi__ = "i";
-pub const __UINT_FAST32_TYPE__ = c_uint;
-pub const __UINT_FAST32_MAX__ = @import("std").zig.c_translation.promoteIntLiteral(c_uint, 4294967295, .decimal);
-pub const __UINT_FAST32_FMTo__ = "o";
-pub const __UINT_FAST32_FMTu__ = "u";
-pub const __UINT_FAST32_FMTx__ = "x";
-pub const __UINT_FAST32_FMTX__ = "X";
-pub const __INT_FAST64_TYPE__ = c_longlong;
-pub const __INT_FAST64_MAX__ = @as(c_longlong, 9223372036854775807);
-pub const __INT_FAST64_WIDTH__ = @as(c_int, 64);
-pub const __INT_FAST64_FMTd__ = "lld";
-pub const __INT_FAST64_FMTi__ = "lli";
-pub const __UINT_FAST64_TYPE__ = c_ulonglong;
-pub const __UINT_FAST64_MAX__ = @as(c_ulonglong, 18446744073709551615);
-pub const __UINT_FAST64_FMTo__ = "llo";
-pub const __UINT_FAST64_FMTu__ = "llu";
-pub const __UINT_FAST64_FMTx__ = "llx";
-pub const __UINT_FAST64_FMTX__ = "llX";
-pub const __USER_LABEL_PREFIX__ = "";
-pub const __FINITE_MATH_ONLY__ = @as(c_int, 0);
-pub const __GNUC_STDC_INLINE__ = @as(c_int, 1);
-pub const __GCC_ATOMIC_TEST_AND_SET_TRUEVAL = @as(c_int, 1);
-pub const __GCC_DESTRUCTIVE_SIZE = @as(c_int, 64);
-pub const __GCC_CONSTRUCTIVE_SIZE = @as(c_int, 64);
-pub const __CLANG_ATOMIC_BOOL_LOCK_FREE = @as(c_int, 2);
-pub const __CLANG_ATOMIC_CHAR_LOCK_FREE = @as(c_int, 2);
-pub const __CLANG_ATOMIC_CHAR16_T_LOCK_FREE = @as(c_int, 2);
-pub const __CLANG_ATOMIC_CHAR32_T_LOCK_FREE = @as(c_int, 2);
-pub const __CLANG_ATOMIC_WCHAR_T_LOCK_FREE = @as(c_int, 2);
-pub const __CLANG_ATOMIC_SHORT_LOCK_FREE = @as(c_int, 2);
-pub const __CLANG_ATOMIC_INT_LOCK_FREE = @as(c_int, 2);
-pub const __CLANG_ATOMIC_LONG_LOCK_FREE = @as(c_int, 2);
-pub const __CLANG_ATOMIC_LLONG_LOCK_FREE = @as(c_int, 2);
-pub const __CLANG_ATOMIC_POINTER_LOCK_FREE = @as(c_int, 2);
-pub const __GCC_ATOMIC_BOOL_LOCK_FREE = @as(c_int, 2);
-pub const __GCC_ATOMIC_CHAR_LOCK_FREE = @as(c_int, 2);
-pub const __GCC_ATOMIC_CHAR16_T_LOCK_FREE = @as(c_int, 2);
-pub const __GCC_ATOMIC_CHAR32_T_LOCK_FREE = @as(c_int, 2);
-pub const __GCC_ATOMIC_WCHAR_T_LOCK_FREE = @as(c_int, 2);
-pub const __GCC_ATOMIC_SHORT_LOCK_FREE = @as(c_int, 2);
-pub const __GCC_ATOMIC_INT_LOCK_FREE = @as(c_int, 2);
-pub const __GCC_ATOMIC_LONG_LOCK_FREE = @as(c_int, 2);
-pub const __GCC_ATOMIC_LLONG_LOCK_FREE = @as(c_int, 2);
-pub const __GCC_ATOMIC_POINTER_LOCK_FREE = @as(c_int, 2);
-pub const __PIC__ = @as(c_int, 2);
-pub const __pic__ = @as(c_int, 2);
-pub const __FLT_RADIX__ = @as(c_int, 2);
-pub const __DECIMAL_DIG__ = __LDBL_DECIMAL_DIG__;
-pub const __SSP_STRONG__ = @as(c_int, 2);
-pub const __GCC_ASM_FLAG_OUTPUTS__ = @as(c_int, 1);
-pub const __code_model_small__ = @as(c_int, 1);
-pub const __amd64__ = @as(c_int, 1);
-pub const __amd64 = @as(c_int, 1);
-pub const __x86_64 = @as(c_int, 1);
-pub const __x86_64__ = @as(c_int, 1);
-pub const __SEG_GS = @as(c_int, 1);
-pub const __SEG_FS = @as(c_int, 1);
-pub const __seg_gs = @compileError("unable to translate macro: undefined identifier `address_space`");
-// (no file):366:9
-pub const __seg_fs = @compileError("unable to translate macro: undefined identifier `address_space`");
-// (no file):367:9
-pub const __k8 = @as(c_int, 1);
-pub const __k8__ = @as(c_int, 1);
-pub const __tune_k8__ = @as(c_int, 1);
-pub const __REGISTER_PREFIX__ = "";
-pub const __NO_MATH_INLINES = @as(c_int, 1);
-pub const __FXSR__ = @as(c_int, 1);
-pub const __SSE2__ = @as(c_int, 1);
-pub const __SSE2_MATH__ = @as(c_int, 1);
-pub const __SSE__ = @as(c_int, 1);
-pub const __SSE_MATH__ = @as(c_int, 1);
-pub const __MMX__ = @as(c_int, 1);
-pub const __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 = @as(c_int, 1);
-pub const __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 = @as(c_int, 1);
-pub const __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 = @as(c_int, 1);
-pub const __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 = @as(c_int, 1);
-pub const __SIZEOF_FLOAT128__ = @as(c_int, 16);
+
+
+
 pub const _WIN32 = @as(c_int, 1);
 pub const _WIN64 = @as(c_int, 1);
 pub const WIN32 = @as(c_int, 1);
-pub const __WIN32 = @as(c_int, 1);
-pub const __WIN32__ = @as(c_int, 1);
 pub const WINNT = @as(c_int, 1);
-pub const __WINNT = @as(c_int, 1);
-pub const __WINNT__ = @as(c_int, 1);
 pub const WIN64 = @as(c_int, 1);
-pub const __WIN64 = @as(c_int, 1);
-pub const __WIN64__ = @as(c_int, 1);
-pub const __MINGW64__ = @as(c_int, 1);
-pub const __MSVCRT__ = @as(c_int, 1);
-pub const __MINGW32__ = @as(c_int, 1);
-pub const __declspec = @compileError("unable to translate C expr: unexpected token '__attribute__'");
-// (no file):398:9
+
 pub const _cdecl = @compileError("unable to translate macro: undefined identifier `__cdecl__`");
-// (no file):399:9
+
 pub const __cdecl = @compileError("unable to translate macro: undefined identifier `__cdecl__`");
-// (no file):400:9
+
 pub const _stdcall = @compileError("unable to translate macro: undefined identifier `__stdcall__`");
-// (no file):401:9
+
 pub const __stdcall = @compileError("unable to translate macro: undefined identifier `__stdcall__`");
-// (no file):402:9
+
 pub const _fastcall = @compileError("unable to translate macro: undefined identifier `__fastcall__`");
-// (no file):403:9
+
 pub const __fastcall = @compileError("unable to translate macro: undefined identifier `__fastcall__`");
-// (no file):404:9
+
 pub const _thiscall = @compileError("unable to translate macro: undefined identifier `__thiscall__`");
-// (no file):405:9
+
 pub const __thiscall = @compileError("unable to translate macro: undefined identifier `__thiscall__`");
-// (no file):406:9
+
 pub const _pascal = @compileError("unable to translate macro: undefined identifier `__pascal__`");
-// (no file):407:9
+
 pub const __pascal = @compileError("unable to translate macro: undefined identifier `__pascal__`");
-// (no file):408:9
-pub const __STDC__ = @as(c_int, 1);
-pub const __STDC_HOSTED__ = @as(c_int, 1);
-pub const __STDC_VERSION__ = @as(c_long, 201710);
-pub const __STDC_UTF_16__ = @as(c_int, 1);
-pub const __STDC_UTF_32__ = @as(c_int, 1);
-pub const __STDC_EMBED_NOT_FOUND__ = @as(c_int, 0);
-pub const __STDC_EMBED_FOUND__ = @as(c_int, 1);
-pub const __STDC_EMBED_EMPTY__ = @as(c_int, 2);
-pub const __MSVCRT_VERSION__ = @as(c_int, 0xE00);
-pub const _WIN32_WINNT = @as(c_int, 0x0a00);
-pub const _FORTIFY_SOURCE = @as(c_int, 2);
+
 pub const RAYLIB_H = "";
-pub const __need___va_list = "";
-pub const __need_va_list = "";
-pub const __need_va_arg = "";
-pub const __need___va_copy = "";
-pub const __need_va_copy = "";
-pub const __STDARG_H = "";
-pub const __GNUC_VA_LIST = "";
-pub const _VA_LIST = "";
 pub const va_start = @compileError("unable to translate macro: undefined identifier `__builtin_va_start`");
-// /Users/ngynkvn/.zvm/master/lib/include/__stdarg_va_arg.h:17:9
+
 pub const va_end = @compileError("unable to translate macro: undefined identifier `__builtin_va_end`");
-// /Users/ngynkvn/.zvm/master/lib/include/__stdarg_va_arg.h:19:9
+
 pub const va_arg = @compileError("unable to translate C expr: unexpected token 'an identifier'");
-// /Users/ngynkvn/.zvm/master/lib/include/__stdarg_va_arg.h:20:9
-pub const __va_copy = @compileError("unable to translate macro: undefined identifier `__builtin_va_copy`");
-// /Users/ngynkvn/.zvm/master/lib/include/__stdarg___va_copy.h:11:9
+
+
 pub const va_copy = @compileError("unable to translate macro: undefined identifier `__builtin_va_copy`");
-// /Users/ngynkvn/.zvm/master/lib/include/__stdarg_va_copy.h:11:9
+
 pub const RAYLIB_VERSION_MAJOR = @as(c_int, 5);
 pub const RAYLIB_VERSION_MINOR = @as(c_int, 6);
 pub const RAYLIB_VERSION_PATCH = @as(c_int, 0);
@@ -6085,13 +5655,13 @@ pub const PI = @as(f32, 3.14159265358979323846);
 pub const DEG2RAD = @import("std").zig.c_translation.MacroArithmetic.div(PI, @as(f32, 180.0));
 pub const RAD2DEG = @import("std").zig.c_translation.MacroArithmetic.div(@as(f32, 180.0), PI);
 pub const RL_MALLOC = @compileError("unable to translate macro: undefined identifier `malloc`");
-// /Users/ngynkvn/.cache/zig/p/1220cba465f60567429bd99f8cc6359460701949597e2c468046c8d88986b0367878/src/raylib.h:133:13
+
 pub const RL_CALLOC = @compileError("unable to translate macro: undefined identifier `calloc`");
-// /Users/ngynkvn/.cache/zig/p/1220cba465f60567429bd99f8cc6359460701949597e2c468046c8d88986b0367878/src/raylib.h:136:13
+
 pub const RL_REALLOC = @compileError("unable to translate macro: undefined identifier `realloc`");
-// /Users/ngynkvn/.cache/zig/p/1220cba465f60567429bd99f8cc6359460701949597e2c468046c8d88986b0367878/src/raylib.h:139:13
+
 pub const RL_FREE = @compileError("unable to translate macro: undefined identifier `free`");
-// /Users/ngynkvn/.cache/zig/p/1220cba465f60567429bd99f8cc6359460701949597e2c468046c8d88986b0367878/src/raylib.h:142:13
+
 pub inline fn CLITERAL(@"type": anytype) @TypeOf(@"type") {
     _ = &@"type";
     return @"type";
@@ -6129,8 +5699,6 @@ pub const BLACK = @import("std").mem.zeroInit(CLITERAL(Color), .{ @as(c_int, 0),
 pub const BLANK = @import("std").mem.zeroInit(CLITERAL(Color), .{ @as(c_int, 0), @as(c_int, 0), @as(c_int, 0), @as(c_int, 0) });
 pub const MAGENTA = @import("std").mem.zeroInit(CLITERAL(Color), .{ @as(c_int, 255), @as(c_int, 0), @as(c_int, 255), @as(c_int, 255) });
 pub const RAYWHITE = @import("std").mem.zeroInit(CLITERAL(Color), .{ @as(c_int, 245), @as(c_int, 245), @as(c_int, 245), @as(c_int, 255) });
-pub const __STDBOOL_H = "";
-pub const __bool_true_false_are_defined = @as(c_int, 1);
 pub const @"bool" = bool;
 pub const @"true" = @as(c_int, 1);
 pub const @"false" = @as(c_int, 0);
@@ -6144,7 +5712,7 @@ pub const SHADER_LOC_MAP_SPECULAR = SHADER_LOC_MAP_METALNESS;
 pub const GetMouseRay = GetScreenToWorldRay;
 pub const RAYMATH_H = "";
 pub const RMAPI = @compileError("unable to translate C expr: unexpected token 'inline'");
-// /Users/ngynkvn/.cache/zig/p/1220cba465f60567429bd99f8cc6359460701949597e2c468046c8d88986b0367878/src/raymath.h:78:17
+
 pub const EPSILON = @as(f32, 0.000001);
 pub inline fn MatrixToFloat(mat: anytype) @TypeOf(MatrixToFloatV(mat).v) {
     _ = &mat;
@@ -6154,70 +5722,21 @@ pub inline fn Vector3ToFloat(vec: anytype) @TypeOf(Vector3ToFloatV(vec).v) {
     _ = &vec;
     return Vector3ToFloatV(vec).v;
 }
-pub const _MATH_H_ = "";
-pub const _INC_CRTDEFS = "";
-pub const _INC_CORECRT = "";
-pub const _INC__MINGW_H = "";
-pub const _INC_CRTDEFS_MACRO = "";
 pub const __STRINGIFY = @compileError("unable to translate C expr: unexpected token '#'");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw_mac.h:10:9
+
 pub inline fn __MINGW64_STRINGIFY(x: anytype) @TypeOf(__STRINGIFY(x)) {
     _ = &x;
     return __STRINGIFY(x);
 }
-pub const __MINGW64_VERSION_MAJOR = @as(c_int, 13);
-pub const __MINGW64_VERSION_MINOR = @as(c_int, 0);
-pub const __MINGW64_VERSION_BUGFIX = @as(c_int, 0);
-pub const __MINGW64_VERSION_RC = @as(c_int, 0);
-pub const __MINGW64_VERSION_STR = __MINGW64_STRINGIFY(__MINGW64_VERSION_MAJOR) ++ "." ++ __MINGW64_STRINGIFY(__MINGW64_VERSION_MINOR) ++ "." ++ __MINGW64_STRINGIFY(__MINGW64_VERSION_BUGFIX);
-pub const __MINGW64_VERSION_STATE = "alpha";
-pub const __MINGW32_MAJOR_VERSION = @as(c_int, 3);
-pub const __MINGW32_MINOR_VERSION = @as(c_int, 11);
-pub const _M_AMD64 = @as(c_int, 100);
-pub const _M_X64 = @as(c_int, 100);
 pub const @"_" = @as(c_int, 1);
-pub const __MINGW_USE_UNDERSCORE_PREFIX = @as(c_int, 0);
 pub const __MINGW_IMP_SYMBOL = @compileError("unable to translate macro: undefined identifier `__imp_`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw_mac.h:119:11
-pub const __MINGW_IMP_LSYMBOL = @compileError("unable to translate macro: undefined identifier `__imp_`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw_mac.h:120:11
+
 pub inline fn __MINGW_USYMBOL(sym: anytype) @TypeOf(sym) {
     _ = &sym;
     return sym;
 }
-pub const __MINGW_LSYMBOL = @compileError("unable to translate C expr: unexpected token '##'");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw_mac.h:122:11
-pub const __MINGW_ASM_CALL = @compileError("unable to translate C expr: unexpected token '__asm__'");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw_mac.h:130:9
-pub const __MINGW_ASM_CRT_CALL = @compileError("unable to translate C expr: unexpected token '__asm__'");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw_mac.h:131:9
-pub const __MINGW_EXTENSION = @compileError("unable to translate C expr: unexpected token '__extension__'");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw_mac.h:163:13
-pub const __C89_NAMELESS = __MINGW_EXTENSION;
-pub const __C89_NAMELESSSTRUCTNAME = "";
-pub const __C89_NAMELESSSTRUCTNAME1 = "";
-pub const __C89_NAMELESSSTRUCTNAME2 = "";
-pub const __C89_NAMELESSSTRUCTNAME3 = "";
-pub const __C89_NAMELESSSTRUCTNAME4 = "";
-pub const __C89_NAMELESSSTRUCTNAME5 = "";
-pub const __C89_NAMELESSUNIONNAME = "";
-pub const __C89_NAMELESSUNIONNAME1 = "";
-pub const __C89_NAMELESSUNIONNAME2 = "";
-pub const __C89_NAMELESSUNIONNAME3 = "";
-pub const __C89_NAMELESSUNIONNAME4 = "";
-pub const __C89_NAMELESSUNIONNAME5 = "";
-pub const __C89_NAMELESSUNIONNAME6 = "";
-pub const __C89_NAMELESSUNIONNAME7 = "";
-pub const __C89_NAMELESSUNIONNAME8 = "";
-pub const __GNU_EXTENSION = __MINGW_EXTENSION;
-pub const __MINGW_HAVE_ANSI_C99_PRINTF = @as(c_int, 1);
-pub const __MINGW_HAVE_WIDE_C99_PRINTF = @as(c_int, 1);
-pub const __MINGW_HAVE_ANSI_C99_SCANF = @as(c_int, 1);
-pub const __MINGW_HAVE_WIDE_C99_SCANF = @as(c_int, 1);
-pub const __MINGW_POISON_NAME = @compileError("unable to translate macro: undefined identifier `_layout_has_not_been_verified_and_its_declaration_is_most_likely_incorrect`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw_mac.h:203:11
-pub const __MSABI_LONG = @import("std").zig.c_translation.Macros.L_SUFFIX;
-pub const __MINGW_GCC_VERSION = ((__GNUC__ * @as(c_int, 10000)) + (__GNUC_MINOR__ * @as(c_int, 100))) + __GNUC_PATCHLEVEL__;
+
+
 pub inline fn __MINGW_GNUC_PREREQ(major: anytype, minor: anytype) @TypeOf((__GNUC__ > major) or ((__GNUC__ == major) and (__GNUC_MINOR__ >= minor))) {
     _ = &major;
     _ = &minor;
@@ -6228,29 +5747,10 @@ pub inline fn __MINGW_MSC_PREREQ(major: anytype, minor: anytype) @TypeOf(@as(c_i
     _ = &minor;
     return @as(c_int, 0);
 }
-pub const __MINGW_ATTRIB_DEPRECATED_STR = @compileError("unable to translate C expr: unexpected token ''");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw_mac.h:247:11
-pub const __MINGW_SEC_WARN_STR = "This function or variable may be unsafe, use _CRT_SECURE_NO_WARNINGS to disable deprecation";
-pub const __MINGW_MSVC2005_DEPREC_STR = "This POSIX function is deprecated beginning in Visual C++ 2005, use _CRT_NONSTDC_NO_DEPRECATE to disable deprecation";
-pub const __MINGW_ATTRIB_DEPRECATED_MSVC2005 = __MINGW_ATTRIB_DEPRECATED_STR(__MINGW_MSVC2005_DEPREC_STR);
-pub const __MINGW_ATTRIB_DEPRECATED_SEC_WARN = __MINGW_ATTRIB_DEPRECATED_STR(__MINGW_SEC_WARN_STR);
-pub const __MINGW_MS_PRINTF = @compileError("unable to translate macro: undefined identifier `__format__`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw_mac.h:271:9
-pub const __MINGW_MS_SCANF = @compileError("unable to translate macro: undefined identifier `__format__`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw_mac.h:274:9
-pub const __MINGW_GNU_PRINTF = @compileError("unable to translate macro: undefined identifier `__format__`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw_mac.h:277:9
-pub const __MINGW_GNU_SCANF = @compileError("unable to translate macro: undefined identifier `__format__`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw_mac.h:280:9
-pub const __mingw_ovr = @compileError("unable to translate macro: undefined identifier `__unused__`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw_mac.h:301:11
-pub const __mingw_attribute_artificial = @compileError("unable to translate macro: undefined identifier `__artificial__`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw_mac.h:308:11
-pub const __MINGW_SELECTANY = @compileError("unable to translate macro: undefined identifier `__selectany__`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw_mac.h:314:9
+
+
 pub const __MINGW_FORTIFY_LEVEL = @as(c_int, 2);
-pub const __mingw_bos_declare = @compileError("unable to translate macro: undefined identifier `__chk_fail`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw_mac.h:346:11
+
 pub inline fn __mingw_bos(p: anytype, maxtype: anytype) @TypeOf(__builtin_object_size(p, (maxtype > @as(c_int, 0)) and (__MINGW_FORTIFY_LEVEL > @as(c_int, 1)))) {
     _ = &p;
     _ = &maxtype;
@@ -6261,164 +5761,50 @@ pub inline fn __mingw_bos_known(p: anytype) @TypeOf(__mingw_bos(p, @as(c_int, 0)
     return __mingw_bos(p, @as(c_int, 0)) != @import("std").zig.c_translation.cast(usize, -@as(c_int, 1));
 }
 pub const __mingw_bos_cond_chk = @compileError("unable to translate macro: undefined identifier `__chk_fail`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw_mac.h:363:11
+
 pub inline fn __mingw_bos_ptr_chk(p: anytype, n: anytype, maxtype: anytype) @TypeOf(__mingw_bos_cond_chk(!(__mingw_bos_known(p) != 0) or (__mingw_bos(p, maxtype) >= @import("std").zig.c_translation.cast(usize, n)))) {
     _ = &p;
     _ = &n;
     _ = &maxtype;
     return __mingw_bos_cond_chk(!(__mingw_bos_known(p) != 0) or (__mingw_bos(p, maxtype) >= @import("std").zig.c_translation.cast(usize, n)));
 }
-pub const __mingw_bos_ptr_chk_warn = @compileError("unable to translate macro: undefined identifier `__mingw_chk_fail_warn`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw_mac.h:367:11
-pub const __mingw_bos_ovr = @compileError("unable to translate macro: undefined identifier `__always_inline__`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw_mac.h:372:11
-pub const __mingw_bos_extern_ovr = @compileError("unable to translate macro: undefined identifier `__always_inline__`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw_mac.h:375:11
-pub const __MINGW_FORTIFY_VA_ARG = @as(c_int, 0);
-pub const _INC_MINGW_SECAPI = "";
-pub const _CRT_SECURE_CPP_OVERLOAD_SECURE_NAMES = @as(c_int, 0);
-pub const _CRT_SECURE_CPP_OVERLOAD_SECURE_NAMES_MEMORY = @as(c_int, 0);
+
 pub const _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES = @as(c_int, 0);
-pub const _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES_COUNT = @as(c_int, 0);
-pub const _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES_MEMORY = @as(c_int, 0);
-pub const __MINGW_CRT_NAME_CONCAT2 = @compileError("unable to translate macro: undefined identifier `_s`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw_secapi.h:41:9
-pub const __CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES_MEMORY_0_3_ = @compileError("unable to translate C expr: unexpected token ';'");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw_secapi.h:69:9
-pub const __LONG32 = c_long;
-pub const __MINGW_IMPORT = @compileError("unable to translate macro: undefined identifier `__dllimport__`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:44:12
-pub const __USE_CRTIMP = @as(c_int, 1);
-pub const _CRTIMP = @compileError("unable to translate macro: undefined identifier `__dllimport__`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:52:15
-pub const __DECLSPEC_SUPPORTED = "";
+
+
 pub const USE___UUIDOF = @as(c_int, 0);
-pub const _inline = @compileError("unable to translate C expr: unexpected token '__inline'");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:74:9
-pub const __CRT_INLINE = @compileError("unable to translate macro: undefined identifier `__gnu_inline__`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:83:11
-pub const __MINGW_INTRIN_INLINE = @compileError("unable to translate macro: undefined identifier `__always_inline__`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:90:9
-pub const __MINGW_CXX11_CONSTEXPR = "";
-pub const __MINGW_CXX14_CONSTEXPR = "";
-pub const __UNUSED_PARAM = @compileError("unable to translate macro: undefined identifier `__unused__`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:118:11
-pub const __restrict_arr = @compileError("unable to translate C expr: unexpected token '__restrict'");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:133:10
-pub const __MINGW_ATTRIB_NORETURN = @compileError("unable to translate macro: undefined identifier `__noreturn__`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:149:9
-pub const __MINGW_ATTRIB_CONST = @compileError("unable to translate C expr: unexpected token '__attribute__'");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:150:9
-pub const __MINGW_ATTRIB_MALLOC = @compileError("unable to translate macro: undefined identifier `__malloc__`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:160:9
-pub const __MINGW_ATTRIB_PURE = @compileError("unable to translate macro: undefined identifier `__pure__`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:161:9
-pub const __MINGW_ATTRIB_NONNULL = @compileError("unable to translate macro: undefined identifier `__nonnull__`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:174:9
-pub const __MINGW_ATTRIB_UNUSED = @compileError("unable to translate macro: undefined identifier `__unused__`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:180:9
-pub const __MINGW_ATTRIB_USED = @compileError("unable to translate macro: undefined identifier `__used__`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:186:9
+
 pub const __MINGW_ATTRIB_DEPRECATED = @compileError("unable to translate macro: undefined identifier `__deprecated__`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:187:9
-pub const __MINGW_ATTRIB_DEPRECATED_MSG = @compileError("unable to translate macro: undefined identifier `__deprecated__`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:189:9
-pub const __MINGW_NOTHROW = @compileError("unable to translate macro: undefined identifier `__nothrow__`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:204:9
-pub const __MINGW_ATTRIB_NO_OPTIMIZE = "";
-pub const __MINGW_PRAGMA_PARAM = @compileError("unable to translate C expr: unexpected token ''");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:222:9
-pub const __MINGW_BROKEN_INTERFACE = @compileError("unable to translate macro: undefined identifier `message`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:225:9
-pub const _UCRT = "";
-pub const _INT128_DEFINED = "";
-pub const __int8 = u8;
-pub const __int16 = c_short;
-pub const __int32 = c_int;
-pub const __int64 = c_longlong;
-pub const __ptr32 = "";
-pub const __ptr64 = "";
-pub const __unaligned = "";
-pub const __w64 = "";
-pub const __forceinline = @compileError("unable to translate macro: undefined identifier `__always_inline__`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:280:9
-pub const __nothrow = "";
-pub const _INC_VADEFS = "";
+
 pub const MINGW_SDK_INIT = "";
 pub const MINGW_HAS_SECURE_API = @as(c_int, 1);
-pub const __STDC_SECURE_LIB__ = @as(c_long, 200411);
-pub const __GOT_SECURE_LIB__ = __STDC_SECURE_LIB__;
 pub const MINGW_DDK_H = "";
 pub const MINGW_HAS_DDK_H = @as(c_int, 1);
-pub const _CRT_PACKING = @as(c_int, 8);
-pub const _VA_LIST_DEFINED = "";
 pub inline fn _ADDRESSOF(v: anytype) @TypeOf(&v) {
     _ = &v;
     return &v;
 }
-pub const _crt_va_start = @compileError("unable to translate macro: undefined identifier `__builtin_va_start`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/vadefs.h:48:9
-pub const _crt_va_arg = @compileError("unable to translate C expr: unexpected token 'an identifier'");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/vadefs.h:49:9
-pub const _crt_va_end = @compileError("unable to translate macro: undefined identifier `__builtin_va_end`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/vadefs.h:50:9
-pub const _crt_va_copy = @compileError("unable to translate macro: undefined identifier `__builtin_va_copy`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/vadefs.h:51:9
+
 pub const __CRT_STRINGIZE = @compileError("unable to translate C expr: unexpected token '#'");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:299:9
+
 pub inline fn _CRT_STRINGIZE(_Value: anytype) @TypeOf(__CRT_STRINGIZE(_Value)) {
     _ = &_Value;
     return __CRT_STRINGIZE(_Value);
 }
 pub const __CRT_WIDE = @compileError("unable to translate macro: undefined identifier `L`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:304:9
+
 pub inline fn _CRT_WIDE(_String: anytype) @TypeOf(__CRT_WIDE(_String)) {
     _ = &_String;
     return __CRT_WIDE(_String);
 }
-pub const _W64 = "";
-pub const _CRTIMP_NOIA64 = _CRTIMP;
-pub const _CRTIMP2 = _CRTIMP;
-pub const _CRTIMP_ALTERNATIVE = _CRTIMP;
-pub const _CRT_ALTERNATIVE_IMPORTED = "";
-pub const _MRTIMP2 = _CRTIMP;
-pub const _DLL = "";
-pub const _MT = "";
-pub const _MCRTIMP = _CRTIMP;
-pub const _CRTIMP_PURE = _CRTIMP;
-pub const _PGLOBAL = "";
-pub const _AGLOBAL = "";
-pub const _SECURECRT_FILL_BUFFER_PATTERN = @as(c_int, 0xFD);
-pub const _CRT_DEPRECATE_TEXT = @compileError("unable to translate macro: undefined identifier `deprecated`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:363:9
-pub const _CRT_INSECURE_DEPRECATE_MEMORY = @compileError("unable to translate C expr: unexpected token ''");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:366:9
-pub const _CRT_INSECURE_DEPRECATE_GLOBALS = @compileError("unable to translate C expr: unexpected token ''");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:370:9
-pub const _CRT_MANAGED_HEAP_DEPRECATE = "";
-pub const _CRT_OBSOLETE = @compileError("unable to translate C expr: unexpected token ''");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:378:9
-pub const _CONST_RETURN = "";
+
 pub const UNALIGNED = "";
-pub const _CRT_ALIGN = @compileError("unable to translate macro: undefined identifier `__aligned__`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:405:9
-pub const __CRTDECL = __cdecl;
-pub const _ARGMAX = @as(c_int, 100);
-pub const _TRUNCATE = @import("std").zig.c_translation.cast(usize, -@as(c_int, 1));
+
 pub inline fn _CRT_UNUSED(x: anytype) anyopaque {
     _ = &x;
     return @import("std").zig.c_translation.cast(anyopaque, x);
 }
-pub const __USE_MINGW_ANSI_STDIO = @as(c_int, 0);
-pub const _CRT_glob = @compileError("unable to translate macro: undefined identifier `_dowildcard`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:469:9
-pub const __ANONYMOUS_DEFINED = "";
-pub const _ANONYMOUS_UNION = __MINGW_EXTENSION;
-pub const _ANONYMOUS_STRUCT = __MINGW_EXTENSION;
-pub const _UNION_NAME = @compileError("unable to translate C expr: unexpected token ''");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:489:9
-pub const _STRUCT_NAME = @compileError("unable to translate C expr: unexpected token ''");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:490:9
+
 pub const DUMMYUNIONNAME = "";
 pub const DUMMYUNIONNAME1 = "";
 pub const DUMMYUNIONNAME2 = "";
@@ -6435,81 +5821,13 @@ pub const DUMMYSTRUCTNAME2 = "";
 pub const DUMMYSTRUCTNAME3 = "";
 pub const DUMMYSTRUCTNAME4 = "";
 pub const DUMMYSTRUCTNAME5 = "";
-pub const __CRT_UUID_DECL = @compileError("unable to translate C expr: unexpected token ''");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:577:9
-pub const __MINGW_DEBUGBREAK_IMPL = !(__has_builtin(__debugbreak) != 0);
-pub const __MINGW_FASTFAIL_IMPL = !(__has_builtin(__fastfail) != 0);
-pub const __MINGW_PREFETCH_IMPL = @compileError("unable to translate macro: undefined identifier `__prefetch`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/_mingw.h:634:9
-pub const _CRTNOALIAS = "";
-pub const _CRTRESTRICT = "";
-pub const _SIZE_T_DEFINED = "";
-pub const _SSIZE_T_DEFINED = "";
-pub const _RSIZE_T_DEFINED = "";
-pub const _INTPTR_T_DEFINED = "";
-pub const __intptr_t_defined = "";
-pub const _UINTPTR_T_DEFINED = "";
-pub const __uintptr_t_defined = "";
-pub const _PTRDIFF_T_DEFINED = "";
-pub const _PTRDIFF_T_ = "";
-pub const _WCHAR_T_DEFINED = "";
-pub const _WCTYPE_T_DEFINED = "";
-pub const _WINT_T = "";
-pub const _ERRCODE_DEFINED = "";
-pub const _TIME32_T_DEFINED = "";
-pub const _TIME64_T_DEFINED = "";
-pub const _TIME_T_DEFINED = "";
-pub const _CRT_SECURE_CPP_NOTHROW = @compileError("unable to translate macro: undefined identifier `throw`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/corecrt.h:143:9
-pub const __DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_0 = @compileError("unable to translate C expr: unexpected token ''");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/corecrt.h:262:9
-pub const __DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_1 = @compileError("unable to translate C expr: unexpected token ''");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/corecrt.h:263:9
-pub const __DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_2 = @compileError("unable to translate C expr: unexpected token ''");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/corecrt.h:264:9
-pub const __DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_3 = @compileError("unable to translate C expr: unexpected token ''");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/corecrt.h:265:9
-pub const __DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_4 = @compileError("unable to translate C expr: unexpected token ''");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/corecrt.h:266:9
-pub const __DEFINE_CPP_OVERLOAD_SECURE_FUNC_1_1 = @compileError("unable to translate C expr: unexpected token ''");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/corecrt.h:267:9
-pub const __DEFINE_CPP_OVERLOAD_SECURE_FUNC_1_2 = @compileError("unable to translate C expr: unexpected token ''");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/corecrt.h:268:9
-pub const __DEFINE_CPP_OVERLOAD_SECURE_FUNC_1_3 = @compileError("unable to translate C expr: unexpected token ''");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/corecrt.h:269:9
-pub const __DEFINE_CPP_OVERLOAD_SECURE_FUNC_2_0 = @compileError("unable to translate C expr: unexpected token ''");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/corecrt.h:270:9
-pub const __DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_1_ARGLIST = @compileError("unable to translate C expr: unexpected token ''");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/corecrt.h:271:9
-pub const __DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_2_ARGLIST = @compileError("unable to translate C expr: unexpected token ''");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/corecrt.h:272:9
-pub const __DEFINE_CPP_OVERLOAD_SECURE_FUNC_SPLITPATH = @compileError("unable to translate C expr: unexpected token ''");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/corecrt.h:273:9
-pub const __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_0 = @compileError("unable to translate macro: undefined identifier `__func_name`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/corecrt.h:277:9
-pub const __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_1 = @compileError("unable to translate macro: undefined identifier `__func_name`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/corecrt.h:279:9
-pub const __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_2 = @compileError("unable to translate macro: undefined identifier `__func_name`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/corecrt.h:281:9
-pub const __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_3 = @compileError("unable to translate macro: undefined identifier `__func_name`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/corecrt.h:283:9
-pub const __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_4 = @compileError("unable to translate macro: undefined identifier `__func_name`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/corecrt.h:285:9
-pub const __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_0_EX = @compileError("unable to translate C expr: unexpected token ''");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/corecrt.h:422:9
-pub const __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_1_EX = @compileError("unable to translate C expr: unexpected token ''");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/corecrt.h:423:9
-pub const __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_2_EX = @compileError("unable to translate C expr: unexpected token ''");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/corecrt.h:424:9
-pub const __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_3_EX = @compileError("unable to translate C expr: unexpected token ''");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/corecrt.h:425:9
-pub const __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_4_EX = @compileError("unable to translate C expr: unexpected token ''");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/corecrt.h:426:9
-pub const _TAGLC_ID_DEFINED = "";
-pub const _THREADLOCALEINFO = "";
-pub const __crt_typefix = @compileError("unable to translate C expr: unexpected token ''");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/corecrt.h:486:9
-pub const _CRT_USE_WINAPI_FAMILY_DESKTOP_APP = "";
+
+
+
+
+
+
+
 pub const _DOMAIN = @as(c_int, 1);
 pub const _SING = @as(c_int, 2);
 pub const _OVERFLOW = @as(c_int, 3);
@@ -6535,7 +5853,6 @@ pub const M_2_PI = @as(f64, 0.63661977236758134308);
 pub const M_2_SQRTPI = @as(f64, 1.12837916709551257390);
 pub const M_SQRT2 = @as(f64, 1.41421356237309504880);
 pub const M_SQRT1_2 = @as(f64, 0.70710678118654752440);
-pub const __MINGW_FPCLASS_DEFINED = @as(c_int, 1);
 pub const _FPCLASS_SNAN = @as(c_int, 0x0001);
 pub const _FPCLASS_QNAN = @as(c_int, 0x0002);
 pub const _FPCLASS_NINF = @as(c_int, 0x0004);
@@ -6546,22 +5863,12 @@ pub const _FPCLASS_PZ = @as(c_int, 0x0040);
 pub const _FPCLASS_PD = @as(c_int, 0x0080);
 pub const _FPCLASS_PN = @as(c_int, 0x0100);
 pub const _FPCLASS_PINF = @as(c_int, 0x0200);
-pub const __mingw_types_compatible_p = @compileError("unable to translate C expr: unexpected token 'an identifier'");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/math.h:95:9
-pub const __mingw_choose_expr = @compileError("unable to translate C expr: unexpected token 'an identifier'");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/math.h:103:9
-pub const __MINGW_SOFTMATH = "";
+
 pub const _HUGE = __MINGW_IMP_SYMBOL(_HUGE).*;
 pub const HUGE_VAL = @compileError("unable to translate macro: undefined identifier `__builtin_huge_val`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/math.h:149:9
-pub const _EXCEPTION_DEFINED = "";
-pub const _CRT_ABS_DEFINED = "";
-pub const _CRT_ATOF_DEFINED = "";
+
 pub const EDOM = @as(c_int, 33);
 pub const ERANGE = @as(c_int, 34);
-pub const _COMPLEX_DEFINED = "";
-pub const _CRT_MATHERR_DEFINED = "";
-pub const _SIGN_DEFINED = "";
 pub const FP_SNAN = _FPCLASS_SNAN;
 pub const FP_QNAN = _FPCLASS_QNAN;
 pub const FP_NINF = _FPCLASS_NINF;
@@ -6574,7 +5881,7 @@ pub const FP_NNORM = _FPCLASS_NN;
 pub const FP_PNORM = _FPCLASS_PN;
 pub const HUGE_VALF = __builtin_huge_valf();
 pub const HUGE_VALL = @compileError("unable to translate macro: undefined identifier `__builtin_huge_vall`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/math.h:342:9
+
 pub const INFINITY = __builtin_inff();
 pub const NAN = __builtin_nanf("");
 pub const FP_NAN = @as(c_int, 0x0100);
@@ -6589,7 +5896,7 @@ pub inline fn __dfp_expansion(__call: anytype, __fin: anytype, x: anytype) @Type
     return __fin;
 }
 pub const fpclassify = @compileError("unable to translate macro: undefined identifier `__builtin_trap`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/math.h:484:9
+
 pub inline fn isfinite(x: anytype) @TypeOf((fpclassify(x) & FP_NAN) == @as(c_int, 0)) {
     _ = &x;
     return (fpclassify(x) & FP_NAN) == @as(c_int, 0);
@@ -6599,13 +5906,13 @@ pub inline fn isinf(x: anytype) @TypeOf(fpclassify(x) == FP_INFINITE) {
     return fpclassify(x) == FP_INFINITE;
 }
 pub const isnan = @compileError("unable to translate macro: undefined identifier `__builtin_trap`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/math.h:578:9
+
 pub inline fn isnormal(x: anytype) @TypeOf(fpclassify(x) == FP_NORMAL) {
     _ = &x;
     return fpclassify(x) == FP_NORMAL;
 }
 pub const signbit = @compileError("unable to translate macro: undefined identifier `__builtin_trap`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/math.h:638:9
+
 pub const FP_ILOGB0 = @import("std").zig.c_translation.cast(c_int, @import("std").zig.c_translation.promoteIntLiteral(c_int, 0x80000000, .hex));
 pub const FP_ILOGBNAN = @import("std").zig.c_translation.cast(c_int, @import("std").zig.c_translation.promoteIntLiteral(c_int, 0x7fffffff, .hex));
 pub inline fn _nan() @TypeOf(nan("")) {
@@ -6618,27 +5925,25 @@ pub inline fn _nanl() @TypeOf(nanl("")) {
     return nanl("");
 }
 pub const isgreater = @compileError("unable to translate macro: undefined identifier `__builtin_isgreater`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/math.h:1136:9
+
 pub const isgreaterequal = @compileError("unable to translate macro: undefined identifier `__builtin_isgreaterequal`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/math.h:1137:9
+
 pub const isless = @compileError("unable to translate macro: undefined identifier `__builtin_isless`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/math.h:1138:9
+
 pub const islessequal = @compileError("unable to translate macro: undefined identifier `__builtin_islessequal`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/math.h:1139:9
+
 pub const islessgreater = @compileError("unable to translate macro: undefined identifier `__builtin_islessgreater`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/math.h:1140:9
+
 pub const isunordered = @compileError("unable to translate macro: undefined identifier `__builtin_isunordered`");
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/math.h:1141:9
-pub const _copysignl = copysignl;
-pub const _hypotl = hypotl;
+
 pub const matherr = _matherr;
 pub const HUGE = _HUGE;
 pub const RLGL_H = "";
 pub const RLGL_VERSION = "5.0";
 pub const TRACELOG = @compileError("unable to translate C expr: expected ')' instead got '...'");
-// /Users/ngynkvn/.cache/zig/p/1220cba465f60567429bd99f8cc6359460701949597e2c468046c8d88986b0367878/src/rlgl.h:133:13
+
 pub const TRACELOGD = @compileError("unable to translate C expr: expected ')' instead got '...'");
-// /Users/ngynkvn/.cache/zig/p/1220cba465f60567429bd99f8cc6359460701949597e2c468046c8d88986b0367878/src/rlgl.h:134:13
+
 pub const GRAPHICS_API_OPENGL_33 = "";
 pub const RLGL_RENDER_TEXTURES_HINT = "";
 pub const RL_DEFAULT_BATCH_BUFFER_ELEMENTS = @as(c_int, 8192);
@@ -6731,15 +6036,9 @@ pub const RAYGUI_VERSION_MINOR = @as(c_int, 5);
 pub const RAYGUI_VERSION_PATCH = @as(c_int, 0);
 pub const RAYGUI_VERSION = "4.5-dev";
 pub const RAYGUIAPI = "";
-pub const RAYGUI_MALLOC = @compileError("unable to translate macro: undefined identifier `malloc`");
-// /Users/ngynkvn/.cache/zig/p/12208f66b71749c6497ade9b3ca46d4d3df61fda22387f73074f59769e5711ed3ad1/src/raygui.h:363:13
-pub const RAYGUI_CALLOC = @compileError("unable to translate macro: undefined identifier `calloc`");
-// /Users/ngynkvn/.cache/zig/p/12208f66b71749c6497ade9b3ca46d4d3df61fda22387f73074f59769e5711ed3ad1/src/raygui.h:366:13
-pub const RAYGUI_FREE = @compileError("unable to translate macro: undefined identifier `free`");
-// /Users/ngynkvn/.cache/zig/p/12208f66b71749c6497ade9b3ca46d4d3df61fda22387f73074f59769e5711ed3ad1/src/raygui.h:369:13
+
 pub const RAYGUI_SUPPORT_LOG_INFO = "";
-pub const RAYGUI_LOG = @compileError("unable to translate C expr: expected ')' instead got '...'");
-// /Users/ngynkvn/.cache/zig/p/12208f66b71749c6497ade9b3ca46d4d3df61fda22387f73074f59769e5711ed3ad1/src/raygui.h:376:11
+
 pub const SCROLLBAR_LEFT_SIDE = @as(c_int, 0);
 pub const SCROLLBAR_RIGHT_SIDE = @as(c_int, 1);
 pub const threadlocaleinfostruct = struct_threadlocaleinfostruct;
