@@ -1,4 +1,4 @@
-const rl = @import("../raylib.zig");
+const rl = @import("../../raylib.zig");
 
 pub const Rectangle = extern struct {
     x: f32 = 0,

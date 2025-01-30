@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const cnv = @import("../ext/convert.zig");
+const cnv = @import("../raylib/ext/convert.zig");
 const ffi = cnv.ffi;
 const iff = cnv.iff;
 const rgb = cnv.rgb;

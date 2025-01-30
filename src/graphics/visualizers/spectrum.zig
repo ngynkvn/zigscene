@@ -1,6 +1,6 @@
 const processor = @import("../../audio/processor.zig");
 var screenWidth: c_int = @import("../../core/config.zig").Window.width;
-const cnv = @import("../../ext/convert.zig");
+const cnv = @import("../../raylib/ext/convert.zig");
 const ffi = cnv.ffi;
 const rl = @import("../../raylib.zig");
 

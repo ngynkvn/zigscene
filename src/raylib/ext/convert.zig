@@ -1,4 +1,4 @@
-const rl = @import("../raylib.zig");
+const rl = @import("../../raylib.zig");
 
 // @floatFromInt shortcut
 pub inline fn ffi(T: type, x: anytype) T {

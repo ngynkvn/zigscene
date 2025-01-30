@@ -1,10 +1,12 @@
-pub const Rectangle = @import("../ext/structs.zig").Rectangle;
-pub const Color = @import("../ext/color.zig").Color;
-const vector = @import("../ext/vector.zig");
+pub const Rectangle = @import("ext/structs.zig").Rectangle;
+pub const Color = @import("ext/color.zig").Color;
+const vector = @import("ext/vector.zig");
 pub const Vector4 = vector.Vector4;
 pub const Vector3 = vector.Vector3;
 pub const Vector2 = vector.Vector2;
 pub extern fn Get_TextWidth([*c]const u8) c_int;
+pub extern fn RayguiDark() void;
+pub extern fn RayguiLoadStyle([*c]const u8, usize) void;
 
 pub const __builtin_fabs = @import("std").zig.c_builtins.__builtin_fabs;
 pub const __builtin_fabsf = @import("std").zig.c_builtins.__builtin_fabsf;
@@ -1282,26 +1284,6 @@ pub fn fabsf(arg_x: f32) callconv(.c) f32 {
     _ = &x;
     return __builtin_fabsf(x);
 }
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/math.h:213:5: warning: TODO implement translation of stmt class GCCAsmStmtClass
-
-// /Users/ngynkvn/.zvm/master/lib/libc/include/any-windows-any/math.h:207:36: warning: unable to translate function, demoted to extern
-pub extern fn fabsl(arg_x: c_longdouble) callconv(.c) c_longdouble;
-pub fn fabs(arg_x: f64) callconv(.c) f64 {
-    var x = arg_x;
-    _ = &x;
-    return __builtin_fabs(x);
-}
-pub extern fn ldexp(_X: f64, _Y: c_int) f64;
-pub extern fn frexp(_X: f64, _Y: [*c]c_int) f64;
-pub extern fn modf(_X: f64, _Y: [*c]f64) f64;
-pub extern fn fmod(_X: f64, _Y: f64) f64;
-pub extern fn sincos(__x: f64, p_sin: [*c]f64, p_cos: [*c]f64) void;
-pub extern fn sincosl(__x: c_longdouble, p_sin: [*c]c_longdouble, p_cos: [*c]c_longdouble) void;
-pub extern fn sincosf(__x: f32, p_sin: [*c]f32, p_cos: [*c]f32) void;
-pub extern fn abs(_X: c_int) c_int;
-pub extern fn labs(_X: c_long) c_long;
-pub extern fn atof(_String: [*c]const u8) f64;
-pub extern fn _atof_l(_String: [*c]const u8, _Locale: _locale_t) f64;
 pub const struct__complex = extern struct {
     x: f64 = @import("std").mem.zeroes(f64),
     y: f64 = @import("std").mem.zeroes(f64),
@@ -5640,9 +5622,6 @@ pub const ICON_253: c_int = 253;
 pub const ICON_254: c_int = 254;
 pub const ICON_255: c_int = 255;
 pub const GuiIconName = c_uint;
-
-pub extern fn RayguiDark() void;
-pub extern fn RayguiLoadStyle([*c]const u8, usize) void;
 
 pub const __llvm__ = @as(c_int, 1);
 pub const __clang__ = @as(c_int, 1);
