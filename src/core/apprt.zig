@@ -15,6 +15,7 @@ const APP_NAME = Config.Window.title;
 const debug = @import("debug.zig");
 const event = @import("event.zig");
 const input = @import("input.zig");
+const rgs = @embedFile("rgs");
 
 pub const App = struct {
     t: f32 = 0,
@@ -29,7 +30,7 @@ pub const App = struct {
         rl.InitAudioDevice();
 
         rl.GuiSetAlpha(0.8);
-        rl.RayguiDark();
+        rl.RayguiLoadStyle(rgs, rgs.len);
         if (try processArgs()) |path| {
             event.onFilenameInput(path);
         }
@@ -105,7 +106,7 @@ pub const App = struct {
                         .height = @floatFromInt(-shader.sceneTexture.texture.height),
                     },
                     .{},
-                    rl.WHITE,
+                    .{},
                 );
             }
             self.render_ui();
