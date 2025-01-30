@@ -1,4 +1,4 @@
-const Vector3 = @import("../ext/vector.zig").Vector3;
+const Vector3 = @import("../raylib/ext/vector.zig").Vector3;
 const controls = @import("../gui/controls.zig");
 const rl = @import("../raylib.zig");
 

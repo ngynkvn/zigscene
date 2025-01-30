@@ -1,7 +1,7 @@
 pub usingnamespace struct {
     // NOTE: eventually, the plan is completely get rid of raylib
     // exporting out all of it's functions
-    pub usingnamespace @import("gen/raylib.gen.zig");
+    pub usingnamespace @import("raylib/raylib.gen.zig");
 
     const colorPicker = @import("gui/color_picker.zig");
     pub const GuiColorBarHueH = colorPicker.GuiColorBarHueH;

@@ -2,9 +2,9 @@ const std = @import("std");
 
 const processor = @import("../audio/processor.zig");
 const input = @import("../core/input.zig");
-const cnv = @import("../ext/convert.zig");
+const cnv = @import("../raylib/ext/convert.zig");
 const ffi = cnv.ffi;
-const Rectangle = @import("../ext/structs.zig").Rectangle;
+const Rectangle = @import("../raylib/ext/structs.zig").Rectangle;
 const rl = @import("../raylib.zig");
 const Window = @import("../ui/window.zig").Window;
 var screenWidth: c_int = @import("config.zig").Window.width;

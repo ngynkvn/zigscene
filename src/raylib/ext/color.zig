@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const rl = @import("../raylib.zig");
+const rl = @import("../../raylib.zig");
 const cnv = @import("convert.zig");
 const iff = cnv.iff;
 const Vector3 = rl.Vector3;
@@ -96,7 +96,7 @@ test "fromHSV conversion" {
 }
 
 test "fromHSV = HsvToColor" {
-    const ColorFromHSV = @import("../raylib.zig").ColorFromHSV;
+    const ColorFromHSV = @import("../../raylib.zig").ColorFromHSV;
     for (0..36) |x| {
         for (0..10) |y| {
             for (0..10) |z| {

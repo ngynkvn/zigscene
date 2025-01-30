@@ -2,7 +2,7 @@ const std = @import("std");
 
 const Config = @import("../../core/config.zig");
 const N = Config.Audio.buffer_size;
-const cnv = @import("../../ext/convert.zig");
+const cnv = @import("../../raylib/ext/convert.zig");
 const ffi = cnv.ffi;
 
 pub const ComplexF32 = std.math.Complex(f32);
