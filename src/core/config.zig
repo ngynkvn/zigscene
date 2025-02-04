@@ -1,4 +1,4 @@
-const Vector3 = @import("../ext/vector.zig").Vector3;
+const Vector3 = @import("../raylib/ext/vector.zig").Vector3;
 const controls = @import("../gui/controls.zig");
 const rl = @import("../raylib.zig");
 
@@ -26,7 +26,7 @@ pub const Audio = struct {
 pub const Shader = struct {
     pub var chroma_factor: f32 = 0.001;
     pub var noise_factor: f32 = 0.005;
-    pub var alpha_factor: f32 = 0.0;
+    pub var alpha_factor: f32 = 1.0;
     pub const Scalars = [_]controls.Scalar{
         .{ "Chroma", &chroma_factor, .{ 0.0, 0.01 } },
         .{ "Noise", &noise_factor, .{ 0.0, 0.5 } },

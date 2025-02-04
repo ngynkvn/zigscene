@@ -1,7 +1,7 @@
 const processor = @import("../../audio/processor.zig");
 var screenWidth: c_int = @import("../../core/config.zig").Window.width;
-const hsv = @import("../../ext/color.zig").Color.hsv.vec3;
-const cnv = @import("../../ext/convert.zig");
+const hsv = @import("../../raylib/ext/color.zig").Color.hsv.vec3;
+const cnv = @import("../../raylib/ext/convert.zig");
 const ffi = cnv.ffi;
 const rl = @import("../../raylib.zig");
 
@@ -22,8 +22,8 @@ pub const WaveFormLine = struct {
         const px = x + center.x;
         const py = y + center.y;
         // zig fmt: off
-        rl.DrawRectangleRec(.{ .x = px, .y = py,      .width = SPACING, .height = 1 }, hsv(color1).into());
-        rl.DrawRectangleRec(.{ .x = px, .y = py + 8,  .width = SPACING, .height = 2 }, hsv(color2).into());
+        rl.DrawRectangleRec(.{ .x = px, .y = py,      .width = SPACING, .height = 1 }, hsv(color1));
+        rl.DrawRectangleRec(.{ .x = px, .y = py + 8,  .width = SPACING, .height = 2 }, hsv(color2));
         // zig fmt: on
     }
 };
@@ -44,8 +44,8 @@ pub const WaveFormBar = struct {
         const x = ffi(f32, i) * SPACING;
         const y = (v * amplitude.*);
         const px = x;
-        const c1 = hsv(color1.*).into();
-        const c2 = hsv(color2.*).into();
+        const c1 = hsv(color1.*);
+        const c2 = hsv(color2.*);
         // TODO: configurable
         maxes[i] = @max(y + base_h.*, maxes[i]);
         maxes[i] *= 0.99;
@@ -54,7 +54,7 @@ pub const WaveFormBar = struct {
             .y = center.y * 2 - maxes[i],
             .width = SPACING,
             .height = maxes[i],
-        }, hsv(trail_color.*).into());
+        }, hsv(trail_color.*));
         rl.DrawRectangleGradientEx(.{
             .x = px,
             .y = center.y * 2 - y - base_h.*,

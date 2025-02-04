@@ -3,8 +3,8 @@
     .version = "0.0.0",
     .dependencies = .{
         .raylib = .{
-            .url = "git+https://github.com/ngynkvn/raylib?ref=hotfix/2605#cb005c0fe5c25a3cd4df358de0b6a24ba6cd7a91",
-            .hash = "122018b75b15de9dc8ae13e05f89d043380cee7abe93be7a0aa123f9904418fd7f2a",
+            .url = "git+https://github.com/ngynkvn/raylib#d46ba9a67176f49c3badc031a8f0445b142b5880",
+            .hash = "12208d70362a450a22ee21118abe339c063c7ac921bc6e1296ccb495385ea05f25e4",
         },
         .raygui = .{
             .url = "https://github.com/raysan5/raygui/archive/1f813711063f0ff01bd3a89d50ebc17c5412e83c.tar.gz",
