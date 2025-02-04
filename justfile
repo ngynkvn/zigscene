@@ -1,6 +1,7 @@
 # Update external dependencies
 update-deps:
     #!/bin/bash
+    echo "No longer used!" && exit 1
     cd deps/raylib
     LATEST_RAYLIB=$(curl --silent https://api.github.com/repos/raysan5/raylib/commits | jq -r .[0].sha)
     LATEST_RAYGUI=$(curl --silent https://api.github.com/repos/raysan5/raygui/commits | jq -r .[0].sha)

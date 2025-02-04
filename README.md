@@ -44,6 +44,10 @@ zig build -Doptimize=ReleaseFast
 zig build test
 ```
 
+## Developer Tools
+
+This project uses [just](https://github.com/casey/just) as well.
+
 ## Usage
 
 `zig build run`, then drag and drop an audio file onto the window. Simple hotkeys are available: **TODO**
