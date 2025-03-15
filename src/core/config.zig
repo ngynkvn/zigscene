@@ -47,6 +47,7 @@ pub const Visualizer = struct {
         pub var color1: Vector3 = .{ .x = 0, .y = 0, .z = 0.96 };
         pub var color2: Vector3 = .{ .x = 100, .y = 1, .z = 0.90 };
     };
+
     pub const WaveFormBar = struct {
         pub var Scalars = [_]controls.Scalar{
             .{ "amplitude", &amplitude, .{ 0, 100 } },
