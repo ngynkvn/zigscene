@@ -3,12 +3,12 @@
     .version = "0.0.0",
     .dependencies = .{
         .raylib = .{
-            .url = "git+https://github.com/ngynkvn/raylib?ref=hotfix/2605#cb005c0fe5c25a3cd4df358de0b6a24ba6cd7a91",
-            .hash = "122018b75b15de9dc8ae13e05f89d043380cee7abe93be7a0aa123f9904418fd7f2a",
+            .url = "https://github.com/raysan5/raylib/archive/2f63a15630d084290b0e41e13e8d9c35756152d4.tar.gz",
+            .hash = "raylib-5.5.0-whq8uFV0zQBGtpL-i4gk_odyOOpsnsFAqtMIpLVdOLA5",
         },
         .raygui = .{
-            .url = "https://github.com/raysan5/raygui/archive/1f813711063f0ff01bd3a89d50ebc17c5412e83c.tar.gz",
-            .hash = "12208f66b71749c6497ade9b3ca46d4d3df61fda22387f73074f59769e5711ed3ad1",
+            .url = "https://github.com/raysan5/raygui/archive/1536ae35c7b42d863135f4181fd2a225e531f68b.tar.gz",
+            .hash = "N-V-__8AAEp9UgBJ2n1eks3_3YZk3GCO1XOENazWaCO7ggM2",
         },
     },
     .paths = .{
