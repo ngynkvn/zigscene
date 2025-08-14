@@ -15,7 +15,6 @@ const APP_NAME = Config.Window.title;
 const debug = @import("debug.zig");
 const event = @import("event.zig");
 const input = @import("input.zig");
-const rgs = @embedFile("rgs");
 
 pub const App = struct {
     t: f32 = 0,
@@ -23,27 +22,22 @@ pub const App = struct {
     pub fn init(_: std.mem.Allocator) !App {
         // TODO: Options menu
         rl.SetConfigFlags(rl.FLAG_WINDOW_RESIZABLE | rl.FLAG_WINDOW_TRANSPARENT | rl.FLAG_WINDOW_TOPMOST);
-
         // Setup
         rl.InitWindow(screenWidth, screenHeight, APP_NAME);
-
         rl.InitAudioDevice();
-
         rl.GuiSetAlpha(0.8);
-        rl.RayguiLoadStyle(rgs, rgs.len);
+        rl.RayguiDark();
+        rl.SetMasterVolume(Config.Audio.volume);
+
         if (try processArgs()) |path| {
             event.onFilenameInput(path);
         }
-
-        rl.SetMasterVolume(Config.Audio.volume);
-        // Init shader
         shader.init();
         return .{};
     }
-    pub fn deinit(self: App) void {
-        _ = self;
+    pub fn deinit(_: App) void {
         rl.CloseAudioDevice();
-        rl.CloseWindow(); // Close window and OpenGL context
+        rl.CloseWindow();
     }
 
     fn processArgs() !?[]const u8 {
