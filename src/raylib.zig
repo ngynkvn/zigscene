@@ -1,11 +1,121 @@
-pub usingnamespace struct {
-    // NOTE: eventually, the plan is completely get rid of raylib
-    // exporting out all of it's functions
-    pub usingnamespace @import("raylib");
-
-    const colorPicker = @import("gui/color_picker.zig");
-    pub const GuiColorBarHueH = colorPicker.GuiColorBarHueH;
-};
+pub const rl = @import("raylib");
+const colorPicker = @import("gui/color_picker.zig");
+pub const GuiColorBarHueH = colorPicker.GuiColorBarHueH;
+pub const AttachAudioMixedProcessor = rl.AttachAudioMixedProcessor;
+pub const BASE_COLOR_DISABLED = rl.BASE_COLOR_DISABLED;
+pub const BeginDrawing = rl.BeginDrawing;
+pub const BeginMode3D = rl.BeginMode3D;
+pub const BeginShaderMode = rl.BeginShaderMode;
+pub const BeginTextureMode = rl.BeginTextureMode;
+pub const BLUE = rl.BLUE;
+pub const BORDER = rl.BORDER;
+pub const BORDER_COLOR_DISABLED = rl.BORDER_COLOR_DISABLED;
+pub const BORDER_WIDTH = rl.BORDER_WIDTH;
+pub const CAMERA_ORTHOGRAPHIC = rl.CAMERA_ORTHOGRAPHIC;
+pub const CAMERA_PERSPECTIVE = rl.CAMERA_PERSPECTIVE;
+pub const Camera3D = rl.Camera3D;
+pub const CheckCollisionPointRec = rl.CheckCollisionPointRec;
+pub const ClearBackground = rl.ClearBackground;
+pub const CloseAudioDevice = rl.CloseAudioDevice;
+pub const CloseWindow = rl.CloseWindow;
+pub const Color = rl.Color;
+pub const COLORPICKER = rl.COLORPICKER;
+pub const DrawCubeWires = rl.DrawCubeWires;
+pub const DrawRectangleGradientEx = rl.DrawRectangleGradientEx;
+pub const DrawRectangleRec = rl.DrawRectangleRec;
+pub const DrawSphereWires = rl.DrawSphereWires;
+pub const DrawText = rl.DrawText;
+pub const DrawTextureRec = rl.DrawTextureRec;
+pub const EndDrawing = rl.EndDrawing;
+pub const EndMode3D = rl.EndMode3D;
+pub const EndShaderMode = rl.EndShaderMode;
+pub const EndTextureMode = rl.EndTextureMode;
+pub const Fade = rl.Fade;
+pub const FLAG_BORDERLESS_WINDOWED_MODE = rl.FLAG_BORDERLESS_WINDOWED_MODE;
+pub const FLAG_WINDOW_RESIZABLE = rl.FLAG_WINDOW_RESIZABLE;
+pub const FLAG_WINDOW_TOPMOST = rl.FLAG_WINDOW_TOPMOST;
+pub const FLAG_WINDOW_TRANSPARENT = rl.FLAG_WINDOW_TRANSPARENT;
+pub const GetColor = rl.GetColor;
+pub const GetFileName = rl.GetFileName;
+pub const GetFPS = rl.GetFPS;
+pub const GetFrameTime = rl.GetFrameTime;
+pub const GetMouseDelta = rl.GetMouseDelta;
+pub const GetMousePosition = rl.GetMousePosition;
+pub const GetMouseWheelMoveV = rl.GetMouseWheelMoveV;
+pub const GetMusicTimeLength = rl.GetMusicTimeLength;
+pub const GetMusicTimePlayed = rl.GetMusicTimePlayed;
+pub const GetScreenHeight = rl.GetScreenHeight;
+pub const GetScreenWidth = rl.GetScreenWidth;
+pub const GetWorldToScreen = rl.GetWorldToScreen;
+pub const guiAlpha = rl.guiAlpha;
+pub const GuiButton = rl.GuiButton;
+pub const guiControlExclusiveMode = rl.guiControlExclusiveMode;
+pub const guiControlExclusiveRec = rl.guiControlExclusiveRec;
+pub const GuiFade = rl.GuiFade;
+pub const GuiGetState = rl.GuiGetState;
+pub const GuiGetStyle = rl.GuiGetStyle;
+pub const GuiIsLocked = rl.GuiIsLocked;
+pub const GuiLabel = rl.GuiLabel;
+pub const GuiPanel = rl.GuiPanel;
+pub const GuiSetAlpha = rl.GuiSetAlpha;
+pub const GuiSlider = rl.GuiSlider;
+pub const GuiSliderBar = rl.GuiSliderBar;
+pub const GuiStatusBar = rl.GuiStatusBar;
+pub const GuiToggleGroup = rl.GuiToggleGroup;
+pub const GuiValueBoxFloat = rl.GuiValueBoxFloat;
+pub const HUEBAR_SELECTOR_HEIGHT = rl.HUEBAR_SELECTOR_HEIGHT;
+pub const HUEBAR_SELECTOR_OVERFLOW = rl.HUEBAR_SELECTOR_OVERFLOW;
+pub const ICON_ARROW_LEFT = rl.ICON_ARROW_LEFT;
+pub const ICON_COLOR_PICKER = rl.ICON_COLOR_PICKER;
+pub const ICON_FX = rl.ICON_FX;
+pub const ICON_PLAYER_PAUSE = rl.ICON_PLAYER_PAUSE;
+pub const ICON_PLAYER_PLAY = rl.ICON_PLAYER_PLAY;
+pub const InitAudioDevice = rl.InitAudioDevice;
+pub const InitWindow = rl.InitWindow;
+pub const IsFileDropped = rl.IsFileDropped;
+pub const IsMouseButtonDown = rl.IsMouseButtonDown;
+pub const IsMusicStreamPlaying = rl.IsMusicStreamPlaying;
+pub const IsMusicValid = rl.IsMusicValid;
+pub const IsWindowResized = rl.IsWindowResized;
+pub const IsWindowState = rl.IsWindowState;
+pub const LoadDroppedFiles = rl.LoadDroppedFiles;
+pub const LoadMusicStream = rl.LoadMusicStream;
+pub const LoadRenderTexture = rl.LoadRenderTexture;
+pub const LoadShaderFromMemory = rl.LoadShaderFromMemory;
+pub const MOUSE_BUTTON_LEFT = rl.MOUSE_BUTTON_LEFT;
+pub const MOUSE_LEFT_BUTTON = rl.MOUSE_LEFT_BUTTON;
+pub const Music = rl.Music;
+pub const PauseMusicStream = rl.PauseMusicStream;
+pub const PlayMusicStream = rl.PlayMusicStream;
+pub const RayguiDark = rl.RayguiDark;
+pub const RAYWHITE = rl.RAYWHITE;
+pub const Rectangle = rl.Rectangle;
+pub const RED = rl.RED;
+pub const RenderTexture2D = rl.RenderTexture2D;
+pub const ResumeMusicStream = rl.ResumeMusicStream;
+pub const RL_SHADER_UNIFORM_FLOAT = rl.RL_SHADER_UNIFORM_FLOAT;
+pub const rlGetLocationUniform = rl.rlGetLocationUniform;
+pub const rlPopMatrix = rl.rlPopMatrix;
+pub const rlPushMatrix = rl.rlPushMatrix;
+pub const rlRotatef = rl.rlRotatef;
+pub const rlTranslatef = rl.rlTranslatef;
+pub const SeekMusicStream = rl.SeekMusicStream;
+pub const SetConfigFlags = rl.SetConfigFlags;
+pub const SetMasterVolume = rl.SetMasterVolume;
+pub const SetShaderValue = rl.SetShaderValue;
+pub const SetWindowPosition = rl.SetWindowPosition;
+pub const Shader = rl.Shader;
+pub const STATE_DISABLED = rl.STATE_DISABLED;
+pub const STATE_FOCUSED = rl.STATE_FOCUSED;
+pub const STATE_PRESSED = rl.STATE_PRESSED;
+pub const ToggleBorderlessWindowed = rl.ToggleBorderlessWindowed;
+pub const UnloadDroppedFiles = rl.UnloadDroppedFiles;
+pub const UnloadRenderTexture = rl.UnloadRenderTexture;
+pub const UpdateMusicStream = rl.UpdateMusicStream;
+pub const Vector2 = rl.Vector2;
+pub const Vector3 = rl.Vector3;
+pub const WHITE = rl.WHITE;
+pub const WindowShouldClose = rl.WindowShouldClose;
 
 // zig fmt: off
 pub const Key = enum(c_int) {
@@ -47,8 +157,8 @@ pub const Key = enum(c_int) {
     }
 };
 
-pub fn isKeyUp(k: Key) bool { return @This().IsKeyUp(k.c()); }
-pub fn isKeyDown(k: Key) bool { return @This().IsKeyDown(k.c()); }
-pub fn isKeyPressed(k: Key) bool { return @This().IsKeyPressed(k.c()); }
-pub fn isKeyReleased(k: Key) bool { return @This().IsKeyReleased(k.c()); }
+pub fn isKeyUp(k: Key) bool { return rl.IsKeyUp(k.c()); }
+pub fn isKeyDown(k: Key) bool { return rl.IsKeyDown(k.c()); }
+pub fn isKeyPressed(k: Key) bool { return rl.IsKeyPressed(k.c()); }
+pub fn isKeyReleased(k: Key) bool { return rl.IsKeyReleased(k.c()); }
 // zig fmt: on
