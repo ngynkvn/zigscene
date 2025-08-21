@@ -1,9 +1,9 @@
 const std = @import("std");
+const rl = @import("raylibz");
 
 const tracy = @import("tracy");
 
 const apprt = @import("core/apprt.zig");
-const rl = @import("raylib.zig");
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
@@ -14,11 +14,11 @@ pub fn main() !void {
 
     // Main loop
     // Detects window close button or ESC key
-    while (!rl.WindowShouldClose()) {
+    while (!rl.Window.shouldClose()) {
         defer tracy.frameMarkNamed("zigscene");
         app.processMusic();
         app.processInput();
         app.render();
-        app.t += rl.GetFrameTime();
+        app.t += rl.getFrameTime();
     }
 }

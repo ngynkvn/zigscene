@@ -1,7 +1,7 @@
 const std = @import("std");
+const rl = @import("raylibz");
 
 pub const playback = @import("../audio/playback.zig");
-pub const rl = @import("../raylib.zig");
 pub const Config = @import("config.zig");
 pub const debug = @import("debug.zig");
 pub const event = @import("event.zig");
@@ -15,7 +15,7 @@ pub var camera: rl.Camera3D = .{
     .target     = Config.Camera.initial_target,         // Camera looking at point
     .up         = .{ .x = 0.0, .y = 1.0, .z = 0.0  },   // Camera up vector (rotation towards target)
     .fovy       = Config.Camera.fov,                    // Camera field-of-view Y
-    .projection = rl.CAMERA_PERSPECTIVE,                // Camera projection type
+    .projection = rl.CameraProjection.perspective,                // Camera projection type
     // zig fmt: on
 };
 
@@ -60,30 +60,29 @@ pub fn processInput() void {
     const ctx = @import("tracy").traceNamed(@src(), "input_processing");
     defer ctx.end();
 
-    MouseState.LeftDown = rl.IsMouseButtonDown(rl.MOUSE_BUTTON_LEFT);
-    MouseState.RightDown = rl.IsMouseButtonDown(rl.MOUSE_BUTTON_RIGHT);
-    MouseState.Position = rl.GetMousePosition();
-    MouseState.Delta = rl.GetMouseDelta();
-    if (!MouseState.Delta.equals(.{})) {
+    MouseState.LeftDown = rl.isMouseButtonDown(rl.MouseButton.left);
+    MouseState.RightDown = rl.isMouseButtonDown(rl.MouseButton.right);
+    MouseState.Position = rl.getMousePosition();
+    MouseState.Delta = rl.getMouseDelta();
+    if (MouseState.Delta.x != 0 or MouseState.Delta.y != 0) {
         MouseState.PrevDelta = MouseState.Delta;
     }
-    MouseState.MouseWheel = rl.GetMouseWheelMoveV();
-    if (!MouseState.MouseWheel.equals(.{})) {
+    MouseState.MouseWheel = rl.getMouseWheelMoveV();
+    if (MouseState.MouseWheel.x != 0 or MouseState.MouseWheel.y != 0) {
         MouseState.PrevMouseWheel = MouseState.MouseWheel;
     }
 
-    if (rl.IsFileDropped()) {
-        const files = rl.LoadDroppedFiles();
-        defer rl.UnloadDroppedFiles(files);
+    if (rl.isFileDropped()) {
+        const files = rl.loadDroppedFiles();
+        defer rl.unloadDroppedFiles(files);
         const file = files.paths[0];
         const len = std.mem.len(file);
         event.onFilenameInput(file[0..len]);
     }
 
     if (rl.isKeyPressed(.C)) camera.projection = switch (camera.projection) {
-        rl.CAMERA_PERSPECTIVE => rl.CAMERA_ORTHOGRAPHIC,
-        rl.CAMERA_ORTHOGRAPHIC => rl.CAMERA_PERSPECTIVE,
-        else => unreachable,
+        .perspective => .orthographic,
+        .orthographic => .perspective,
     };
 
     if (rl.isKeyPressed(.ONE)) {
@@ -103,25 +102,25 @@ pub fn processInput() void {
     } else if (rl.isKeyReleased(.SPACE)) Config.Audio.release = prevValue;
 
     if (rl.isKeyPressed(.F)) {
-        if (!rl.IsWindowState(rl.FLAG_BORDERLESS_WINDOWED_MODE)) rl.SetWindowPosition(0, 0);
-        rl.ToggleBorderlessWindowed();
+        if (!rl.Window.isState(.{ .borderless_windowed_mode = true })) rl.Window.setPosition(0, 0);
+        rl.Window.toggleBorderless();
     }
     if (rl.isKeyPressed(.P)) {
-        if (rl.IsMusicValid(playback.music)) {
-            if (rl.IsMusicStreamPlaying(playback.music)) {
-                rl.PauseMusicStream(playback.music);
+        if (rl.isMusicValid(playback.music)) {
+            if (rl.isMusicStreamPlaying(playback.music)) {
+                rl.pauseMusicStream(playback.music);
             } else {
-                rl.PlayMusicStream(playback.music);
+                rl.playMusicStream(playback.music);
             }
         }
     }
-    if (rl.isKeyDown(.LEFT)) rot_offset -= 100 * rl.GetFrameTime();
-    if (rl.isKeyDown(.RIGHT)) rot_offset += 100 * rl.GetFrameTime();
+    if (rl.isKeyDown(.LEFT)) rot_offset -= 100 * rl.getFrameTime();
+    if (rl.isKeyDown(.RIGHT)) rot_offset += 100 * rl.getFrameTime();
 
-    if (rl.IsWindowResized()) {
-        event.onWindowResize(rl.GetScreenWidth(), rl.GetScreenHeight());
+    if (rl.Window.isResized()) {
+        event.onWindowResize(rl.Window.getScreenWidth(), rl.Window.getScreenHeight());
     }
-    const wheelMove = rl.GetMouseWheelMoveV();
+    const wheelMove = rl.getMouseWheelMoveV();
     if (@abs(wheelMove.x) > @abs(wheelMove.y)) {
         event.onSwipe(.horizontal, wheelMove.x);
         rot_offset += wheelMove.x;

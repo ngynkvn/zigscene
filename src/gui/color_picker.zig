@@ -1,31 +1,31 @@
 const std = @import("std");
+const rl = @import("raylibz");
 
-const cnv = @import("../raylib/ext/convert.zig");
-const ffi = cnv.ffi;
-const iff = cnv.iff;
-const rgb = cnv.rgb;
-const rl = @import("../raylib.zig");
-const BASE_COLOR_DISABLED = rl.BASE_COLOR_DISABLED;
-const BORDER_COLOR_DISABLED = rl.BORDER_COLOR_DISABLED;
-const BORDER_WIDTH = rl.BORDER_WIDTH;
-const COLORPICKER = rl.COLORPICKER;
-const HUEBAR_SELECTOR_HEIGHT = rl.HUEBAR_SELECTOR_HEIGHT;
-const HUEBAR_SELECTOR_OVERFLOW = rl.HUEBAR_SELECTOR_OVERFLOW;
-const MOUSE_BUTTON_LEFT = rl.MOUSE_BUTTON_LEFT;
-const STATE_DISABLED = rl.STATE_DISABLED;
-const STATE_FOCUSED = rl.STATE_FOCUSED;
-const STATE_PRESSED = rl.STATE_PRESSED;
-const CheckCollisionPointRec = rl.CheckCollisionPointRec;
-const Fade = rl.Fade;
-const GetColor = rl.GetColor;
-const GetMousePosition = rl.GetMousePosition;
-const GuiGetState = rl.GuiGetState;
-const GuiGetStyle = rl.GuiGetStyle;
-const GuiIsLocked = rl.GuiIsLocked;
-const IsMouseButtonDown = rl.IsMouseButtonDown;
+const BASE_COLOR_DISABLED = rl.rlc.rlc.BASE_COLOR_DISABLED;
+const BORDER_COLOR_DISABLED = rl.rlc.rlc.BORDER_COLOR_DISABLED;
+const BORDER_WIDTH = rl.rlc.rlc.BORDER_WIDTH;
+const COLORPICKER = rl.rlc.rlc.COLORPICKER;
+const HUEBAR_SELECTOR_HEIGHT = rl.rlc.rlc.HUEBAR_SELECTOR_HEIGHT;
+const HUEBAR_SELECTOR_OVERFLOW = rl.rlc.rlc.HUEBAR_SELECTOR_OVERFLOW;
+const MOUSE_BUTTON_LEFT = rl.rlc.rlc.MOUSE_BUTTON_LEFT;
+const STATE_DISABLED = rl.rlc.rlc.STATE_DISABLED;
+const STATE_FOCUSED = rl.rlc.rlc.STATE_FOCUSED;
+const STATE_PRESSED = rl.rlc.rlc.STATE_PRESSED;
+const CheckCollisionPointRec = rl.checkCollisionPointRec;
+const Fade = rl.fade;
+const GetColor = rl.getColor;
+const GetMousePosition = rl.getMousePosition;
+const GuiGetState = rl.guiGetState;
+const GuiGetStyle = rl.guiGetStyle;
+const GuiIsLocked = rl.guiIsLocked;
+const IsMouseButtonDown = rl.isMouseButtonDown;
 const Color = rl.Color;
 const Rectangle = rl.Rectangle;
 const Vector2 = rl.Vector2;
+
+fn rgb(r: u8, g: u8, b: u8) Color {
+    return .{ .r = r, .g = g, .b = b, .a = 255 };
+}
 
 //const BORDER = rl.BORDER;
 const BORDER = 0;
@@ -38,8 +38,10 @@ pub var guiControlExclusiveRec: Rectangle = Rectangle{ .x = 0, .y = 0, .width = 
 // const guiControlExclusiveRec = rl.guiControlExclusiveRec;
 
 pub fn GuiColorBarHueH(bounds: Rectangle, text: [*c]const u8, hue: [*c]f32) c_int {
-    const width = rl.Get_TextWidth(text);
-    _ = rl.GuiLabel(bounds.with(.{ .x = bounds.x - @as(f32, @floatFromInt(width)) - 4 }), text);
+    const width = rl.guiGetTextWidth(text);
+    var b = bounds;
+    b.x -= @as(f32, @floatFromInt(width)) + 4;
+    _ = rl.guiLabel(b, text);
     var state: c_int = GuiGetState();
 
     const selector_height = @as(f32, @floatFromInt(GuiGetStyle(COLORPICKER, HUEBAR_SELECTOR_HEIGHT)));
@@ -54,7 +56,7 @@ pub fn GuiColorBarHueH(bounds: Rectangle, text: [*c]const u8, hue: [*c]f32) c_in
     if (state != STATE_DISABLED and !GuiIsLocked()) {
         const mousePoint: Vector2 = GetMousePosition();
         if (guiControlExclusiveMode) {
-            if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+            if (rl.isMouseButtonDown(rl.MouseButton.left)) {
                 if (bounds.x == guiControlExclusiveRec.x and
                     bounds.y == guiControlExclusiveRec.y and
                     bounds.width == guiControlExclusiveRec.width and
@@ -69,7 +71,7 @@ pub fn GuiColorBarHueH(bounds: Rectangle, text: [*c]const u8, hue: [*c]f32) c_in
                 guiControlExclusiveRec = Rectangle{ .x = 0, .y = 0, .width = 0, .height = 0 };
             }
         } else if (CheckCollisionPointRec(mousePoint, bounds) or CheckCollisionPointRec(mousePoint, selector)) {
-            if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+            if (rl.isMouseButtonDown(rl.MouseButton.left)) {
                 state = STATE_PRESSED;
                 guiControlExclusiveMode = true;
                 guiControlExclusiveRec = bounds;
@@ -92,7 +94,7 @@ pub fn GuiColorBarHueH(bounds: Rectangle, text: [*c]const u8, hue: [*c]f32) c_in
         const seg_w = @ceil(bounds.width / 6);
         inline for (HUE_GRADIENTS, 0..) |hg, i| {
             const start, const end = hg;
-            rl.DrawRectangleGradientEx(
+            rl.drawRectangleGradientEx(
                 .{ .x = bounds.x + (i * bounds.width / HUE_GRADIENTS.len), .y = bounds.y, .width = seg_w, .height = bounds.height },
                 Fade(start, guiAlpha),
                 Fade(start, guiAlpha),
@@ -101,7 +103,7 @@ pub fn GuiColorBarHueH(bounds: Rectangle, text: [*c]const u8, hue: [*c]f32) c_in
             );
         }
     } else {
-        rl.DrawRectangleGradientEx(
+        rl.drawRectangleGradientEx(
             bounds,
             Fade(Fade(GetColor(@intCast(GuiGetStyle(COLORPICKER, BASE_COLOR_DISABLED))), 0.1), guiAlpha),
             Fade(Fade(GetColor(@intCast(GuiGetStyle(COLORPICKER, BASE_COLOR_DISABLED))), 0.1), guiAlpha),
@@ -117,21 +119,21 @@ pub fn GuiColorBarHueH(bounds: Rectangle, text: [*c]const u8, hue: [*c]f32) c_in
 }
 
 pub fn GuiDrawRectangle(rec: Rectangle, borderWidth: c_int, borderColor: Color, color: Color) void {
-    if (color.a > 0) rl.DrawRectangleRec(rec, GuiFade(color, guiAlpha));
+    if (color.a > 0) rl.drawRectangleRec(rec, GuiFade(color, guiAlpha));
 
     if (borderWidth > 0) {
         const bw: f32 = @floatFromInt(borderWidth);
         const b_color = GuiFade(borderColor, guiAlpha);
         // zig fmt: off
-        rl.DrawRectangleRec(.{ .x = rec.x,                  .y = rec.y,                   .width = rec.width, .height = bw },                    b_color);
-        rl.DrawRectangleRec(.{ .x = rec.x,                  .y = rec.y + bw,              .width = bw,        .height = rec.height - (2 * bw) }, b_color);
-        rl.DrawRectangleRec(.{ .x = rec.x + rec.width - bw, .y = rec.y + bw,              .width = bw,        .height = rec.height - (2 * bw) }, b_color);
-        rl.DrawRectangleRec(.{ .x = rec.x,                  .y = rec.y + rec.height - bw, .width = rec.width, .height = bw },                    b_color);
+        rl.drawRectangleRec(.{ .x = rec.x,                  .y = rec.y,                   .width = rec.width, .height = bw },                    b_color);
+        rl.drawRectangleRec(.{ .x = rec.x,                  .y = rec.y + bw,              .width = bw,        .height = rec.height - (2 * bw) }, b_color);
+        rl.drawRectangleRec(.{ .x = rec.x + rec.width - bw, .y = rec.y + bw,              .width = bw,        .height = rec.height - (2 * bw) }, b_color);
+        rl.drawRectangleRec(.{ .x = rec.x,                  .y = rec.y + rec.height - bw, .width = rec.width, .height = bw },                    b_color);
         // zig fmt: on
     }
 }
 
 pub fn GuiFade(color: Color, alpha: f32) Color {
     const a = std.math.clamp(alpha, 0, 1);
-    return .{ .r = color.r, .g = color.g, .b = color.b, .a = iff(u8, ffi(f32, color.a) * a) };
+    return .{ .r = color.r, .g = color.g, .b = color.b, .a = @as(u8, @intFromFloat(@as(f32, @floatFromInt(color.a)) * a)) };
 }

@@ -1,5 +1,6 @@
 .{
-    .name = "tracy",
+    .name = .tracy,
+    .fingerprint = 0x255a89eeb3401662,
 
     .version = "0.0.0",
     .dependencies = .{

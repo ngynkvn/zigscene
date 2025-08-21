@@ -2,8 +2,6 @@ const std = @import("std");
 
 const Config = @import("../../core/config.zig");
 const N = Config.Audio.buffer_size;
-const cnv = @import("../../raylib/ext/convert.zig");
-const ffi = cnv.ffi;
 
 pub const ComplexF32 = std.math.Complex(f32);
 /// https://en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm
@@ -22,8 +20,8 @@ pub fn fft(values: []ComplexF32) void {
     fft(odds);
     for (0..len / 2) |i| {
         const index = ComplexF32.init(
-            @cos(-2 * std.math.pi * ffi(f32, i) / ffi(f32, len)),
-            @sin(-2 * std.math.pi * ffi(f32, i) / ffi(f32, len)),
+            @cos(-2 * std.math.pi * @as(f32, @floatFromInt(i)) / @as(f32, @floatFromInt(len))),
+            @sin(-2 * std.math.pi * @as(f32, @floatFromInt(i)) / @as(f32, @floatFromInt(len))),
         ).mul(odds[i]);
         values[i] = evens[i].add(index);
         values[i + len / 2] = evens[i].sub(index);

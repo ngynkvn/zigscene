@@ -1,11 +1,9 @@
 const std = @import("std");
-
+const rl = @import("raylibz");
 const processor = @import("../audio/processor.zig");
 const input = @import("../core/input.zig");
-const cnv = @import("../raylib/ext/convert.zig");
-const ffi = cnv.ffi;
-const Rectangle = @import("../raylib/ext/structs.zig").Rectangle;
-const rl = @import("../raylib.zig");
+
+const Rectangle = rl.Rectangle;
 const Window = @import("../ui/window.zig").Window;
 var screenWidth: c_int = @import("config.zig").Window.width;
 
@@ -24,20 +22,26 @@ pub fn render() void {
 
     if (debug_window.begin()) |ctx| {
         const bounds = ctx.bounds();
-        const buf = std.fmt.bufPrintZ(txt[0..64], "FPS: {d:4} ({d:4.2})", .{
-            rl.GetFPS(),
-            std.fmt.fmtDuration(@intFromFloat(rl.GetFrameTime() * std.time.ns_per_ms)),
+        const buf = std.fmt.bufPrintZ(txt[0..64], "FPS: {d:4} ({D:4.2})", .{
+            rl.getFPS(),
+            @as(u64, @intFromFloat(rl.getFrameTime() * std.time.ns_per_ms)),
         }) catch txt[0..0];
-        _ = rl.GuiLabel(rl.Rectangle{ .x = bounds.x, .y = bounds.y, .width = bounds.width, .height = 24 }, buf.ptr);
-        _ = rl.GuiLabel(rl.Rectangle{ .x = bounds.x, .y = bounds.y + 80, .width = bounds.width, .height = 120 }, input.MouseState.state().ptr);
-        rl.DrawRay(.{ .position = .{ .x = bounds.x, .y = bounds.y }, .direction = rl.Vector3.from(input.MouseState.PrevDelta) }, rl.RED);
+        _ = rl.guiLabel(rl.Rectangle{ .x = bounds.x, .y = bounds.y, .width = bounds.width, .height = 24 }, buf.ptr);
+        _ = rl.guiLabel(rl.Rectangle{ .x = bounds.x, .y = bounds.y + 80, .width = bounds.width, .height = 120 }, input.MouseState.state().ptr);
+        rl.drawRay(
+            .{
+                .position = .{ .x = bounds.x, .y = bounds.y },
+                .direction = rl.Vector3{ .x = input.MouseState.PrevDelta.x, .y = input.MouseState.PrevDelta.y, .z = 0 },
+            },
+            rl.RED,
+        );
     }
     if (debug_window2.begin()) |ctx| {
         _ = ctx;
     }
 
     // pos.height = 10 + 100 * processor.rms_energy;
-    // rl.DrawRectangleRec(pos, rl.RED);
+    // rl.drawRectangleRec(pos, rl.RED);
     // // timeseries beats
     // const tsbeats = Rectangle.from(10, 64, 1, 10);
     // // Go past last written and scan from there
@@ -45,7 +49,7 @@ pub fn render() void {
     // for (1..processor.past_beats.len + 1) |b| {
     //     const i = (bi + b) % processor.past_beats.len;
     //     const value = processor.past_beats[i];
-    //     rl.DrawRectangleRec(tsbeats.translate(ffi(f32, b * 2), 0), if (!value) rl.BLUE else rl.RED);
+    //     rl.drawRectangleRec(tsbeats.translate(@as(f32, b * 2), 0), if (!value) rl.BLUE else rl.RED);
     // }
 }
 

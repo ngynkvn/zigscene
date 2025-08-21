@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const rl = @import("../raylib.zig");
+const rl = @import("raylibz");
 
 pub const Window = struct {
     bounds: rl.Rectangle,
@@ -32,15 +32,15 @@ pub const Window = struct {
     pub fn update(self: *Window) void {
         if (!self.visible) return;
 
-        const mouse_pos = rl.GetMousePosition();
+        const mouse_pos = rl.getMousePosition();
         const title_bar = rl.Rectangle{
             .x = self.bounds.x,
             .y = self.bounds.y,
             .width = self.bounds.width,
             .height = 30,
         };
-        if (rl.CheckCollisionPointRec(mouse_pos, self.bounds)) {
-            rl.DrawRectangleLines(
+        if (rl.checkCollisionPointRec(mouse_pos, self.bounds)) {
+            rl.drawRectangleLines(
                 @intFromFloat(self.bounds.x - 1),
                 @intFromFloat(self.bounds.y - 1),
                 @intFromFloat(self.bounds.width + 2),
@@ -49,18 +49,18 @@ pub const Window = struct {
             );
         }
 
-        if (rl.CheckCollisionPointRec(mouse_pos, title_bar)) {
+        if (rl.checkCollisionPointRec(mouse_pos, title_bar)) {
             if (!self.drag_target) {
-                rl.SetMouseCursor(rl.MOUSE_CURSOR_POINTING_HAND);
+                rl.setMouseCursor(rl.MouseCursor.pointing_hand);
             }
             self.drag_target = true;
-            if (rl.IsMouseButtonPressed(rl.MOUSE_LEFT_BUTTON)) {
+            if (rl.isMouseButtonPressed(rl.MouseButton.left)) {
                 self.dragging = .Dragging;
                 self.drag_start = mouse_pos;
             }
         } else {
             if (self.drag_target) {
-                rl.SetMouseCursor(rl.MOUSE_CURSOR_DEFAULT);
+                rl.setMouseCursor(rl.MouseCursor.default);
             }
             self.drag_target = false;
         }
@@ -72,35 +72,35 @@ pub const Window = struct {
             .width = 20,
             .height = 20,
         };
-        if (rl.CheckCollisionPointRec(mouse_pos, corner)) {
+        if (rl.checkCollisionPointRec(mouse_pos, corner)) {
             if (!self.resize_target) {
-                rl.SetMouseCursor(rl.MOUSE_CURSOR_RESIZE_NWSE);
+                rl.setMouseCursor(rl.MouseCursor.resize_nwse);
             }
             self.resize_target = true;
-            if (rl.IsMouseButtonPressed(rl.MOUSE_LEFT_BUTTON)) {
+            if (rl.isMouseButtonPressed(rl.MouseButton.left)) {
                 self.dragging = .Resizing;
                 self.drag_start = mouse_pos;
             }
         } else {
             if (self.resize_target) {
-                rl.SetMouseCursor(rl.MOUSE_CURSOR_DEFAULT);
+                rl.setMouseCursor(rl.MouseCursor.default);
             }
             self.resize_target = false;
         }
 
-        if (rl.IsMouseButtonReleased(rl.MOUSE_LEFT_BUTTON)) {
+        if (rl.isMouseButtonReleased(rl.MouseButton.left)) {
             self.dragging = .None;
             self.drag_start = null;
         }
 
         switch (self.dragging) {
             .Resizing => {
-                const delta = rl.GetMouseDelta();
+                const delta = rl.getMouseDelta();
                 self.bounds.width += delta.x;
                 self.bounds.height += delta.y;
             },
             .Dragging => {
-                const delta = rl.GetMouseDelta();
+                const delta = rl.getMouseDelta();
                 self.bounds.x += delta.x;
                 self.bounds.y += delta.y;
             },
@@ -128,7 +128,7 @@ pub const Window = struct {
     pub fn begin(self: *Window) ?Context {
         if (!self.visible) return null;
         self.update();
-        if (rl.GuiWindowBox(self.bounds, self.title.ptr) == 0) {
+        if (rl.guiWindowBox(self.bounds, self.title.ptr) == 0) {
             return self.context();
         } else {
             self.visible = !self.visible;

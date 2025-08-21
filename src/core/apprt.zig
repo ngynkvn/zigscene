@@ -1,4 +1,5 @@
 const std = @import("std");
+const rl = @import("raylibz");
 
 const tracy = @import("tracy");
 
@@ -6,7 +7,6 @@ const music = @import("../audio/playback.zig");
 const processor = @import("../audio/processor.zig");
 const graphics = @import("../graphics.zig");
 const gui = @import("../gui.zig");
-const rl = @import("../raylib.zig");
 const shader = @import("../shader/shader.zig");
 const Config = @import("config.zig");
 pub var screenWidth: c_int = Config.Window.width;
@@ -21,13 +21,17 @@ pub const App = struct {
     // Init sequence for the GUI / Window
     pub fn init(_: std.mem.Allocator) !App {
         // TODO: Options menu
-        rl.SetConfigFlags(rl.FLAG_WINDOW_RESIZABLE | rl.FLAG_WINDOW_TRANSPARENT | rl.FLAG_WINDOW_TOPMOST);
+        rl.setConfigFlags(.{
+            .window_resizable = true,
+            .window_transparent = true,
+            .window_topmost = true,
+        });
         // Setup
-        rl.InitWindow(screenWidth, screenHeight, APP_NAME);
-        rl.InitAudioDevice();
-        rl.GuiSetAlpha(0.8);
-        rl.RayguiDark();
-        rl.SetMasterVolume(Config.Audio.volume);
+        rl.Window.init(screenWidth, screenHeight, APP_NAME);
+        rl.initAudioDevice();
+        // rl.guiSetAlpha(0.8);
+        // rl.RayguiDark();
+        rl.setMasterVolume(Config.Audio.volume);
 
         if (try processArgs()) |path| {
             event.onFilenameInput(path);
@@ -36,8 +40,8 @@ pub const App = struct {
         return .{};
     }
     pub fn deinit(_: App) void {
-        rl.CloseAudioDevice();
-        rl.CloseWindow();
+        rl.closeAudioDevice();
+        rl.Window.close();
     }
 
     fn processArgs() !?[]const u8 {
@@ -56,13 +60,13 @@ pub const App = struct {
         if (music.IsMusicStreamPlaying()) music.UpdateMusicStream();
     }
     pub fn render(self: *App) void {
-        const center = rl.GetWorldToScreen(.{}, input.camera);
+        const center = rl.getWorldToScreen(.{}, input.camera);
         const renderCtx = tracy.traceNamed(@src(), "Render");
         defer renderCtx.end();
         { // Begin texture rendering
-            rl.BeginTextureMode(shader.sceneTexture);
-            defer rl.EndTextureMode();
-            rl.ClearBackground(.{ .a = @intFromFloat(@round(Config.Shader.alpha_factor * 255)) });
+            rl.beginTextureMode(shader.sceneTexture);
+            defer rl.endTextureMode();
+            rl.clearBackground(.{ .a = @intFromFloat(@round(Config.Shader.alpha_factor * 255)) });
             { // Draw 2D Graphics
                 const ctx = tracy.traceNamed(@src(), "2d");
                 defer ctx.end();
@@ -82,18 +86,18 @@ pub const App = struct {
         { // Begin draw
             const drawCtx = tracy.traceNamed(@src(), "draw");
             defer drawCtx.end();
-            rl.BeginDrawing();
-            defer rl.EndDrawing();
+            rl.beginDrawing();
+            defer rl.endDrawing();
             // We need to double clear in case the background has transparency
-            rl.ClearBackground(.{ .a = @intFromFloat(@round(Config.Shader.alpha_factor * 255)) });
+            rl.clearBackground(.{ .a = @intFromFloat(@round(Config.Shader.alpha_factor * 255)) });
             { // Begin shader drawing
                 const ctx = tracy.traceNamed(@src(), "draw shader");
                 defer ctx.end();
-                rl.BeginShaderMode(shader.program);
-                defer rl.EndShaderMode();
-                rl.SetShaderValue(shader.program, shader.chromaFactorLoc, &Config.Shader.chroma_factor, rl.RL_SHADER_UNIFORM_FLOAT);
-                rl.SetShaderValue(shader.program, shader.noiseFactorLoc, &Config.Shader.noise_factor, rl.RL_SHADER_UNIFORM_FLOAT);
-                rl.DrawTextureRec(
+                rl.beginShaderMode(shader.program);
+                defer rl.endShaderMode();
+                rl.setShaderValue(shader.program, shader.chromaFactorLoc, &Config.Shader.chroma_factor, rl.ShaderUniformDataType.float);
+                rl.setShaderValue(shader.program, shader.noiseFactorLoc, &Config.Shader.noise_factor, rl.ShaderUniformDataType.float);
+                rl.drawTextureRec(
                     shader.sceneTexture.texture,
                     .{
                         .width = @floatFromInt(shader.sceneTexture.texture.width),

@@ -1,9 +1,8 @@
+const rl = @import("raylibz");
+const hsv = rl.Color.hsv.vec3;
+
 const processor = @import("../../audio/processor.zig");
 var screenWidth: c_int = @import("../../core/config.zig").Window.width;
-const hsv = @import("../../raylib/ext/color.zig").Color.hsv.vec3;
-const cnv = @import("../../raylib/ext/convert.zig");
-const ffi = cnv.ffi;
-const rl = @import("../../raylib.zig");
 
 comptime {
     @setFloatMode(.optimized);
@@ -15,15 +14,15 @@ pub const WaveFormLine = struct {
         const amplitude: f32 = Config.amplitude;
         const color1 = Config.color1;
         const color2 = Config.color2;
-        const SPACING = ffi(f32, screenWidth) / ffi(f32, processor.curr_buffer.len);
-        const x = ffi(f32, i) * SPACING;
+        const SPACING = @as(f32, @floatFromInt(screenWidth)) / @as(f32, @floatFromInt(processor.curr_buffer.len));
+        const x = @as(f32, @floatFromInt(i)) * SPACING;
         const y = -(v * amplitude);
         // "plot" x and y
         const px = x + center.x;
         const py = y + center.y;
         // zig fmt: off
-        rl.DrawRectangleRec(.{ .x = px, .y = py,      .width = SPACING, .height = 1 }, hsv(color1));
-        rl.DrawRectangleRec(.{ .x = px, .y = py + 8,  .width = SPACING, .height = 2 }, hsv(color2));
+        rl.drawRectangleRec(.{ .x = px, .y = py,      .width = SPACING, .height = 1 }, rl.Color.hsv.vec3(color1));
+        rl.drawRectangleRec(.{ .x = px, .y = py + 8,  .width = SPACING, .height = 2 }, rl.Color.hsv.vec3(color2));
         // zig fmt: on
     }
 };
@@ -40,22 +39,22 @@ pub const WaveFormBar = struct {
     var maxes: [N]f32 = @splat(0);
 
     pub fn render(center: rl.Vector2, i: usize, v: f32) void {
-        const SPACING = ffi(f32, screenWidth) / ffi(f32, processor.curr_buffer.len);
-        const x = ffi(f32, i) * SPACING;
+        const SPACING = @as(f32, @floatFromInt(screenWidth)) / @as(f32, @floatFromInt(processor.curr_buffer.len));
+        const x = @as(f32, @floatFromInt(i)) * SPACING;
         const y = (v * amplitude.*);
         const px = x;
-        const c1 = hsv(color1.*);
-        const c2 = hsv(color2.*);
+        const c1 = rl.Color.hsv.vec3(color1.*);
+        const c2 = rl.Color.hsv.vec3(color2.*);
         // TODO: configurable
         maxes[i] = @max(y + base_h.*, maxes[i]);
         maxes[i] *= 0.99;
-        rl.DrawRectangleRec(.{
+        rl.drawRectangleRec(.{
             .x = px,
             .y = center.y * 2 - maxes[i],
             .width = SPACING,
             .height = maxes[i],
-        }, hsv(trail_color.*));
-        rl.DrawRectangleGradientEx(.{
+        }, rl.Color.hsv.vec3(trail_color.*));
+        rl.drawRectangleGradientEx(.{
             .x = px,
             .y = center.y * 2 - y - base_h.*,
             .width = SPACING,

@@ -1,6 +1,5 @@
 const std = @import("std");
-
-const rl = @import("../raylib.zig");
+const rl = @import("raylibz");
 
 pub const Panel = struct {
     bounds: rl.Rectangle,
@@ -26,7 +25,7 @@ pub const Panel = struct {
 
     pub fn begin(self: *Panel) bool {
         if (!self.visible) return false;
-        _ = rl.GuiPanel(self.bounds, self.title.ptr);
+        _ = rl.guiPanel(self.bounds, self.title.ptr);
         return true;
     }
 
@@ -63,7 +62,7 @@ pub const Panel = struct {
         }
 
         pub fn label(self: *Context, text: [*c]const u8) void {
-            _ = rl.GuiLabel(self.nextRow(24), text);
+            _ = rl.guiLabel(self.nextRow(24), text);
         }
         const SliderOptions = struct {
             text: []const u8,
@@ -74,7 +73,7 @@ pub const Panel = struct {
             editing: bool = false,
         };
         pub fn slider(_: *Context, value: *f32, so: SliderOptions) void {
-            _ = rl.GuiSlider(so.bounds, so.text.ptr, null, value, so.min, so.max);
+            _ = rl.guiSlider(so.bounds, so.text.ptr, null, value, so.min, so.max);
             if (so.valueBox) {
                 const adj = rl.Rectangle{
                     .x = so.bounds.x + so.bounds.width + 2,
@@ -83,7 +82,7 @@ pub const Panel = struct {
                     .height = 16,
                 };
                 const buf = std.fmt.bufPrintZ(&value_buffer, tunable_fmt, .{value.*}) catch unreachable;
-                _ = rl.GuiValueBoxFloat(adj, "", buf.ptr, value, so.editing);
+                _ = rl.guiValueBoxFloat(adj, "", buf.ptr, value, so.editing);
             }
         }
 

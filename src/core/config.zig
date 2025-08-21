@@ -1,6 +1,7 @@
-const Vector3 = @import("../raylib/ext/vector.zig").Vector3;
+const rl = @import("raylibz");
 const controls = @import("../gui/controls.zig");
-const rl = @import("../raylib.zig");
+
+const Vector3 = rl.Vector3;
 
 pub const Window = struct {
     pub const width = 1024;

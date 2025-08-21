@@ -1,5 +1,6 @@
 const std = @import("std");
-pub const rl = @import("../raylib.zig");
+const rl = @import("raylibz");
+
 pub const Config = @import("../core/config.zig");
 
 pub var sceneTexture: rl.RenderTexture2D = undefined;
@@ -12,8 +13,8 @@ pub var screenHeight: c_int = Config.Window.height;
 pub fn onWindowResize(width: i32, height: i32) void {
     screenWidth = width;
     screenHeight = height;
-    rl.UnloadRenderTexture(sceneTexture);
-    sceneTexture = rl.LoadRenderTexture(screenWidth, screenHeight);
+    rl.unloadRenderTexture(sceneTexture);
+    sceneTexture = rl.loadRenderTexture(screenWidth, screenHeight);
 }
 
 var fs = @embedFile("chromatic.fs.glsl");
@@ -21,10 +22,10 @@ var vs = @embedFile("chromatic.vs.glsl");
 
 // TODO: make the shader program swappable and adjust options as needed
 pub fn init() void {
-    sceneTexture = rl.LoadRenderTexture(screenWidth, screenHeight);
-    program = rl.LoadShaderFromMemory(vs, fs);
-    chromaFactorLoc = rl.rlGetLocationUniform(program.id, "chromaFactor");
-    noiseFactorLoc = rl.rlGetLocationUniform(program.id, "noiseFactor");
+    sceneTexture = rl.loadRenderTexture(screenWidth, screenHeight);
+    program = rl.loadShaderFromMemory(vs, fs);
+    chromaFactorLoc = rl.getLocationUniform(program, "chromaFactor");
+    noiseFactorLoc = rl.getLocationUniform(program, "noiseFactor");
     std.debug.assert(chromaFactorLoc != -1);
     std.debug.assert(noiseFactorLoc != -1);
 }

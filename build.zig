@@ -5,15 +5,15 @@ pub fn build(b: *std.Build) !void {
     const optimize = b.standardOptimizeOption(.{});
 
     const opts = b.addOptions();
-    const tracy_enable = b.option(bool, "tracy_enable", "Enable Tracy integration. Supply path to Tracy source") orelse false;
+    const tracy_enable = b.option(bool, "tracy", "Enable Tracy integration. Supply path to Tracy source") orelse false;
     const enable_callstack = b.option(
         bool,
-        "tracy_callstack",
+        "tracy-callstack",
         "Include callstack information with Tracy data. Does nothing if -Dtracy is not provided",
     ) orelse tracy_enable;
     const enable_allocation = b.option(
         bool,
-        "tracy_allocation",
+        "tracy-allocation",
         "Include allocation information with Tracy data. Does nothing if -Dtracy is not provided",
     ) orelse tracy_enable;
 
@@ -26,22 +26,26 @@ pub fn build(b: *std.Build) !void {
     });
     const tracy_mod = tracy.module(if (target.query.isNative() and tracy_enable) "tracy" else "tracy-stub");
 
-    const raylib = b.dependency("raylib", .{
+    const raylibz = b.dependency("raylibz", .{
         .target = target,
         .optimize = optimize,
         .linux_display_backend = .X11,
     });
 
-    const exe = b.addExecutable(.{
-        .name = "zigscene",
+    const zs_mod = b.createModule(.{
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
+
+    const exe = b.addExecutable(.{
+        .name = "zigscene",
+        .root_module = zs_mod,
+    });
     exe.root_module.addOptions("options", opts);
     b.installArtifact(exe);
 
-    exe.root_module.addImport("raylib", raylib.module("raylib"));
+    exe.root_module.addImport("raylib", raylibz.module("raylibz"));
     exe.root_module.addImport("tracy", tracy_mod);
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
@@ -52,11 +56,10 @@ pub fn build(b: *std.Build) !void {
     run_step.dependOn(&run_cmd.step);
 
     const exe_unit_tests = b.addTest(.{
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
+        .name = "zigscene-test",
+        .root_module = zs_mod,
     });
-    exe_unit_tests.root_module.addImport("raylib", raylib.module("raylib"));
+    exe_unit_tests.root_module.addImport("raylibz", raylibz.module("raylibz"));
     exe_unit_tests.root_module.addImport("tracy", tracy_mod);
     exe_unit_tests.root_module.addOptions("options", opts);
 
@@ -92,18 +95,20 @@ fn addReleaseStep(b: *std.Build, opts: *std.Build.Step.Options) !void {
         });
         const tracy_mod = tracy.module("tracy-stub");
 
-        const raylib = b.dependency("raylib", .{
+        const raylib = b.dependency("raylibz", .{
             .target = target,
             .optimize = optimize,
         });
         const release_exe = b.addExecutable(.{
             .name = "zigscene",
-            .root_source_file = b.path("src/main.zig"),
-            .target = target,
-            .optimize = optimize,
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("src/main.zig"),
+                .target = target,
+                .optimize = optimize,
+            }),
         });
         release_exe.root_module.addOptions("options", opts);
-        release_exe.root_module.addImport("raylib", raylib.module("raylib"));
+        release_exe.root_module.addImport("raylibz", raylib.module("raylibz"));
         release_exe.root_module.addImport("tracy", tracy_mod);
         release_step.dependOn(&b.addInstallArtifact(release_exe, .{ .dest_dir = .{ .override = .{ .custom = try t.zigTriple(b.allocator) } } }).step);
     }

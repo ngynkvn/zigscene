@@ -1,10 +1,7 @@
 const std = @import("std");
+const rl = @import("raylibz");
 
 const processor = @import("../../audio/processor.zig");
-const hsv = @import("../../raylib/ext/color.zig").Color.hsv.vec3;
-const cnv = @import("../../raylib/ext/convert.zig");
-const ffi = cnv.ffi;
-const rl = @import("../../raylib.zig");
 
 comptime {
     @setFloatMode(.optimized);
@@ -22,14 +19,14 @@ pub const Bubble = struct {
         const effect: f32 = Config.effect;
         const color_scale: f32 = Config.color_scale;
         const bubble_color_scale: f32 = Config.bubble_color_scale;
-        rl.BeginMode3D(camera3d);
-        defer rl.EndMode3D();
+        rl.beginMode3D(camera3d);
+        defer rl.endMode3D();
         rl.rlRotatef(rot_offset, 0, 1, 0);
         {
             rl.rlPushMatrix();
             rl.rlRotatef(t * 32, 1, 1, 1);
             color1.x += processor.rms_energy * bubble_color_scale;
-            rl.DrawSphereWires(.{}, r_sphere + processor.rms_energy * effect, 10, 10, hsv(color1));
+            rl.drawSphereWires(.{}, r_sphere + processor.rms_energy * effect, 10, 10, rl.Color.hsv.vec3(color1));
             rl.rlPopMatrix();
         }
         rl.rlPushMatrix();
@@ -40,7 +37,7 @@ pub const Bubble = struct {
                 (effect * processor.rms_energy) +
                 (@abs(v) * effect);
 
-            const angle_rad = ffi(f32, i) * tsteps;
+            const angle_rad = @as(f32, @floatFromInt(i)) * tsteps;
             const x = @cos(angle_rad) * r;
             const y = @sin(angle_rad) * r;
 
@@ -50,7 +47,7 @@ pub const Bubble = struct {
 
             var col = color2;
             col.x += processor.rms_energy * color_scale + @abs(v) * 30;
-            rl.DrawCubeWires(.{}, 0.05, height_ring + @abs(v) * effect + processor.rms_energy * 0.2, 0.05, hsv(col));
+            rl.drawCubeWires(.{}, 0.05, height_ring + @abs(v) * effect + processor.rms_energy * 0.2, 0.05, rl.Color.hsv.vec3(col));
             rl.rlPopMatrix();
         }
         rl.rlPopMatrix();
