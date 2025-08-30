@@ -28,33 +28,51 @@ var color_panel = Panel.init(8, 24, 200, 700, "Colors");
 pub fn frame() void {
     if (scalar_panel.begin()) |p| {
         var c = p.context();
+        c.offset_y += 24;
+        var b = c.bounds();
+        b.height = 24;
+        c.offset_y += 24;
+        _ = rl.guiLabel(b, "WaveFormLine");
         renderSettings(&c, config.Visualizer.WaveFormLine.Settings);
+        b = c.bounds();
+        b.height = 24;
+        c.offset_y += 24;
+        _ = rl.guiLabel(b, "Bubbles");
         renderSettings(&c, config.Visualizer.Bubble.Settings);
     }
 }
 
 const Settings = std.StaticStringMap(controls.Setting);
 pub fn renderSettings(ctx: *Panel.Context, comptime settings: Settings) void {
+    var keyWidth: f32 = 0;
+    for (settings.keys()) |key| {
+        const text_width: f32 = @floatFromInt(rl.guiGetTextWidth(key.ptr));
+        keyWidth = @max(keyWidth, text_width + 2);
+    }
     for (settings.keys(), settings.values()) |key, v| {
-        renderControl(ctx, key, v);
-        _ = ctx.nextRow(24);
+        renderControl(ctx, key, keyWidth, v);
+        ctx.offset_y += Panel.ROW_HEIGHT + Panel.PADDING;
     }
 }
-fn renderControl(ctx: *Panel.Context, key: []const u8, v: controls.Setting) void {
-    const x = ctx.current_x;
-    const y = ctx.current_y;
+fn renderControl(ctx: *Panel.Context, key: []const u8, keyWidth: f32, v: controls.Setting) void {
+    const bounds = ctx.bounds();
+    const x = bounds.x;
+    const y = bounds.y;
     switch (v) {
-        .scalar => |s| ctx.slider(s.value, .{
-            .text = key,
-            .bounds = .{ .x = x, .y = y, .width = 200, .height = 24 },
-            .min = s.range.@"0",
-            .max = s.range.@"1",
-        }),
-        else => {},
-        // .color => |c| ctx.colorPicker(c.value, .{
-        //     .text = key,
-        //     .bounds = .{ .x = x, .y = y, .width = 200, .height = 24 },
-        // }),
+        .scalar => |s| {
+            ctx.label(key.ptr, .{ .x = x, .y = y, .width = keyWidth, .height = Panel.ROW_HEIGHT });
+            ctx.slider(s.value, .{
+                .bounds = .{ .x = x + keyWidth, .y = y, .width = bounds.width - keyWidth, .height = Panel.ROW_HEIGHT },
+                .min = s.range.@"0",
+                .max = s.range.@"1",
+            });
+        },
+        .color => |c| {
+            ctx.label(key.ptr, .{ .x = x, .y = y, .width = keyWidth, .height = Panel.ROW_HEIGHT });
+            ctx.colorPicker(c.value, .{
+                .bounds = .{ .x = x + keyWidth, .y = y, .width = bounds.width - keyWidth, .height = Panel.ROW_HEIGHT },
+            });
+        },
     }
 }
 

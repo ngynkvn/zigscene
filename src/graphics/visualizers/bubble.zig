@@ -23,7 +23,7 @@ pub const Bubble = struct {
         .{ "sphere_radius", controls.Setting{ .scalar = .{ .value = &sphere_radius, .range = .{ 0.1, 4 } } } },
         .{ "effect", controls.Setting{ .scalar = .{ .value = &effect, .range = .{ 0.1, 1 } } } },
         .{ "color_scale", controls.Setting{ .scalar = .{ .value = &color_scale, .range = .{ 0.0, 100 } } } },
-        .{ "bubble_color_scale", controls.Setting{ .scalar = .{ .value = &bubble_color_scale, .range = .{ 0.0, 100 } } } },
+        .{ "bubble_scale", controls.Setting{ .scalar = .{ .value = &bubble_color_scale, .range = .{ 0.0, 100 } } } },
         .{ "height_ring", controls.Setting{ .scalar = .{ .value = &height_ring, .range = .{ 0.0, 1 } } } },
         .{ "color1", controls.Setting{ .color = .{ .value = &color1.x } } },
         .{ "color2", controls.Setting{ .color = .{ .value = &color2.x } } },

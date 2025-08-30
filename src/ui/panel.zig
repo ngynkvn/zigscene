@@ -5,16 +5,13 @@ pub const Panel = struct {
     bounds: rl.Rectangle,
     title: []const u8,
     visible: bool = true,
-    content_padding: f32 = 10,
+    content_padding: f32 = 8,
+    pub const ROW_HEIGHT: f32 = 24;
+    pub const PADDING: f32 = 8;
 
     pub fn init(x: f32, y: f32, width: f32, height: f32, title: []const u8) Panel {
         return .{
-            .bounds = .{
-                .x = x,
-                .y = y,
-                .width = width,
-                .height = height,
-            },
+            .bounds = .{ .x = x, .y = y, .width = width, .height = height },
             .title = title,
         };
     }
@@ -31,76 +28,53 @@ pub const Panel = struct {
 
     pub const Context = struct {
         root: Panel,
-        current_y: f32 = 0,
-        current_x: f32 = 0,
+        offset_x: f32 = 0,
+        offset_y: f32 = 0,
 
         pub fn bounds(self: Context) rl.Rectangle {
             const pad = self.root.content_padding;
             const rt = self.root.bounds;
             return .{
-                .x = rt.x + pad,
-                .y = rt.y + pad + 24,
+                .x = rt.x + pad + self.offset_x,
+                .y = rt.y + pad + self.offset_y,
                 .width = rt.width - (pad * 2),
                 .height = rt.height - (pad * 2),
             };
         }
 
-        pub fn nextRow(self: *Context, height: f32) rl.Rectangle {
-            const b = self.bounds();
-            const result: rl.Rectangle = .{
-                .x = b.x + self.current_x,
-                .y = b.y + self.current_y,
-                .width = b.width,
-                .height = height,
-            };
-            self.current_y += height;
-            return result;
+        pub fn label(_: *Context, text: [*c]const u8, label_bounds: rl.Rectangle) void {
+            _ = rl.guiLabel(label_bounds, text);
         }
 
-        pub fn spacer(self: *Context, amount: f32) void {
-            self.current_y += amount;
-        }
-
-        pub fn label(self: *Context, text: [*c]const u8) void {
-            _ = rl.guiLabel(self.nextRow(24), text);
-        }
         const SliderOptions = struct {
-            text: []const u8,
             bounds: rl.Rectangle = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
             min: f32,
             max: f32,
             valueBox: bool = true,
             editing: bool = false,
         };
-        pub fn slider(_: *Context, value: *f32, so: SliderOptions) void {
-            _ = rl.guiSlider(so.bounds, so.text.ptr, null, value, so.min, so.max);
+        pub fn slider(_: *const Context, value: *f32, so: SliderOptions) void {
+            const VALUE_BOX_WIDTH: f32 = 48;
+            var b = so.bounds;
+            b.width -= VALUE_BOX_WIDTH;
+            _ = rl.guiSlider(b, "", null, value, so.min, so.max);
             if (so.valueBox) {
                 const adj = rl.Rectangle{
-                    .x = so.bounds.x + so.bounds.width + 2,
+                    .x = b.x + b.width + 8,
                     .y = so.bounds.y,
-                    .width = 48,
-                    .height = 16,
+                    .width = VALUE_BOX_WIDTH,
+                    .height = ROW_HEIGHT,
                 };
                 const buf = std.fmt.bufPrintZ(&value_buffer, tunable_fmt, .{value.*}) catch unreachable;
                 _ = rl.guiValueBoxFloat(adj, "", buf.ptr, value, so.editing);
             }
         }
-
-        pub fn group(self: *Context) Group {
-            return .{ .ctx = self };
-        }
-
-        pub const Group = struct {
-            ctx: *Context,
-            pub fn begin(self: Group, spacing: f32) void {
-                self.ctx.current_x += spacing;
-            }
-
-            pub fn end(self: Group) void {
-                self.ctx.current_x = 0;
-                self.ctx.spacer(8);
-            }
+        const ColorPickerOptions = struct {
+            bounds: rl.Rectangle = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
         };
+        pub fn colorPicker(_: *const Context, value: *f32, cp: ColorPickerOptions) void {
+            _ = rl.guiColorBarHueH(cp.bounds, "", value);
+        }
     };
     pub fn toggle(self: *Panel) void {
         self.visible = !self.visible;

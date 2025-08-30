@@ -9,7 +9,7 @@ pub const Vector2 = vector.Vector2;
 pub const Vector3 = vector.Vector3;
 pub const Vector4 = vector.Vector4;
 pub const Matrix = vector.Matrix;
-pub const GuiColorBarHueH = @import("gui/color_picker.zig").GuiColorBarHueH;
+pub const guiColorBarHueH = @import("gui/color_picker.zig").guiColorBarHueH;
 
 pub const Rectangle = extern struct {
     x: f32 = 0,

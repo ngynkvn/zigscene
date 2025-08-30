@@ -1,4 +1,5 @@
 const std = @import("std");
+// const Translator = @import("translate_c").Translator;
 
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
@@ -19,6 +20,7 @@ pub fn build(b: *std.Build) !void {
     raylib_lib.root_module.addCSourceFile(.{ .file = b.path("raygui.gen.c") });
     raylib_lib.addIncludePath(raylib_c.path("src"));
     raylib_lib.addIncludePath(raygui.path("src"));
+    raylib_lib.addIncludePath(raygui.path("."));
     raylib_lib.installHeader(raygui.path("src/raygui.h"), "raygui.h");
 
     b.installArtifact(raylib_lib);
@@ -40,6 +42,21 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
     raylibz_mod.addImport("raylibc", raylib_mod);
+
+    // You *can* pass `target` and/or `optimize` in the options struct here, but it's typically
+    // not necessary. You usually want to build for the host target, which is the default.
+    // const translate_c = b.dependency("translate_c", .{});
+
+    // const t: Translator = .init(translate_c, .{
+    //     .c_source_file = b.path("raylib.gen.c"),
+    //     .target = target,
+    //     .optimize = optimize,
+    // });
+    // t.addIncludePath(raylib_c.path("src"));
+    // t.addIncludePath(raygui.path("src"));
+    // Depend on the translated C code as a Zig module.
+    // raylibz_mod.addImport("translated", t.mod);
+
     raylibz_mod.linkLibrary(raylib_lib);
 
     const gen_rl_tool_exe = b.addExecutable(.{

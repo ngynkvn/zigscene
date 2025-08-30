@@ -37,7 +37,7 @@ var guiControlExclusiveMode = false;
 pub var guiControlExclusiveRec: Rectangle = Rectangle{ .x = 0, .y = 0, .width = 0, .height = 0 };
 // const guiControlExclusiveRec = rl.guiControlExclusiveRec;
 
-pub fn GuiColorBarHueH(bounds: Rectangle, text: [*c]const u8, hue: [*c]f32) c_int {
+pub fn guiColorBarHueH(bounds: Rectangle, text: [*c]const u8, hue: [*c]f32) c_int {
     const width = rl.guiGetTextWidth(text);
     var b = bounds;
     b.x -= @as(f32, @floatFromInt(width)) + 4;

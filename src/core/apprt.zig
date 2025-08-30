@@ -29,6 +29,7 @@ pub const App = struct {
         // Setup
         rl.Window.init(screenWidth, screenHeight, APP_NAME);
         rl.initAudioDevice();
+        rl.rlc.RayguiDark();
         // rl.guiSetAlpha(0.8);
         // rl.RayguiDark();
         rl.setMasterVolume(Config.Audio.volume);

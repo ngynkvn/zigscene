@@ -11,6 +11,10 @@
             .url = "https://github.com/raysan5/raygui/archive/1536ae35c7b42d863135f4181fd2a225e531f68b.tar.gz",
             .hash = "N-V-__8AAEp9UgBJ2n1eks3_3YZk3GCO1XOENazWaCO7ggM2",
         },
+        // .translate_c = .{
+        //     .url = "git+https://github.com/ziglang/translate-c#2f52290cbe1d41c11eb752d812905fadc088079b",
+        //     .hash = "translate_c-0.0.0-Q_BUWg6EBgAoONS4gAtpbICCVrQul3BwQficO8BX2JM1",
+        // },
     },
     .paths = .{
         "build.zig",

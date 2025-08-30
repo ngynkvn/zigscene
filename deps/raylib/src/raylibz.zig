@@ -2718,7 +2718,7 @@ pub const SCROLLBAR_RIGHT_SIDE: c_int = 1;
 // EXTENSIONS
 
 pub const ext = @import("ext/ext.zig");
-pub const GuiColorBarHueH = ext.GuiColorBarHueH;
+pub const guiColorBarHueH = ext.guiColorBarHueH;
 pub const Vector2 = ext.Vector2;
 pub const Vector3 = ext.Vector3;
 pub const Vector4 = ext.Vector4;
