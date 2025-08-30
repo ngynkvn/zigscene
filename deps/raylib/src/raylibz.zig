@@ -2715,7 +2715,10 @@ pub const RAYGUI_VERSION = "4.5-dev";
 pub const SCROLLBAR_LEFT_SIDE: c_int = 0;
 pub const SCROLLBAR_RIGHT_SIDE: c_int = 1;
 
+// EXTENSIONS
+
 pub const ext = @import("ext/ext.zig");
+pub const GuiColorBarHueH = ext.GuiColorBarHueH;
 pub const Vector2 = ext.Vector2;
 pub const Vector3 = ext.Vector3;
 pub const Vector4 = ext.Vector4;

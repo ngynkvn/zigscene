@@ -1,5 +1,5 @@
 const std = @import("std");
-const rl = @import("raylib_c");
+const rl = @import("raylibc");
 
 pub const float3 = extern struct {
     v: [3]f32,

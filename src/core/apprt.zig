@@ -70,12 +70,15 @@ pub const App = struct {
             { // Draw 2D Graphics
                 const ctx = tracy.traceNamed(@src(), "2d");
                 defer ctx.end();
-                for (processor.curr_buffer, processor.curr_fft, 0..) |v, fv, i| {
-                    graphics.WaveFormLine.render(.{ .y = center.y - 80 }, i, v);
-                    graphics.WaveFormBar.render(center, i, v);
-                    graphics.WaveFormLine.render(.{ .y = center.y * 2 }, i, fv.magnitude() * 0.15);
-                    graphics.FFTSpectrum.render(center, i, fv.magnitude());
+                const vs = processor.curr_buffer;
+                var fvs: [2048]f32 = undefined;
+                for (processor.curr_fft, fvs[0..processor.curr_fft.len]) |v, *fv| {
+                    fv.* = v.magnitude();
                 }
+                graphics.WaveFormLine.render(center, vs);
+                graphics.WaveFormBar.render(center, vs);
+                graphics.WaveFormLine.render(center, &fvs);
+                graphics.FFTSpectrum.render(center, &fvs);
             }
             { // Draw 3D graphics
                 const ctx = tracy.traceNamed(@src(), "bubble");

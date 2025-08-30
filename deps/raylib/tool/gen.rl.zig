@@ -1,7 +1,11 @@
 const std = @import("std");
 const mem = std.mem;
 pub fn main() !void {
-    const allocator = std.heap.page_allocator;
+    var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
+    defer _ = gpa.deinit();
+    var arena = std.heap.ArenaAllocator.init(gpa.allocator());
+    defer arena.deinit();
+    const allocator = arena.allocator();
     var args = std.process.args();
     _ = args.next();
     const src_file = args.next().?;
@@ -16,28 +20,31 @@ pub fn main() !void {
 
     const root_decls = ast.rootDecls();
     for (root_decls) |n| {
-        switch (ast.nodeTag(n)) {
-            .fn_decl => {
-                var buffer: [1]Node.Index = undefined;
-                const fdecl = ast.fullFnProto(&buffer, n).?;
-                const name = ast.tokenSlice(fdecl.name_token.?);
-                if (mem.startsWith(u8, name, "__")) {
-                    try fixups.omit_nodes.put(allocator, n, {});
-                }
-            },
-            .simple_var_decl => {
-                const init_expr = omitCompileError(ast, n);
-                if (init_expr) |i| {
-                    // std.debug.print("omitting node: {s}\n", .{ast.getNodeSource(i)});
-                    try fixups.omit_nodes.put(allocator, i, {});
-                }
-            },
-            else => {},
-        }
+        try visitRootDecl(allocator, ast, n, &fixups);
     }
     try ast.render(allocator, &stdout.interface, fixups);
 }
 
+fn visitRootDecl(arena: std.mem.Allocator, ast: Ast, n: Node.Index, fixups: *Ast.Render.Fixups) !void {
+    switch (ast.nodeTag(n)) {
+        .fn_decl => {
+            var buffer: [1]Node.Index = undefined;
+            const fdecl = ast.fullFnProto(&buffer, n).?;
+            const name = ast.tokenSlice(fdecl.name_token.?);
+            if (mem.startsWith(u8, name, "__")) {
+                try fixups.omit_nodes.put(arena, n, {});
+            }
+        },
+        .simple_var_decl => {
+            const init_expr = omitCompileError(ast, n);
+            if (init_expr) |i| {
+                // std.debug.print("omitting node: {s}\n", .{ast.getNodeSource(i)});
+                try fixups.omit_nodes.put(arena, i, {});
+            }
+        },
+        else => {},
+    }
+}
 const Ast = std.zig.Ast;
 const Node = std.zig.Ast.Node;
 fn omitCompileError(ast: Ast, decl: Node.Index) ?Node.Index {

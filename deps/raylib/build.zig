@@ -9,16 +9,17 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
-    const raylib_dep = b.dependency("raylibc", .{
+    const raylib_c = b.dependency("raylibc", .{
         .target = target,
         .optimize = optimize,
         .linux_display_backend = b.option(enum { X11, Wayland, Both }, "linux_display_backend", "Linux display backend to use") orelse .X11,
     });
-    const raylib_lib = raylib_dep.artifact("raylib");
+    const raylib_lib = raylib_c.artifact("raylib");
     raylib_lib.root_module.addCMacro("SUPPORT_FILEFORMAT_FLAC", "1");
     raylib_lib.root_module.addCSourceFile(.{ .file = b.path("raygui.gen.c") });
-    raylib_lib.addIncludePath(raylib_dep.path("src"));
+    raylib_lib.addIncludePath(raylib_c.path("src"));
     raylib_lib.addIncludePath(raygui.path("src"));
+    raylib_lib.installHeader(raygui.path("src/raygui.h"), "raygui.h");
 
     b.installArtifact(raylib_lib);
 
@@ -27,10 +28,10 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
-    raylib_c2z.addIncludePath(raylib_dep.path("src"));
+    raylib_c2z.addIncludePath(raylib_c.path("src"));
     raylib_c2z.addIncludePath(raygui.path("src"));
 
-    const raylib_mod = raylib_c2z.addModule("raylib");
+    const raylib_mod = raylib_c2z.addModule("raylibc");
     raylib_mod.linkLibrary(raylib_lib);
 
     const raylibz_mod = b.addModule("raylibz", .{
@@ -56,7 +57,7 @@ pub fn build(b: *std.Build) !void {
     const update_src = b.addUpdateSourceFiles();
     update_src.addCopyFileToSource(stdout, "src/gen/raylib.generated.zig");
 
-    const gen_rl_tool_step = b.step("gen-rl-tool", "generate the raylib.gen.zig file");
+    const gen_rl_tool_step = b.step("gen:rl-c2zig", "generate the raylib.gen.zig file");
     gen_rl_tool_step.dependOn(&gen_rl_tool_cmd.step);
     gen_rl_tool_step.dependOn(&update_src.step);
 

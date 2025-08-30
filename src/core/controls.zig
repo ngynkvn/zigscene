@@ -4,3 +4,8 @@
 pub const Scalar = struct { []const u8, *f32, struct { f32, f32 } };
 pub const ScalarList = struct { name: []const []const u8, value: []f32, range: []struct { f32, f32 } };
 pub const Color = struct { []const u8, *f32 };
+
+pub const Setting = union(enum) {
+    scalar: struct { value: *f32, range: struct { f32, f32 } },
+    color: struct { value: *f32 },
+};

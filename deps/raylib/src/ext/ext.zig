@@ -1,8 +1,45 @@
 const std = @import("std");
-
 test {
     std.testing.refAllDeclsRecursive(@This());
 }
+
+pub const Color = @import("color.zig").Color;
+pub const vector = @import("vector/vector.zig");
+pub const Vector2 = vector.Vector2;
+pub const Vector3 = vector.Vector3;
+pub const Vector4 = vector.Vector4;
+pub const Matrix = vector.Matrix;
+pub const GuiColorBarHueH = @import("gui/color_picker.zig").GuiColorBarHueH;
+
+pub const Rectangle = extern struct {
+    x: f32 = 0,
+    y: f32 = 0,
+    width: f32 = 0,
+    height: f32 = 0,
+    pub fn from(x: f32, y: f32, width: f32, height: f32) Rectangle {
+        return .{ .x = x, .y = y, .width = width, .height = height };
+    }
+    pub const Modifier = struct {
+        width: ?f32 = null,
+        height: ?f32 = null,
+        x: ?f32 = null,
+        y: ?f32 = null,
+    };
+    pub fn with(self: Rectangle, mod: Modifier) Rectangle {
+        return .{
+            .x = mod.x orelse self.x,
+            .y = mod.y orelse self.y,
+            .width = mod.width orelse self.width,
+            .height = mod.height orelse self.height,
+        };
+    }
+    pub fn resize(self: Rectangle, width: f32, height: f32) Rectangle {
+        return .{ .x = self.x, .y = self.y, .width = width, .height = height };
+    }
+    pub fn translate(self: Rectangle, dx: f32, dy: f32) Rectangle {
+        return .{ .x = self.x + dx, .y = self.y + dy, .width = self.width, .height = self.height };
+    }
+};
 
 pub const LIGHTGRAY: Color = .from([4]u8{ 200, 200, 200, 255 });
 pub const GRAY: Color = .from([4]u8{ 130, 130, 130, 255 });
@@ -32,12 +69,6 @@ pub const MAGENTA: Color = .from([4]u8{ 255, 0, 255, 255 });
 pub const RAYWHITE: Color = .from([4]u8{ 245, 245, 245, 255 });
 
 // TYPES
-pub const Color = @import("color.zig").Color;
-pub const vector = @import("vector/vector.zig");
-pub const Vector2 = vector.Vector2;
-pub const Vector3 = vector.Vector3;
-pub const Vector4 = vector.Vector4;
-pub const Matrix = vector.Matrix;
 pub const Quaternion = vector.Quaternion;
 pub const CameraProjection = enum(c_int) { perspective = 0, orthographic = 1 };
 
@@ -102,36 +133,6 @@ pub const SaveFileTextCallback = ?*const fn ([*c]const u8, [*c]u8) callconv(.c) 
 pub const VertexBuffer = extern struct { elementCount: c_int = 0, vertices: [*c]f32 = null, texcoords: [*c]f32 = null, normals: [*c]f32 = null, colors: [*c]u8 = null, indices: [*c]c_uint = null, vaoId: c_uint = 0, vboId: [5]c_uint = .{} };
 pub const DrawCall = extern struct { mode: c_int = 0, vertexCount: c_int = 0, vertexAlignment: c_int = 0, textureId: c_uint = 0 };
 pub const RenderBatch = extern struct { bufferCount: c_int = 0, currentBuffer: c_int = 0, vertexBuffer: [*c]VertexBuffer = null, draws: [*c]DrawCall = null, drawCounter: c_int = 0, currentDepth: f32 = 0 };
-
-pub const Rectangle = extern struct {
-    x: f32 = 0,
-    y: f32 = 0,
-    width: f32 = 0,
-    height: f32 = 0,
-    pub fn from(x: f32, y: f32, width: f32, height: f32) Rectangle {
-        return .{ .x = x, .y = y, .width = width, .height = height };
-    }
-    pub const Modifier = struct {
-        width: ?f32 = null,
-        height: ?f32 = null,
-        x: ?f32 = null,
-        y: ?f32 = null,
-    };
-    pub fn with(self: Rectangle, mod: Modifier) Rectangle {
-        return .{
-            .x = mod.x orelse self.x,
-            .y = mod.y orelse self.y,
-            .width = mod.width orelse self.width,
-            .height = mod.height orelse self.height,
-        };
-    }
-    pub fn resize(self: Rectangle, width: f32, height: f32) Rectangle {
-        return .{ .x = self.x, .y = self.y, .width = width, .height = height };
-    }
-    pub fn translate(self: Rectangle, dx: f32, dy: f32) Rectangle {
-        return .{ .x = self.x + dx, .y = self.y + dy, .width = self.width, .height = self.height };
-    }
-};
 
 pub const TextureWrap = enum(c_int) { repeat = 0, clamp = 1, mirror_repeat = 2, mirror_clamp = 3 };
 pub const CubemapLayout = enum(c_int) { auto_detect = 0, line_vertical = 1, line_horizontal = 2, cross_three_by_four = 3, cross_four_by_three = 4 };

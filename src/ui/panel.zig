@@ -19,18 +19,18 @@ pub const Panel = struct {
         };
     }
 
-    pub fn context(self: *Panel) Context {
+    pub fn context(self: Panel) Context {
         return .{ .root = self };
     }
 
-    pub fn begin(self: *Panel) bool {
-        if (!self.visible) return false;
+    pub fn begin(self: Panel) ?Panel {
+        if (!self.visible) return null;
         _ = rl.guiPanel(self.bounds, self.title.ptr);
-        return true;
+        return self;
     }
 
     pub const Context = struct {
-        root: *Panel,
+        root: Panel,
         current_y: f32 = 0,
         current_x: f32 = 0,
 

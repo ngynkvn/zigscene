@@ -1,5 +1,5 @@
 const std = @import("std");
-const rl = @import("raylibz");
+const rl = @import("../../raylibz.zig");
 
 const BASE_COLOR_DISABLED = rl.rlc.rlc.BASE_COLOR_DISABLED;
 const BORDER_COLOR_DISABLED = rl.rlc.rlc.BORDER_COLOR_DISABLED;
