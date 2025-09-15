@@ -1,5 +1,5 @@
 const std = @import("std");
-// const Translator = @import("translate_c").Translator;
+const Translator = @import("translate_c").Translator;
 
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
@@ -22,19 +22,19 @@ pub fn build(b: *std.Build) !void {
     raylib_lib.addIncludePath(raygui.path("src"));
     raylib_lib.addIncludePath(raygui.path("."));
     raylib_lib.installHeader(raygui.path("src/raygui.h"), "raygui.h");
-
     b.installArtifact(raylib_lib);
 
-    const raylib_c2z = b.addTranslateC(.{
-        .root_source_file = b.path("raylib.gen.c"),
+    const translate_c = b.dependency("translate_c", .{});
+    const t = Translator.init(translate_c, .{
+        .c_source_file = b.path("raylib.gen.c"),
         .target = target,
         .optimize = optimize,
     });
-    raylib_c2z.addIncludePath(raylib_c.path("src"));
-    raylib_c2z.addIncludePath(raygui.path("src"));
+    t.addIncludePath(raylib_c.path("src"));
+    t.addIncludePath(raygui.path("src"));
+    t.linkLibrary(raylib_lib);
 
-    const raylib_mod = raylib_c2z.addModule("raylibc");
-    raylib_mod.linkLibrary(raylib_lib);
+    const raylib_mod = t.mod;
 
     const raylibz_mod = b.addModule("raylibz", .{
         .root_source_file = b.path("src/raylibz.zig"),
@@ -42,41 +42,6 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
     raylibz_mod.addImport("raylibc", raylib_mod);
-
-    // You *can* pass `target` and/or `optimize` in the options struct here, but it's typically
-    // not necessary. You usually want to build for the host target, which is the default.
-    // const translate_c = b.dependency("translate_c", .{});
-
-    // const t: Translator = .init(translate_c, .{
-    //     .c_source_file = b.path("raylib.gen.c"),
-    //     .target = target,
-    //     .optimize = optimize,
-    // });
-    // t.addIncludePath(raylib_c.path("src"));
-    // t.addIncludePath(raygui.path("src"));
-    // Depend on the translated C code as a Zig module.
-    // raylibz_mod.addImport("translated", t.mod);
-
-    raylibz_mod.linkLibrary(raylib_lib);
-
-    const gen_rl_tool_exe = b.addExecutable(.{
-        .name = "gen-rl-tool",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("tool/gen.rl.zig"),
-            .target = target,
-            .optimize = optimize,
-        }),
-    });
-    const gen_rl_tool_cmd = b.addRunArtifact(gen_rl_tool_exe);
-    gen_rl_tool_cmd.addFileArg(raylib_mod.root_source_file.?);
-
-    const stdout = gen_rl_tool_cmd.captureStdOut();
-    const update_src = b.addUpdateSourceFiles();
-    update_src.addCopyFileToSource(stdout, "src/gen/raylib.generated.zig");
-
-    const gen_rl_tool_step = b.step("gen:rl-c2zig", "generate the raylib.gen.zig file");
-    gen_rl_tool_step.dependOn(&gen_rl_tool_cmd.step);
-    gen_rl_tool_step.dependOn(&update_src.step);
 
     const example_bouncing_ball = b.addExecutable(.{
         .name = "bouncing_ball",
@@ -96,16 +61,9 @@ pub fn build(b: *std.Build) !void {
         .name = "raylibz",
         .root_module = raylibz_mod,
     });
-    const test_gen_exe = b.addTest(.{
-        .name = "test-gen",
-        .root_module = gen_rl_tool_exe.root_module,
-    });
     test_step.dependOn(&b.addRunArtifact(test_exe).step);
-    test_step.dependOn(&b.addRunArtifact(test_gen_exe).step);
 
     const check_step = b.step("check", "check build");
     check_step.dependOn(&raylib_lib.step);
-    check_step.dependOn(&raylib_c2z.step);
-    check_step.dependOn(&gen_rl_tool_exe.step);
     check_step.dependOn(&example_bouncing_ball.step);
 }
