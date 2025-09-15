@@ -72,14 +72,21 @@ pub const App = struct {
                 const ctx = tracy.traceNamed(@src(), "2d");
                 defer ctx.end();
                 const vs = processor.curr_buffer;
-                var fvs: [2048]f32 = undefined;
-                for (processor.curr_fft, fvs[0..processor.curr_fft.len]) |v, *fv| {
-                    fv.* = v.magnitude();
+                {
+                    const ctx2 = tracy.traceNamed(@src(), "vs");
+                    defer ctx2.end();
+                    graphics.WaveFormLine.render(center, vs);
+                    graphics.WaveFormBar.render(center, vs);
                 }
-                graphics.WaveFormLine.render(center, vs);
-                graphics.WaveFormBar.render(center, vs);
-                graphics.WaveFormLine.render(center, &fvs);
-                graphics.FFTSpectrum.render(center, &fvs);
+                {
+                    var fvs: [1024]f32 = undefined;
+                    for (processor.curr_fft, fvs[0..processor.curr_fft.len]) |v, *fv| {
+                        fv.* = v.magnitude();
+                    }
+                    const ctx2 = tracy.traceNamed(@src(), "fft");
+                    defer ctx2.end();
+                    graphics.FFTSpectrum.render(center, &fvs);
+                }
             }
             { // Draw 3D graphics
                 const ctx = tracy.traceNamed(@src(), "bubble");

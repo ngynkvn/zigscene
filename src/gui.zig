@@ -6,7 +6,9 @@ const controls = @import("core/controls.zig");
 const playback = @import("audio/playback.zig");
 
 const Rectangle = rl.Rectangle;
+const panel = @import("ui/panel.zig");
 const Panel = @import("ui/panel.zig").Panel;
+const LayZ = @import("ui/panel.zig").LayZ;
 const Direction = @import("core/event.zig").Direction;
 
 pub const Tab = enum(c_int) { none, scalar, color };
@@ -23,57 +25,123 @@ pub fn onTabChange(next: Tab) void {
 var draggingSlider = false;
 
 var scalar_panel = Panel.init(8, 24, 280, 700, "Scalars");
-var color_panel = Panel.init(8, 24, 200, 700, "Colors");
+// var color_panel = Panel.init(8, 24, 200, 700, "Colors");
 
+var node_buffer: [1024]LayZ.Node = undefined;
 pub fn frame() void {
-    if (scalar_panel.begin()) |p| {
-        var c = p.context();
-        c.offset_y += 24;
-        var b = c.bounds();
-        b.height = 24;
-        c.offset_y += 24;
-        _ = rl.guiLabel(b, "WaveFormLine");
-        renderSettings(&c, config.Visualizer.WaveFormLine.Settings);
-        b = c.bounds();
-        b.height = 24;
-        c.offset_y += 24;
-        _ = rl.guiLabel(b, "Bubbles");
-        renderSettings(&c, config.Visualizer.Bubble.Settings);
-    }
-}
-
-const Settings = std.StaticStringMap(controls.Setting);
-pub fn renderSettings(ctx: *Panel.Context, comptime settings: Settings) void {
+    var layz = LayZ.init(&node_buffer);
+    layz.startElement(.{
+        .tag = .{ .panel = .{
+            .title = "Scalars",
+        } },
+        .direction = .vertical,
+        .layout = .{ .x = 8, .y = 24, .width = .{ .fixed = 280 }, .height = .{ .fixed = 700 } },
+        .bounds = .{ .x = 8, .y = 24, .width = 280, .height = 700 },
+    });
+    const wave_settings = config.Visualizer.WaveFormLine.Settings;
     var keyWidth: f32 = 0;
-    for (settings.keys()) |key| {
+    for (wave_settings.keys()) |key| {
         const text_width: f32 = @floatFromInt(rl.guiGetTextWidth(key.ptr));
         keyWidth = @max(keyWidth, text_width + 2);
     }
-    for (settings.keys(), settings.values()) |key, v| {
-        renderControl(ctx, key, keyWidth, v);
-        ctx.offset_y += Panel.ROW_HEIGHT + Panel.PADDING;
-    }
-}
-fn renderControl(ctx: *Panel.Context, key: []const u8, keyWidth: f32, v: controls.Setting) void {
-    const bounds = ctx.bounds();
-    const x = bounds.x;
-    const y = bounds.y;
-    switch (v) {
-        .scalar => |s| {
-            ctx.label(key.ptr, .{ .x = x, .y = y, .width = keyWidth, .height = Panel.ROW_HEIGHT });
-            ctx.slider(s.value, .{
-                .bounds = .{ .x = x + keyWidth, .y = y, .width = bounds.width - keyWidth, .height = Panel.ROW_HEIGHT },
-                .min = s.range.@"0",
-                .max = s.range.@"1",
+    for (wave_settings.keys(), wave_settings.values()) |key, v| {
+        layz.startElement(.{
+            .tag = .group,
+            .direction = .horizontal,
+            .layout = .{ .x = 0, .y = 24, .width = .fill, .height = .{ .fixed = 24 } },
+            .bounds = .{ .x = 0, .y = 24, .width = 280, .height = 24 },
+        });
+        {
+            layz.startElement(.{
+                .tag = .{ .label = .{
+                    .text = key,
+                } },
+                .direction = .vertical,
+                .layout = .{ .x = 0, .y = 24, .width = .{ .fixed = keyWidth }, .height = .{ .fixed = 24 } },
+                .bounds = .{ .x = 0, .y = 24, .width = keyWidth, .height = 24 },
             });
-        },
-        .color => |c| {
-            ctx.label(key.ptr, .{ .x = x, .y = y, .width = keyWidth, .height = Panel.ROW_HEIGHT });
-            ctx.colorPicker(c.value, .{
-                .bounds = .{ .x = x + keyWidth, .y = y, .width = bounds.width - keyWidth, .height = Panel.ROW_HEIGHT },
+            layz.endElement();
+            layz.startElement(.{
+                .tag = .{ .slider = switch (v) {
+                    .scalar => .{
+                        .value = v.scalar.value,
+                    },
+                    .color => .{
+                        .value = v.color.value,
+                    },
+                } },
+                .direction = .horizontal,
+                .layout = .{ .x = 0, .y = 24, .width = .fill, .height = .{ .fixed = 24 } },
+                .bounds = .{ .x = 0, .y = 24, .width = 280, .height = 24 },
             });
-        },
+            layz.endElement();
+        }
+        layz.endElement();
     }
+    layz.endElement();
+    const rendered = layz.endLayout();
+    for (rendered) |node| {
+        switch (node.tag) {
+            .panel => {
+                _ = rl.guiPanel(node.bounds, node.tag.panel.title.ptr);
+            },
+            .label => {
+                _ = rl.guiLabel(node.bounds, node.tag.label.text.ptr);
+            },
+            .slider => {
+                _ = rl.guiSlider(node.bounds, null, null, node.tag.slider.value, 0, 1);
+            },
+            else => {},
+        }
+    }
+    // if (scalar_panel.begin()) |p| {
+    //     var bounds = ctx.bounds();
+    //     const wave_settings = config.Visualizer.WaveFormLine.Settings;
+    //     var keyWidth: f32 = 0;
+    //     for (wave_settings.keys()) |key| {
+    //         const text_width: f32 = @floatFromInt(rl.guiGetTextWidth(key.ptr));
+    //         keyWidth = @max(keyWidth, text_width + 2);
+    //     }
+    //     for (wave_settings.keys(), wave_settings.values()) |key, v| {
+    //         switch (v) {
+    //             .scalar => {
+    //                 const label = bounds.resize(keyWidth, Panel.ROW_HEIGHT);
+    //                 _ = rl.guiLabel(label, key.ptr);
+    //             },
+    //             .color => {
+    //                 const label = bounds.resize(keyWidth, Panel.ROW_HEIGHT);
+    //                 _ = rl.guiLabel(label, key.ptr);
+    //             },
+    //         }
+    //         bounds.y += Panel.ROW_HEIGHT;
+    //     }
+    // }
+    // const bubble_settings = config.Visualizer.Bubble.Settings;
+    // for (bubble_settings.keys()) |key| {
+    //     const text_width: f32 = @floatFromInt(rl.guiGetTextWidth(key.ptr));
+    //     keyWidth = @max(keyWidth, text_width + 2);
+    // }
+    // for (bubble_settings.keys(), bubble_settings.values()) |key, v| {
+    //     switch (v) {
+    //         .scalar => {
+    //             _ = rl.guiLabel(.{
+    //                 .x = ctx.x,
+    //                 .y = ctx.y,
+    //                 .width = keyWidth,
+    //                 .height = Panel.ROW_HEIGHT,
+    //             }, key.ptr);
+    //         },
+    //         .color => {
+    //             _ = rl.guiLabel(.{
+    //                 .x = ctx.x,
+    //                 .y = ctx.y,
+    //                 .width = keyWidth,
+    //                 .height = Panel.ROW_HEIGHT,
+    //             }, key.ptr);
+    //         },
+    //     }
+    //     ctx.y += Panel.ROW_HEIGHT;
+    // }
 }
 
 const Layout = struct {

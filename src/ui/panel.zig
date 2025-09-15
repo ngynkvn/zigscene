@@ -1,87 +1,148 @@
 const std = @import("std");
 const rl = @import("raylibz");
 
-pub const Panel = struct {
-    bounds: rl.Rectangle,
-    title: []const u8,
-    visible: bool = true,
-    content_padding: f32 = 8,
-    pub const ROW_HEIGHT: f32 = 24;
-    pub const PADDING: f32 = 8;
+pub const PADDING: f32 = 8;
 
-    pub fn init(x: f32, y: f32, width: f32, height: f32, title: []const u8) Panel {
-        return .{
-            .bounds = .{ .x = x, .y = y, .width = width, .height = height },
-            .title = title,
+pub const LayZ = struct {
+    pub const NodeType = union(enum) {
+        group: void,
+        panel: struct {
+            title: []const u8,
+        },
+        slider: struct {
+            value: *f32,
+        },
+        label: struct {
+            text: []const u8,
+            // bounds: rl.Rectangle,
+        },
+    };
+    pub const Direction = enum {
+        horizontal,
+        vertical,
+    };
+    pub const Node = struct {
+        parent: ?usize = null,
+        tag: NodeType = .{ .group = undefined },
+        direction: Direction = .horizontal,
+        gap: f32 = 8,
+        layout: Layout = .{},
+        bounds: rl.Rectangle = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+    };
+    const LayoutOption = union(enum) {
+        fit: void,
+        fill: void,
+        fixed: f32,
+    };
+    pub const Layout = struct {
+        x: f32 = 0,
+        y: f32 = 0,
+        width: LayoutOption = .fit,
+        height: LayoutOption = .fit,
+    };
+    const NodeList = std.ArrayList(Node);
+    nodes: NodeList,
+    state: struct {
+        current: ?usize,
+        render_buffer: [1024]Node,
+        rendered: NodeList,
+    },
+    pub fn init(buffer: []Node) LayZ {
+        var self: LayZ = .{
+            .nodes = NodeList.initBuffer(buffer),
+            .state = .{
+                .current = null,
+                .render_buffer = [_]Node{undefined} ** 1024,
+                .rendered = undefined,
+            },
         };
-    }
-
-    pub fn context(self: Panel) Context {
-        return .{ .root = self };
-    }
-
-    pub fn begin(self: Panel) ?Panel {
-        if (!self.visible) return null;
-        _ = rl.guiPanel(self.bounds, self.title.ptr);
+        self.state.rendered = NodeList.initBuffer(&self.state.render_buffer);
         return self;
     }
-
-    pub const Context = struct {
-        root: Panel,
-        offset_x: f32 = 0,
-        offset_y: f32 = 0,
-
-        pub fn bounds(self: Context) rl.Rectangle {
-            const pad = self.root.content_padding;
-            const rt = self.root.bounds;
-            return .{
-                .x = rt.x + pad + self.offset_x,
-                .y = rt.y + pad + self.offset_y,
-                .width = rt.width - (pad * 2),
-                .height = rt.height - (pad * 2),
-            };
-        }
-
-        pub fn label(_: *Context, text: [*c]const u8, label_bounds: rl.Rectangle) void {
-            _ = rl.guiLabel(label_bounds, text);
-        }
-
-        const SliderOptions = struct {
-            bounds: rl.Rectangle = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
-            min: f32,
-            max: f32,
-            valueBox: bool = true,
-            editing: bool = false,
-        };
-        pub fn slider(_: *const Context, value: *f32, so: SliderOptions) void {
-            const VALUE_BOX_WIDTH: f32 = 48;
-            var b = so.bounds;
-            b.width -= VALUE_BOX_WIDTH;
-            _ = rl.guiSlider(b, "", null, value, so.min, so.max);
-            if (so.valueBox) {
-                const adj = rl.Rectangle{
-                    .x = b.x + b.width + 8,
-                    .y = so.bounds.y,
-                    .width = VALUE_BOX_WIDTH,
-                    .height = ROW_HEIGHT,
-                };
-                const buf = std.fmt.bufPrintZ(&value_buffer, tunable_fmt, .{value.*}) catch unreachable;
-                _ = rl.guiValueBoxFloat(adj, "", buf.ptr, value, so.editing);
+    pub fn beginLayout(self: *LayZ) void {
+        self.state.current = null;
+        self.state.rendered.shrinkRetainingCapacity(0);
+        self.nodes.shrinkRetainingCapacity(0);
+    }
+    pub fn endLayout(self: *LayZ) []Node {
+        var stack_buffer = [_]?usize{null} ** 128;
+        var stack = std.Deque(?usize).initBuffer(&stack_buffer);
+        stack.pushBackBounded(null) catch unreachable;
+        while (stack.popFront()) |parent| {
+            var roots = self.nodeIterator();
+            while (roots.nextWhereParent(parent)) |r| {
+                const root, const ri = r;
+                self.state.rendered.appendBounded(root) catch unreachable;
+                var left_offset: f32 = 0;
+                var top_offset: f32 = 0;
+                var children = self.nodeIterator();
+                while (children.nextWhereParent(ri)) |c| {
+                    var child, const ci = c;
+                    child.bounds.x += root.bounds.x + left_offset;
+                    child.bounds.y += root.bounds.y + top_offset;
+                    switch (root.direction) {
+                        .horizontal => {
+                            left_offset += child.bounds.width;
+                        },
+                        .vertical => {
+                            top_offset += child.bounds.height;
+                        },
+                    }
+                    self.nodes.items[ci] = child;
+                }
+                stack.pushBackBounded(ri) catch unreachable;
             }
         }
-        const ColorPickerOptions = struct {
-            bounds: rl.Rectangle = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
-        };
-        pub fn colorPicker(_: *const Context, value: *f32, cp: ColorPickerOptions) void {
-            _ = rl.guiColorBarHueH(cp.bounds, "", value);
+        return self.state.rendered.items;
+    }
+    pub fn startElement(self: *LayZ, node: Node) void {
+        self.nodes.appendBounded(.{
+            .parent = self.state.current,
+            .tag = node.tag,
+            .direction = node.direction,
+            .bounds = node.bounds,
+        }) catch unreachable;
+        self.state.current = self.nodes.items.len - 1;
+    }
+    pub fn endElement(self: *LayZ) void {
+        const i = self.state.current orelse return;
+        const child: *Node = &self.nodes.items[i];
+
+        self.state.current = self.nodes.items[i].parent;
+        const parent: *Node = &self.nodes.items[child.parent orelse return];
+
+        switch (parent.direction) {
+            .horizontal => {
+                parent.bounds.height = @max(parent.bounds.height, child.bounds.height + child.bounds.y);
+            },
+            .vertical => {
+                parent.bounds.width = @max(parent.bounds.width, child.bounds.width + child.bounds.x);
+            },
+        }
+    }
+
+    pub fn nodeIterator(self: *LayZ) NodeIterator {
+        return NodeIterator{ .context = self, .index = 0 };
+    }
+    const NodeIterator = struct {
+        context: *LayZ,
+        index: usize,
+        pub fn nextWhereParent(self: *NodeIterator, parent_idx: ?usize) ?struct { Node, usize } {
+            while (self.next()) |node| {
+                if (node.parent == parent_idx) return .{ node, self.index - 1 };
+            }
+            return null;
+        }
+        pub fn next(self: *NodeIterator) ?Node {
+            if (self.index >= self.context.nodes.items.len) return null;
+            const node = self.context.nodes.items[self.index];
+            self.index += 1;
+            return node;
         }
     };
-    pub fn toggle(self: *Panel) void {
-        self.visible = !self.visible;
-    }
 };
 
-const tunable_fmt = "{d:7.3}";
+const tunable_fmt = "{d:6.2}";
 const vlen = std.fmt.count(tunable_fmt, .{0}) + 5;
 var txt = [_]u8{0} ** 256;
 var value_buffer = [_]u8{0} ** vlen;
