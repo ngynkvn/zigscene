@@ -1,5 +1,7 @@
 const std = @import("std");
 const rl = @import("raylibz");
+const deque = @import("deque.zig");
+const Deque = deque.Deque;
 
 pub const PADDING: f32 = 8;
 
@@ -66,7 +68,7 @@ pub const LayZ = struct {
     }
     pub fn endLayout(self: *LayZ) []Node {
         var stack_buffer = [_]?usize{null} ** 128;
-        var stack = std.Deque(?usize).initBuffer(&stack_buffer);
+        var stack = Deque(?usize).initBuffer(&stack_buffer);
         stack.pushBackBounded(null) catch unreachable;
         while (stack.popFront()) |parent| {
             var roots = self.nodeIterator();

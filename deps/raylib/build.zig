@@ -1,5 +1,4 @@
 const std = @import("std");
-const Translator = @import("translate_c").Translator;
 
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
@@ -24,17 +23,16 @@ pub fn build(b: *std.Build) !void {
     raylib_lib.installHeader(raygui.path("src/raygui.h"), "raygui.h");
     b.installArtifact(raylib_lib);
 
-    const translate_c = b.dependency("translate_c", .{});
-    const t = Translator.init(translate_c, .{
-        .c_source_file = b.path("raylib.gen.c"),
+    const t = b.addTranslateC(.{
+        .root_source_file = b.path("raylib.gen.c"),
         .target = target,
         .optimize = optimize,
     });
     t.addIncludePath(raylib_c.path("src"));
     t.addIncludePath(raygui.path("src"));
-    t.linkLibrary(raylib_lib);
 
-    const raylib_mod = t.mod;
+    const raylib_mod = t.createModule();
+    raylib_mod.linkLibrary(raylib_lib);
 
     const raylibz_mod = b.addModule("raylibz", .{
         .root_source_file = b.path("src/raylibz.zig"),

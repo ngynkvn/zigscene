@@ -11,10 +11,6 @@
             .url = "https://github.com/raysan5/raygui/archive/1536ae35c7b42d863135f4181fd2a225e531f68b.tar.gz",
             .hash = "N-V-__8AAEp9UgBJ2n1eks3_3YZk3GCO1XOENazWaCO7ggM2",
         },
-        .translate_c = .{
-            .url = "git+https://github.com/ziglang/translate-c#8353b124cff3aed67818013a12b3a58dd107c72c",
-            .hash = "translate_c-0.0.0-Q_BUWhmEBgCPz6cYNhyaKgb8Pg3lnCRTyU8FTtCbqU5H",
-        },
     },
     .paths = .{
         "build.zig",
