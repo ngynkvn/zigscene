@@ -5,8 +5,8 @@
     .version = "0.0.0",
     .dependencies = .{
         .tracy = .{
-            .url = "https://github.com/wolfpld/tracy/archive/refs/tags/v0.11.1.tar.gz",
-            .hash = "122022a478dccaed1309fb5d022f4041eec45d40c93a855ed24fad970774c2426d91",
+            .url = "git+https://github.com/wolfpld/tracy#0a5aa506b6c522fe37e30244e0a2def9ca34e748",
+            .hash = "N-V-__8AAJiUKwFrA1JoSobz_HNhck9_7eVLAl7rn5cRjv_u",
         },
     },
     .paths = .{

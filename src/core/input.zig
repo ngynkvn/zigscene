@@ -1,10 +1,12 @@
 const std = @import("std");
+const tracy = @import("tracy");
 const rl = @import("raylibz");
 
 pub const playback = @import("../audio/playback.zig");
 pub const Config = @import("config.zig");
 pub const debug = @import("debug.zig");
 pub const event = @import("event.zig");
+pub const apprt = @import("apprt.zig");
 
 var prevValue: f32 = 0;
 pub var rot_offset: f32 = 0.0;
@@ -56,9 +58,9 @@ pub const MouseState = struct {
     }
 };
 
-pub fn processInput() void {
-    const ctx = @import("tracy").traceNamed(@src(), "input_processing");
-    defer ctx.end();
+pub fn processInput(self: *apprt.App) void {
+    const t = tracy.traceNamed(@src(), "input_processing");
+    defer t.end();
 
     MouseState.LeftDown = rl.isMouseButtonDown(rl.MouseButton.left);
     MouseState.RightDown = rl.isMouseButtonDown(rl.MouseButton.right);
@@ -77,7 +79,7 @@ pub fn processInput() void {
         defer rl.unloadDroppedFiles(files);
         const file = files.paths[0];
         const len = std.mem.len(file);
-        event.onFilenameInput(file[0..len]);
+        event.emit(self, .{ .filename_input = file[0..len] }) catch unreachable;
     }
 
     if (rl.isKeyPressed(.C)) camera.projection = switch (camera.projection) {
@@ -86,11 +88,11 @@ pub fn processInput() void {
     };
 
     if (rl.isKeyPressed(.ONE)) {
-        event.onTabChange(.none);
+        event.emit(self, .{ .tab_change = .none }) catch unreachable;
     } else if (rl.isKeyPressed(.TWO)) {
-        event.onTabChange(.scalar);
+        event.emit(self, .{ .tab_change = .scalar }) catch unreachable;
     } else if (rl.isKeyPressed(.THREE)) {
-        event.onTabChange(.color);
+        event.emit(self, .{ .tab_change = .color }) catch unreachable;
     }
 
     // The key was not pressed before but it's down now
@@ -118,14 +120,16 @@ pub fn processInput() void {
     if (rl.isKeyDown(.RIGHT)) rot_offset += 100 * rl.getFrameTime();
 
     if (rl.Window.isResized()) {
-        event.onWindowResize(rl.Window.getScreenWidth(), rl.Window.getScreenHeight());
+        event.emit(self, .{ .window_resize = .{ .width = rl.Window.getScreenWidth(), .height = rl.Window.getScreenHeight() } }) catch unreachable;
     }
     const wheelMove = rl.getMouseWheelMoveV();
-    if (@abs(wheelMove.x) > @abs(wheelMove.y)) {
-        event.onSwipe(.horizontal, wheelMove.x);
+    const amx = @abs(wheelMove.x);
+    const amy = @abs(wheelMove.y);
+    if (amx > amy) {
+        event.emit(self, .{ .swipe = .{ .direction = .horizontal, .amount = wheelMove.x } }) catch unreachable;
         rot_offset += wheelMove.x;
-    } else {
-        event.onSwipe(.vertical, wheelMove.y);
+    } else if (amy > amx) {
+        event.emit(self, .{ .swipe = .{ .direction = .vertical, .amount = wheelMove.y } }) catch unreachable;
         camera.position.z += wheelMove.y;
     }
 

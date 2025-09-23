@@ -1,4 +1,5 @@
 const std = @import("std");
+const tracy = @import("tracy");
 
 const Config = @import("../../core/config.zig");
 const N = Config.Audio.buffer_size;
@@ -6,6 +7,8 @@ const N = Config.Audio.buffer_size;
 pub const ComplexF32 = std.math.Complex(f32);
 /// https://en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm
 pub fn fft(values: []ComplexF32) void {
+    // const t = tracy.traceNamed(@src(), "fft");
+    // defer t.end();
     const len = values.len;
     if (len <= 1) return;
     var it = std.mem.window(ComplexF32, values, 2, 2);

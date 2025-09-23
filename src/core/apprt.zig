@@ -15,17 +15,26 @@ const APP_NAME = Config.Window.title;
 const debug = @import("debug.zig");
 const event = @import("event.zig");
 const input = @import("input.zig");
+const N = Config.Audio.buffer_size;
+const deque = @import("../deque.zig");
+const Deque = deque.Deque;
 
 pub const App = struct {
     t: f32 = 0,
+    allocator: std.mem.Allocator,
+    events: Deque(event.Event),
     // Init sequence for the GUI / Window
-    pub fn init(_: std.mem.Allocator) !App {
+    pub fn init(allocator: std.mem.Allocator) !App {
         // TODO: Options menu
         rl.setConfigFlags(.{
             .window_resizable = true,
             .window_transparent = true,
-            .window_topmost = true,
+            // .window_topmost = true,
         });
+        var app = App{
+            .allocator = allocator,
+            .events = Deque(event.Event).empty,
+        };
         // Setup
         rl.Window.init(screenWidth, screenHeight, APP_NAME);
         rl.initAudioDevice();
@@ -35,14 +44,36 @@ pub const App = struct {
         rl.setMasterVolume(Config.Audio.volume);
 
         if (try processArgs()) |path| {
-            event.onFilenameInput(path);
+            try app.events.pushBack(allocator, .{ .filename_input = path });
         }
         shader.init();
-        return .{};
+        return app;
     }
-    pub fn deinit(_: App) void {
+
+    pub fn executeCallbacks(self: *App) void {
+        while (self.events.popFront()) |callback| {
+            std.log.debug("callback: {any}", .{callback});
+            switch (callback) {
+                .filename_input => |path| {
+                    music.onFilenameInput(path);
+                },
+                .tab_change => |tab| {
+                    gui.onTabChange(tab);
+                },
+                .window_resize => |size| {
+                    graphics.onWindowResize(size.width, size.height);
+                },
+                .swipe => |swipe| {
+                    _ = swipe;
+                },
+            }
+        }
+    }
+
+    pub fn deinit(self: *App) void {
         rl.closeAudioDevice();
         rl.Window.close();
+        self.events.deinit(self.allocator);
     }
 
     fn processArgs() !?[]const u8 {
@@ -53,8 +84,7 @@ pub const App = struct {
         return if (!args.skip()) null else args.next();
     }
     pub fn processInput(self: *App) void {
-        _ = self;
-        input.processInput();
+        input.processInput(self);
     }
     pub fn processMusic(self: *App) void {
         _ = self;
@@ -62,30 +92,28 @@ pub const App = struct {
     }
     pub fn render(self: *App) void {
         const center = rl.getWorldToScreen(.{}, input.camera);
-        const renderCtx = tracy.traceNamed(@src(), "Render");
-        defer renderCtx.end();
+        const t = tracy.traceNamed(@src(), "Render");
+        defer t.end();
         { // Begin texture rendering
             rl.beginTextureMode(shader.sceneTexture);
             defer rl.endTextureMode();
             rl.clearBackground(.{ .a = @intFromFloat(@round(Config.Shader.alpha_factor * 255)) });
             { // Draw 2D Graphics
-                const ctx = tracy.traceNamed(@src(), "2d");
-                defer ctx.end();
+                const t2 = tracy.traceNamed(@src(), "2d");
+                defer t2.end();
                 const vs = processor.curr_buffer;
                 {
-                    const ctx2 = tracy.traceNamed(@src(), "vs");
-                    defer ctx2.end();
-                    graphics.WaveFormLine.render(center, vs);
-                    graphics.WaveFormBar.render(center, vs);
-                }
-                {
-                    var fvs: [1024]f32 = undefined;
-                    for (processor.curr_fft, fvs[0..processor.curr_fft.len]) |v, *fv| {
-                        fv.* = v.magnitude();
+                    const t3 = tracy.traceNamed(@src(), "vs");
+                    defer t3.end();
+                    for (0..vs.len) |i| {
+                        const v = vs[i];
+                        graphics.WaveFormLine.render(center, i, v);
+                        graphics.WaveFormBar.render(center, i, v);
                     }
-                    const ctx2 = tracy.traceNamed(@src(), "fft");
-                    defer ctx2.end();
-                    graphics.FFTSpectrum.render(center, &fvs);
+                }
+                for (0..processor.curr_fft.len) |i| {
+                    const fv = processor.curr_fft[i].magnitude();
+                    graphics.FFTSpectrum.render(center, i, fv);
                 }
             }
             { // Draw 3D graphics

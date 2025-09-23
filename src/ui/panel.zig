@@ -1,6 +1,6 @@
 const std = @import("std");
 const rl = @import("raylibz");
-const deque = @import("deque.zig");
+const deque = @import("../deque.zig");
 const Deque = deque.Deque;
 
 pub const PADDING: f32 = 8;

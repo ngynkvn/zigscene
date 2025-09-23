@@ -22,23 +22,21 @@ pub const WaveFormLine = struct {
         .{ "color2", controls.Setting{ .color = .{ .value = &color2.x } } },
     });
 
-    pub fn render(center: rl.Vector2, vs: []const f32) void {
+    pub fn render(center: rl.Vector2, i: usize, v: f32) void {
         const SPACING = @as(f32, @floatFromInt(screenWidth)) / @as(f32, @floatFromInt(processor.curr_buffer.len));
-        for (vs, 0..) |v, i| {
-            const x = @as(f32, @floatFromInt(i)) * SPACING;
-            const y = -(v * amplitude);
-            // "plot" x and y
-            const px = x + center.x;
-            const py = y + center.y;
-            rl.drawRectangleRec(
-                .{ .x = px, .y = py, .width = SPACING, .height = 1 },
-                rl.Color.hsv.from(color1),
-            );
-            rl.drawRectangleRec(
-                .{ .x = px, .y = py + 8, .width = SPACING, .height = 2 },
-                rl.Color.hsv.from(color2),
-            );
-        }
+        const x = @as(f32, @floatFromInt(i)) * SPACING;
+        const y = -(v * amplitude);
+        // "plot" x and y
+        const px = x + center.x;
+        const py = y + center.y;
+        rl.drawRectangleRec(
+            .{ .x = px, .y = py, .width = SPACING, .height = 1 },
+            rl.Color.hsv.from(color1),
+        );
+        rl.drawRectangleRec(
+            .{ .x = px, .y = py + 8, .width = SPACING, .height = 2 },
+            rl.Color.hsv.from(color2),
+        );
     }
 };
 
@@ -60,30 +58,28 @@ pub const WaveFormBar = struct {
     });
     var maxes: [N]f32 = @splat(0);
 
-    pub fn render(center: rl.Vector2, vs: []const f32) void {
+    pub fn render(center: rl.Vector2, i: usize, v: f32) void {
         const SPACING = @as(f32, @floatFromInt(screenWidth)) / @as(f32, @floatFromInt(processor.curr_buffer.len));
-        for (vs, 0..) |v, i| {
-            const x = @as(f32, @floatFromInt(i)) * SPACING;
-            const y = (v * amplitude);
-            const px = x;
-            const c1 = rl.Color.hsv.from(color1);
-            const c2 = rl.Color.hsv.from(color2);
-            // TODO: configurable
-            maxes[i] = @max(y + base_h, maxes[i]);
-            maxes[i] *= 0.99;
-            rl.drawRectangleRec(.{
-                .x = px,
-                .y = center.y * 2 - maxes[i],
-                .width = SPACING,
-                .height = maxes[i],
-            }, rl.Color.hsv.from(trail_color));
-            rl.drawRectangleGradientEx(.{
-                .x = px,
-                .y = center.y * 2 - y - base_h,
-                .width = SPACING,
-                .height = y + base_h,
-            }, c1, c2, c2, c1);
-        }
+        const x = @as(f32, @floatFromInt(i)) * SPACING;
+        const y = (v * amplitude);
+        const px = x;
+        const c1 = rl.Color.hsv.from(color1);
+        const c2 = rl.Color.hsv.from(color2);
+        // TODO: configurable
+        maxes[i] = @max(y + base_h, maxes[i]);
+        maxes[i] *= 0.99;
+        rl.drawRectangleRec(.{
+            .x = px,
+            .y = center.y * 2 - maxes[i],
+            .width = SPACING,
+            .height = maxes[i],
+        }, rl.Color.hsv.from(trail_color));
+        rl.drawRectangleGradientEx(.{
+            .x = px,
+            .y = center.y * 2 - y - base_h,
+            .width = SPACING,
+            .height = y + base_h,
+        }, c1, c2, c2, c1);
     }
 };
 

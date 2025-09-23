@@ -1,4 +1,5 @@
 const std = @import("std");
+const tracy = @import("tracy");
 const rl = @import("raylibz");
 
 const config = @import("core/config.zig");
@@ -29,6 +30,9 @@ var scalar_panel = Panel.init(8, 24, 280, 700, "Scalars");
 
 var node_buffer: [1024]LayZ.Node = undefined;
 pub fn frame() void {
+    const t = tracy.traceNamed(@src(), "gui frame");
+    defer t.end();
+
     var layz = LayZ.init(&node_buffer);
     layz.startElement(.{
         .tag = .{ .panel = .{

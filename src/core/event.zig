@@ -1,32 +1,21 @@
-const music = @import("../audio/playback.zig");
-const graphics = @import("../graphics.zig");
+const deque = @import("../deque.zig");
+const Deque = deque.Deque;
 const gui = @import("../gui.zig");
-const shader = @import("../shader/shader.zig");
-const debug = @import("debug.zig");
+const apprt = @import("apprt.zig");
 
-const EventHandler = struct {
-    fn dispatch(comptime modules: anytype, comptime handler: []const u8, args: anytype) void {
-        inline for (modules) |module| {
-            if (@hasDecl(module, handler)) {
-                @call(.auto, @field(module, handler), args);
-            }
-        }
-    }
+pub const Event = union(enum) {
+    filename_input: []const u8,
+    tab_change: gui.Tab,
+    window_resize: struct {
+        width: i32,
+        height: i32,
+    },
+    swipe: struct {
+        direction: enum { horizontal, vertical },
+        amount: f32,
+    },
 };
 
-pub inline fn onFilenameInput(filename: []const u8) void {
-    EventHandler.dispatch(.{music}, "onFilenameInput", .{filename});
-}
-
-pub inline fn onTabChange(tab: gui.Tab) void {
-    EventHandler.dispatch(.{gui}, "onTabChange", .{tab});
-}
-
-pub inline fn onWindowResize(width: i32, height: i32) void {
-    EventHandler.dispatch(.{ graphics, shader, debug }, "onWindowResize", .{ width, height });
-}
-
-pub const Direction = enum { horizontal, vertical };
-pub inline fn onSwipe(dir: Direction, amount: f32) void {
-    gui.onSwipe(dir, amount);
+pub fn emit(app: *apprt.App, event: Event) !void {
+    try app.events.pushBack(app.allocator, event);
 }

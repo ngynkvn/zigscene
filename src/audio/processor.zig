@@ -1,6 +1,7 @@
 const std = @import("std");
-
+const tracy = @import("tracy");
 const Config = @import("../core/config.zig");
+
 const N = Config.Audio.buffer_size;
 const beat = @import("analysis/beat_detector.zig");
 const fft = @import("analysis/fft.zig");
@@ -30,8 +31,8 @@ pub var rms_energy: f32 = 0;
 /// The buffer is composed of PCM samples from the audio stream
 /// that were passed to raylib / miniaudio.h
 pub fn audioStreamCallback(ptr: ?*anyopaque, frames: c_uint) callconv(.c) void {
-    const ctx = @import("tracy").traceNamed(@src(), "audio_stream");
-    defer ctx.end();
+    const t = tracy.traceNamed(@src(), "audio_stream");
+    defer t.end();
     const buffer: []const f32 = @as([*]f32, @ptrCast(@alignCast(ptr)))[0 .. frames * 2];
     processBuffer(buffer);
 }
@@ -72,7 +73,7 @@ fn processBuffer(buffer: []const f32) void {
 
     raw_buffer = raw_sample[0..len];
     curr_buffer = audio_buffer[0..len];
-    curr_windowed_buffer = audio_buffer[0..len];
+    curr_windowed_buffer = raw_windowed_buffer[0..len];
 
     fft.fft(fft_buffer[0..len]);
     curr_fft = fft_buffer[0..len];

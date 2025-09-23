@@ -15,10 +15,12 @@ pub fn main() !void {
     // Main loop
     // Detects window close button or ESC key
     while (!rl.Window.shouldClose()) {
-        defer tracy.frameMarkNamed("zigscene");
+        const f = tracy.namedFrame("zigscene");
+        defer f.end();
         app.processMusic();
         app.processInput();
         app.render();
+        app.executeCallbacks();
         app.t += rl.getFrameTime();
     }
 }

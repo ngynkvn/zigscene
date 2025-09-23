@@ -24,7 +24,7 @@ pub fn build(b: *std.Build) !void {
         .tracy_callstack = enable_callstack,
         .tracy_allocation = enable_allocation,
     });
-    const tracy_mod = tracy.module(if (target.query.isNative() and tracy_enable) "tracy" else "tracy-stub");
+    const tracy_mod = tracy.module("tracy");
 
     const raylibz = b.dependency("raylibz", .{
         .target = target,
@@ -93,7 +93,7 @@ fn addReleaseStep(b: *std.Build, opts: *std.Build.Step.Options) !void {
             .target = target,
             .optimize = optimize,
         });
-        const tracy_mod = tracy.module("tracy-stub");
+        const tracy_mod = tracy.module("tracy");
 
         const raylib = b.dependency("raylibz", .{
             .target = target,
