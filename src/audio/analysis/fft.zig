@@ -8,16 +8,19 @@ pub const ComplexF32 = std.math.Complex(f32);
 pub fn fft(values: []ComplexF32) void {
     const len = values.len;
     if (len <= 1) return;
-    var parts = std.mem.zeroes([2][N / 2]ComplexF32);
-    var pi: [2]usize = .{ 0, 0 };
-    for (values, 0..) |v, i| {
-        parts[i % 2][pi[i % 2]] = v;
-        pi[i % 2] += 1;
+    var it = std.mem.window(ComplexF32, values, 2, 2);
+    var evens = std.mem.zeroes([N / 2]ComplexF32);
+    var odds = std.mem.zeroes([N / 2]ComplexF32);
+    for (&evens, &odds) |*e, *o| {
+        const w = it.next() orelse break;
+        if (w.len != 2) break;
+        const ev = w[0];
+        const od = w[1];
+        e.* = ev;
+        o.* = od;
     }
-    const evens = parts[0][0..pi[0]];
-    const odds = parts[1][0..pi[1]];
-    fft(evens);
-    fft(odds);
+    fft(evens[0 .. len / 2]);
+    fft(odds[0 .. len / 2]);
     for (0..len / 2) |i| {
         const index = ComplexF32.init(
             @cos(-2 * std.math.pi * @as(f32, @floatFromInt(i)) / @as(f32, @floatFromInt(len))),
@@ -33,9 +36,7 @@ test "fft" {
         fn cf32(comptime raw: []const [2]f32) [raw.len]ComplexF32 {
             comptime {
                 var out: [raw.len]ComplexF32 = @splat(.init(0, 0));
-                for (0..raw.len) |i| {
-                    out[i] = ComplexF32.init(raw[i][0], raw[i][1]);
-                }
+                for (raw, &out) |v, *i| i.* = .init(v[0], v[1]);
                 return out;
             }
         }

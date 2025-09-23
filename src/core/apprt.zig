@@ -58,7 +58,7 @@ pub const App = struct {
     }
     pub fn processMusic(self: *App) void {
         _ = self;
-        if (music.IsMusicStreamPlaying()) music.UpdateMusicStream();
+        if (music.isMusicStreamPlaying()) music.updateMusicStream();
     }
     pub fn render(self: *App) void {
         const center = rl.getWorldToScreen(.{}, input.camera);
@@ -106,8 +106,8 @@ pub const App = struct {
                 defer ctx.end();
                 rl.beginShaderMode(shader.program);
                 defer rl.endShaderMode();
-                rl.setShaderValue(shader.program, shader.chromaFactorLoc, &Config.Shader.chroma_factor, rl.ShaderUniformDataType.float);
-                rl.setShaderValue(shader.program, shader.noiseFactorLoc, &Config.Shader.noise_factor, rl.ShaderUniformDataType.float);
+                rl.setShaderValue(shader.program, shader.chromaFactorLoc, &Config.Shader.chroma_factor, .float);
+                rl.setShaderValue(shader.program, shader.noiseFactorLoc, &Config.Shader.noise_factor, .float);
                 rl.drawTextureRec(
                     shader.sceneTexture.texture,
                     .{

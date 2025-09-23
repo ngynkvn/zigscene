@@ -16,16 +16,11 @@ pub fn onFilenameInput(path: []const u8) void {
     rl.attachAudioMixedProcessor(processor.audioStreamCallback);
     rl.playMusicStream(music);
 }
-pub fn GetMusicTimePlayed() f32 {
-    return rl.getMusicTimePlayed(music);
-}
-pub fn GetMusicTimeLength() f32 {
-    return rl.getMusicTimeLength(music);
-}
-pub fn IsMusicStreamPlaying() bool {
+
+pub fn isMusicStreamPlaying() bool {
     return rl.isMusicStreamPlaying(music);
 }
-pub fn UpdateMusicStream() void {
+pub fn updateMusicStream() void {
     rl.updateMusicStream(music);
 }
 

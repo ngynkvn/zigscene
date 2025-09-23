@@ -22,3 +22,7 @@ pub fn main() !void {
         app.t += rl.getFrameTime();
     }
 }
+
+test "root" {
+    std.testing.refAllDeclsRecursive(@This());
+}
