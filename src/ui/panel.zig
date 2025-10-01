@@ -13,6 +13,8 @@ pub const LayZ = struct {
         },
         slider: struct {
             value: *f32,
+            min: f32 = 0,
+            max: f32 = 1,
         },
         label: struct {
             text: []const u8,
@@ -144,8 +146,3 @@ pub const LayZ = struct {
     };
 };
 
-const tunable_fmt = "{d:6.2}";
-const vlen = std.fmt.count(tunable_fmt, .{0}) + 5;
-var txt = [_]u8{0} ** 256;
-var value_buffer = [_]u8{0} ** vlen;
-var editing_buffer = [_]u8{0} ** vlen;
