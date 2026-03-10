@@ -1,6 +1,7 @@
 # Update external dependencies
 update-deps:
     #!/bin/bash
+    echo "No longer used!" && exit 1
     cd deps/raylib
     LATEST_RAYLIB=$(curl --silent https://api.github.com/repos/raysan5/raylib/commits | jq -r .[0].sha)
     LATEST_RAYGUI=$(curl --silent https://api.github.com/repos/raysan5/raygui/commits | jq -r .[0].sha)
@@ -12,9 +13,6 @@ release-win32:
     zig build --release=fast -Dtarget=x86_64-windows --prefix release/windows
     zip -j release/win32.zip release/windows/bin/*
 
-# Build web version
-web-build:
-    zig build web -Dtarget=wasm32-emscripten --sysroot "$EMSDK/upstream/emscripten" --verbose --release=fast
 
 # Create flat copy of source files with paths encoded in filenames
 flat-copy:

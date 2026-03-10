@@ -1,18 +1,11 @@
 .{
-    .name = .zigscene,
-
-    .version = "0.0.0",
     .fingerprint = 0x4c367c2295c0e4f5,
-
-    .minimum_zig_version = "0.14.0",
-
+    .name = .zigscene,
+    .version = "0.0.0",
+    .minimum_zig_version = "0.14.0-dev",
     .dependencies = .{
-        .raylib = .{
-            .path = "./deps/raylib/",
-        },
-        .tracy = .{
-            .path = "./deps/tracy/",
-        },
+        .raylibz = .{ .path = "./deps/raylib/" },
+        .tracy = .{ .path = "./deps/tracy/" },
     },
     .paths = .{
         "build.zig",

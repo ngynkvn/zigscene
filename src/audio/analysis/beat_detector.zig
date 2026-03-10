@@ -1,4 +1,5 @@
 const std = @import("std");
+const tracy = @import("tracy");
 
 // Assuming a sample rate of 44100, 43 samples approximates 1 second
 const N = 43;
@@ -18,6 +19,8 @@ pub var min_beat_interval = 10;
 /// This is a very basic version based on:
 /// https://archive.gamedev.net/archive/reference/programming/features/beatdetection/index.html
 pub fn process(buffer: []const f32) bool {
+    const t = tracy.traceNamed(@src(), "beat_detector");
+    defer t.end();
     var current_energy: f32 = 0;
     for (buffer) |sample| current_energy += sample * sample;
     current_energy = current_energy / @as(f32, @floatFromInt(buffer.len));

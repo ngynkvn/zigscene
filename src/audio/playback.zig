@@ -1,6 +1,6 @@
 const std = @import("std");
+const rl = @import("raylibz");
 
-const rl = @import("../raylib.zig");
 const processor = @import("processor.zig");
 
 pub var music = rl.Music{};
@@ -8,25 +8,20 @@ var fnbuff: [256]u8 = @splat(0);
 pub var filename: []u8 = fnbuff[0..0];
 
 pub fn onFilenameInput(path: []const u8) void {
-    music = rl.LoadMusicStream(path.ptr);
-    const cfilename = rl.GetFileName(path.ptr);
+    music = rl.loadMusicStream(path.ptr);
+    const cfilename = rl.getFileName(path.ptr);
     const clen = std.mem.len(cfilename);
     @memcpy(fnbuff[0..clen], cfilename[0..clen]);
     filename = fnbuff[0..clen];
-    rl.AttachAudioMixedProcessor(processor.audioStreamCallback);
-    rl.PlayMusicStream(music);
+    rl.attachAudioMixedProcessor(processor.audioStreamCallback);
+    rl.playMusicStream(music);
 }
-pub fn GetMusicTimePlayed() f32 {
-    return rl.GetMusicTimePlayed(music);
+
+pub fn isMusicStreamPlaying() bool {
+    return rl.isMusicStreamPlaying(music);
 }
-pub fn GetMusicTimeLength() f32 {
-    return rl.GetMusicTimeLength(music);
-}
-pub fn IsMusicStreamPlaying() bool {
-    return rl.IsMusicStreamPlaying(music);
-}
-pub fn UpdateMusicStream() void {
-    rl.UpdateMusicStream(music);
+pub fn updateMusicStream() void {
+    rl.updateMusicStream(music);
 }
 
 fn strpbrk(s: [*:0]const u8, accept: [*:0]const u8) ?[*:0]const u8 {
