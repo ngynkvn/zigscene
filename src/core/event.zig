@@ -6,6 +6,7 @@ const apprt = @import("apprt.zig");
 pub const Event = union(enum) {
     filename_input: []const u8,
     tab_change: gui.Tab,
+    toggle_capture,
     window_resize: struct {
         width: i32,
         height: i32,

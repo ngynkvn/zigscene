@@ -47,6 +47,9 @@ pub fn build(b: *std.Build) !void {
 
     exe.root_module.addImport("raylib", raylibz.module("raylibz"));
     exe.root_module.addImport("tracy", tracy_mod);
+    // Audio capture via miniaudio (bundled in raylib)
+    exe.addCSourceFile(.{ .file = b.path("src/audio/capture.c") });
+    exe.addIncludePath(b.path("deps/raylib/vendor/raylib/src/external"));
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
     if (b.args) |args| {

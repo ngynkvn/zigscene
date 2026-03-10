@@ -5,6 +5,7 @@ const rl = @import("raylibz");
 const config = @import("core/config.zig");
 const controls = @import("core/controls.zig");
 const playback = @import("audio/playback.zig");
+const capture = @import("audio/capture.zig");
 
 const LayZ = @import("ui/panel.zig").LayZ;
 
@@ -30,6 +31,14 @@ pub fn frame() void {
         .direction = .vertical,
         .bounds = .{ .x = 8, .y = 24, .width = 300, .height = 700 },
     });
+
+    // Capture status indicator
+    layz.startElement(.{
+        .tag = .{ .label = .{ .text = if (capture.active) "  [M] Capture: ON" else "  [M] Capture: OFF" } },
+        .direction = .vertical,
+        .bounds = .{ .x = 0, .y = 0, .width = 300, .height = 24 },
+    });
+    layz.endElement();
 
     addSettingsGroup(&layz, "Audio", config.Audio.Settings);
     addSettingsGroup(&layz, "Shader", config.Shader.Settings);

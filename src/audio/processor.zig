@@ -37,6 +37,11 @@ pub fn audioStreamCallback(ptr: ?*anyopaque, frames: c_uint) callconv(.c) void {
     processBuffer(buffer);
 }
 
+/// Public entry point for external capture sources (e.g. audio capture device)
+pub fn processBufferExternal(buffer: []const f32) void {
+    processBuffer(buffer);
+}
+
 /// Process a stereo interleaved PCM buffer
 /// Performance-critical: Called at audio stream rate
 fn processBuffer(buffer: []const f32) void {

@@ -103,6 +103,9 @@ pub fn processInput(self: *apprt.App) void {
         // The key was pressed before but it's up now
     } else if (rl.isKeyReleased(.SPACE)) Config.Audio.release = prevValue;
 
+    if (rl.isKeyPressed(.M)) {
+        event.emit(self, .toggle_capture) catch unreachable;
+    }
     if (rl.isKeyPressed(.F)) {
         if (!rl.Window.isState(.{ .borderless_windowed_mode = true })) rl.Window.setPosition(0, 0);
         rl.Window.toggleBorderless();

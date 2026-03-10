@@ -5,6 +5,7 @@ const tracy = @import("tracy");
 
 const music = @import("../audio/playback.zig");
 const processor = @import("../audio/processor.zig");
+const capture = @import("../audio/capture.zig");
 const graphics = @import("../graphics.zig");
 const gui = @import("../gui.zig");
 const shader = @import("../shader/shader.zig");
@@ -63,6 +64,20 @@ pub const App = struct {
                 .window_resize => |size| {
                     graphics.onWindowResize(size.width, size.height);
                 },
+                .toggle_capture => {
+                    if (!capture.active) {
+                        capture.init(0) catch {
+                            std.log.err("Failed to init capture device", .{});
+                            continue;
+                        };
+                        capture.start() catch {
+                            std.log.err("Failed to start capture", .{});
+                            continue;
+                        };
+                    } else {
+                        capture.deinit();
+                    }
+                },
                 .swipe => |swipe| {
                     _ = swipe;
                 },
@@ -71,6 +86,7 @@ pub const App = struct {
     }
 
     pub fn deinit(self: *App) void {
+        if (capture.active) capture.deinit();
         rl.closeAudioDevice();
         rl.Window.close();
         self.events.deinit(self.allocator);
