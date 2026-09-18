@@ -2,21 +2,9 @@
 
 Audio visualization experiment using zig and raylib.
 
-Built against `0.14.0-dev.2605+136c5a916`
+Built against Zig `0.16.0`.
 
 ## Getting Started
-
-> [!NOTE]
-> This project uses the nightly master build for zig, which frequently introduces breaking changes to the language. While this allows us to use the latest features and
-> improvements, it may:
->
-> - Break unexpectedly when updating Zig versions
-> - Contain code patterns that don't work in stable Zig releases
-> - Require periodic updates to maintain compatibility
->
->   To build this project, you'll need to use Zig's master branch. You can download the latest nightly build from <https://ziglang.org/download/>.
->
->   I also recommend using [zigup][1] or [zvm][2] to install and manage zig versions.
 
 You should have:
 
@@ -28,7 +16,7 @@ You should have:
   ```
 
 - `zig` available in PATH.
-  - Ensure `zig version` outputs `0.14.0-dev.2605+136c5a916`
+  - Ensure `zig version` outputs `0.16.0`
 
 ```bash
 # Build the project

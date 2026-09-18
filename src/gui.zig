@@ -33,10 +33,7 @@ pub fn frame() void {
     if (rl.IsMusicValid(playback.music)) {
         var mtp = playback.GetMusicTimePlayed();
         const mtl = playback.GetMusicTimeLength();
-        var fbs = std.io.fixedBufferStream(&Layout.txt);
-        const text = fbs.writer();
-        _ = text.write(playback.filename) catch unreachable;
-        text.print(" |{d:7.2}s/{d:7.2}s", .{ mtp, mtl }) catch unreachable;
+        _ = std.fmt.bufPrintZ(&Layout.txt, "{s} |{d:7.2}s/{d:7.2}s", .{ playback.filename, mtp, mtl }) catch unreachable;
         if (rl.GuiSliderBar(guiStatusBar, null, null, &mtp, 0, mtl) != 0) {
             draggingSlider = true;
             rl.PauseMusicStream(playback.music);

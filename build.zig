@@ -39,14 +39,13 @@ pub fn build(b: *std.Build) !void {
         const run_step = try emcc.emscriptenRunStep(b);
         run_option.dependOn(&run_step.step);
 
-        const exe_lib = b.addStaticLibrary(.{
+        const exe_lib = b.addLibrary(.{
             .name = "zigscene",
-            .root_source_file = b.path("src/main.zig"),
-            .target = target,
-            .optimize = optimize,
+            .use_lld = if (target.result.os.tag == .linux) false else null,
+            .root_module = b.createModule(.{ .root_source_file = b.path("src/main.zig"), .target = target, .optimize = optimize }),
         });
         const cache_include = b.pathResolve(&.{ b.sysroot.?, "cache", "sysroot", "include" });
-        exe_lib.addIncludePath(.{ .cwd_relative = cache_include });
+        exe_lib.root_module.addIncludePath(.{ .cwd_relative = cache_include });
         exe_lib.root_module.addImport("raylib", raylib.module("raylib"));
         exe_lib.root_module.addImport("tracy", tracy_mod);
         const link_step = try emcc.linkWithEmscripten(b, &[_]*std.Build.Step.Compile{ exe_lib, raylib.artifact("raylib") });
@@ -55,9 +54,8 @@ pub fn build(b: *std.Build) !void {
 
     const exe = b.addExecutable(.{
         .name = "zigscene",
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
+        .use_lld = if (target.result.os.tag == .linux) false else null,
+        .root_module = b.createModule(.{ .root_source_file = b.path("src/main.zig"), .target = target, .optimize = optimize }),
     });
     exe.root_module.addOptions("options", opts);
 
@@ -73,9 +71,7 @@ pub fn build(b: *std.Build) !void {
     run_step.dependOn(&run_cmd.step);
 
     const exe_unit_tests = b.addTest(.{
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{ .root_source_file = b.path("src/main.zig"), .target = target, .optimize = optimize }),
     });
     exe_unit_tests.root_module.addImport("raylib", raylib.module("raylib"));
     exe_unit_tests.root_module.addImport("tracy", tracy_mod);
@@ -119,9 +115,8 @@ fn addReleaseStep(b: *std.Build, opts: *std.Build.Step.Options) !void {
         });
         const release_exe = b.addExecutable(.{
             .name = "zigscene",
-            .root_source_file = b.path("src/main.zig"),
-            .target = target,
-            .optimize = optimize,
+            .use_lld = if (target.result.os.tag == .linux) false else null,
+            .root_module = b.createModule(.{ .root_source_file = b.path("src/main.zig"), .target = target, .optimize = optimize }),
         });
         release_exe.root_module.addOptions("options", opts);
         release_exe.root_module.addImport("raylib", raylib.module("raylib"));

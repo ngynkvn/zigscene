@@ -32,12 +32,12 @@ pub fn build(b: *std.Build) !void {
     raygui_c.step.name = "Generate raygui implementation";
 
     libraylib.installHeader(raygui.path("src/raygui.h"), "raygui.h");
-    libraylib.addCSourceFile(.{
+    libraylib.root_module.addCSourceFile(.{
         .file = raygui_c.getDirectory().path(b, "raygui.c"),
     });
-    libraylib.addIncludePath(raylib.path("src"));
-    libraylib.addIncludePath(raygui.path("src"));
-    libraylib.addIncludePath(raygui.path("styles/dark"));
+    libraylib.root_module.addIncludePath(raylib.path("src"));
+    libraylib.root_module.addIncludePath(raygui.path("src"));
+    libraylib.root_module.addIncludePath(raygui.path("styles/dark"));
 
     const file = b.addWriteFile("raylib.gen.c",
         \\#include "raylib.h"

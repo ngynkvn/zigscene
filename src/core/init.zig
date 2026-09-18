@@ -8,7 +8,7 @@ pub var screenHeight: c_int = Config.Window.height;
 const APP_NAME = Config.Window.title;
 const event = @import("event.zig");
 
-pub fn startup() !void {
+pub fn startup(process_args: std.process.Args) !void {
     // TODO: Options menu
     rl.SetConfigFlags(rl.FLAG_WINDOW_RESIZABLE | rl.FLAG_WINDOW_TRANSPARENT | rl.FLAG_WINDOW_TOPMOST);
 
@@ -19,8 +19,12 @@ pub fn startup() !void {
 
     rl.GuiSetAlpha(0.8);
     rl.RayguiDark();
-    if (try processArgs()) |path| {
-        event.onFilenameInput(path);
+    var buffer: [256]u8 = undefined;
+    var fba = std.heap.FixedBufferAllocator.init(&buffer);
+    var args = try std.process.Args.Iterator.initAllocator(process_args, fba.allocator());
+    defer args.deinit();
+    if (args.skip()) {
+        if (args.next()) |path| event.onFilenameInput(path);
     }
 
     rl.SetMasterVolume(Config.Audio.volume);
@@ -30,10 +34,3 @@ pub fn shutdown() void {
     rl.CloseWindow(); // Close window and OpenGL context
 }
 
-fn processArgs() !?[]const u8 {
-    var buffer: [256]u8 = @splat(0);
-    var fba = std.heap.FixedBufferAllocator.init(&buffer);
-    const allocator = fba.allocator();
-    var args = try std.process.argsWithAllocator(allocator);
-    return if (!args.skip()) null else args.next();
-}

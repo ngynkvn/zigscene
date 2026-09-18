@@ -13,7 +13,7 @@ jobs:
       - name: Zig setup
         uses: mlugg/setup-zig@v1
         with:
-          version: master
+          version: 0.16.0
 
       - name: Run tests
         run: zig build test --summary all

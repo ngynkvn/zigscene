@@ -4,3 +4,5 @@ sounds/
 release/
 trace/
 flat-copy/
+
+zig-pkg/

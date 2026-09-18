@@ -1,11 +1,12 @@
 .{
-    .name = "tracy",
+    .name = .tracy,
 
+    .fingerprint = 0x255a89ee371bdcb9,
     .version = "0.0.0",
     .dependencies = .{
         .tracy = .{
             .url = "https://github.com/wolfpld/tracy/archive/refs/tags/v0.11.1.tar.gz",
-            .hash = "122022a478dccaed1309fb5d022f4041eec45d40c93a855ed24fad970774c2426d91",
+            .hash = "N-V-__8AAMeOlQEipHjcyu0TCftdAi9AQe7EXUDJOoVe0k-t",
         },
     },
     .paths = .{

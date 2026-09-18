@@ -13,12 +13,12 @@ const rl = @import("raylib.zig");
 
 pub var isFullScreen = false;
 
-pub fn main() !void {
+pub fn main(process_init: @import("std").process.Init) !void {
     var t: f32 = 0.0;
 
     // TODO: Live reloading for application changes
     // input hotkey
-    try init.startup();
+    try init.startup(process_init.minimal.args);
     defer init.shutdown();
 
     // Init shader

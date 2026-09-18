@@ -20,11 +20,11 @@ jobs:
       - name: Zig Setup
         uses: mlugg/setup-zig@v1
         with:
-          version: master
+          version: 0.16.0
 
       - name: Build
         run: |
-          zig build --release=safe
+          zig build -Doptimize=ReleaseSafe
           mv zig-out/bin/zigscene zig-out/bin/${{env.RELEASE_NAME}}
 
       - name: Upload for Release
@@ -53,11 +53,11 @@ jobs:
       - name: Zig Setup
         uses: mlugg/setup-zig@v1
         with:
-          version: master
+          version: 0.16.0
 
       - name: Build
         run: |
-          zig build --release=safe
+          zig build -Doptimize=ReleaseSafe
           mv zig-out/bin/zigscene zig-out/bin/${{env.RELEASE_NAME}}
 
       - name: Upload for Release
