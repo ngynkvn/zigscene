@@ -43,7 +43,9 @@ pub fn processInput() void {
             capture.stop();
         } else {
             if (rl.IsMusicValid(playback.music)) rl.PauseMusicStream(playback.music);
-            capture.start(.system, -1) catch {};
+            capture.start(.system, -1) catch {
+                if (rl.IsMusicValid(playback.music)) rl.ResumeMusicStream(playback.music);
+            };
         }
     }
 

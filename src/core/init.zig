@@ -43,7 +43,9 @@ pub fn startup(process_args: std.process.Args) !void {
     }
     if (capture_mode) |mode| {
         if (rl.IsMusicValid(playback.music)) rl.PauseMusicStream(playback.music);
-        capture.start(mode, capture_device) catch {};
+        capture.start(mode, capture_device) catch {
+            if (rl.IsMusicValid(playback.music)) rl.ResumeMusicStream(playback.music);
+        };
     }
 
     rl.SetMasterVolume(Config.Audio.volume);
