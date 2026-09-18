@@ -1,7 +1,6 @@
 const music = @import("../audio/playback.zig");
 const graphics = @import("../graphics.zig");
 const gui = @import("../gui.zig");
-const shader = @import("../shader/shader.zig");
 const debug = @import("debug.zig");
 const capture = @import("../audio/capture.zig");
 
@@ -21,7 +20,7 @@ pub inline fn onTabChange(tab: gui.Tab) void {
 }
 
 pub inline fn onWindowResize(width: i32, height: i32) void {
-    const modules = .{ graphics, shader, debug };
+    const modules = .{ graphics, debug };
     inline for (modules) |module| {
         module.onWindowResize(width, height);
     }

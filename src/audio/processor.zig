@@ -6,6 +6,8 @@ const cnv = @import("../ext/convert.zig");
 const ffi = cnv.ffi;
 const beat = @import("analysis/beat_detector.zig");
 const fft = @import("analysis/fft.zig");
+const SampleQueue = @import("SampleQueue.zig");
+var samples: SampleQueue = .{};
 
 /// Currently loaded audio buffer data
 var audio_buffer = std.mem.zeroes([N]f32);
@@ -32,15 +34,36 @@ pub var rms_energy: f32 = 0;
 /// The buffer is composed of PCM samples from the audio stream
 /// that were passed to raylib / miniaudio.h
 pub fn audioStreamCallback(ptr: ?*anyopaque, frames: c_uint) callconv(.c) void {
-    const ctx = @import("tracy").traceNamed(@src(), "audio_stream");
-    defer ctx.end();
-    const buffer: []const f32 = @as([*]f32, @ptrCast(@alignCast(ptr)))[0 .. frames * 2];
-    processBuffer(buffer);
+    const data = ptr orelse return;
+    const buffer: []const f32 = @as([*]f32, @ptrCast(@alignCast(data)))[0 .. frames * 2];
+    samples.submit(.file, buffer);
 }
 
-/// Process a stereo interleaved PCM buffer
-/// Performance-critical: Called at audio stream rate
-pub fn processBuffer(buffer: []const f32) void {
+pub fn submitCapture(buffer: []const f32) void {
+    samples.submit(.capture, buffer);
+}
+
+pub fn selectSource(source: SampleQueue.Source) void {
+    samples.selectSource(source);
+    @memset(&audio_buffer, 0);
+    @memset(&raw_sample, 0);
+    @memset(&fft_buffer, .init(0, 0));
+    rms_energy = 0;
+    past_beats = @splat(false);
+    bi = 0;
+}
+
+/// Run fixed-size analysis on the render thread, outside device callbacks.
+pub fn update() void {
+    var block: [N * 2]f32 = undefined;
+    for (0..4) |_| {
+        if (!samples.popBlock(&block)) break;
+        processBuffer(&block);
+    }
+}
+
+fn processBuffer(buffer: []const f32) void {
+    std.debug.assert(buffer.len == N * 2);
     const curr_len = buffer.len / 2;
 
     processFrame(buffer, curr_len);
