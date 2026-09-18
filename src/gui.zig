@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const playback = @import("audio/playback.zig");
+const capture = @import("audio/capture.zig");
 const config = @import("core/config.zig");
 const Direction = @import("core/event.zig").Direction;
 const Rectangle = @import("ext/structs.zig").Rectangle;
@@ -30,7 +31,9 @@ pub fn frame() void {
     _ = rl.GuiToggleGroup(base.into(), grouptxt, @ptrCast(&active_tab));
 
     const guiStatusBar = base.translate(base.width * 4 + 10, 0).resize(800, base.height).into();
-    if (rl.IsMusicValid(playback.music)) {
+    if (capture.active) {
+        _ = std.fmt.bufPrintZ(&Layout.txt, "{s} audio capture active (M to stop)", .{if (capture.mode == .system) "System" else "Input"}) catch unreachable;
+    } else if (rl.IsMusicValid(playback.music)) {
         var mtp = playback.GetMusicTimePlayed();
         const mtl = playback.GetMusicTimeLength();
         _ = std.fmt.bufPrintZ(&Layout.txt, "{s} |{d:7.2}s/{d:7.2}s", .{ playback.filename, mtp, mtl }) catch unreachable;
@@ -42,12 +45,14 @@ pub fn frame() void {
             draggingSlider = false;
             rl.ResumeMusicStream(playback.music);
         }
+    } else {
+        _ = std.fmt.bufPrintZ(&Layout.txt, "M: capture system audio | Drop a file to play", .{}) catch unreachable;
     }
     const musicOn = rl.IsMusicStreamPlaying(playback.music) or !rl.IsMusicValid(playback.music);
     var playIconBuffer: [16]u8 = @splat(0);
     const playIconTxt = std.fmt.bufPrintZ(&playIconBuffer, "#{}#", .{if (musicOn) rl.ICON_PLAYER_PLAY else rl.ICON_PLAYER_PAUSE}) catch unreachable;
     _ = rl.GuiStatusBar(guiStatusBar, &Layout.txt);
-    if (rl.GuiButton(base.translate(base.width * 3 + 8, 0).into(), playIconTxt) != 0 and rl.IsMusicValid(playback.music)) {
+    if (rl.GuiButton(base.translate(base.width * 3 + 8, 0).into(), playIconTxt) != 0 and !capture.active and rl.IsMusicValid(playback.music)) {
         if (rl.IsMusicStreamPlaying(playback.music)) {
             rl.PauseMusicStream(playback.music);
         } else {

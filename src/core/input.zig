@@ -5,6 +5,7 @@ pub const rl = @import("../raylib.zig");
 pub const Config = @import("config.zig");
 pub const debug = @import("debug.zig");
 pub const event = @import("event.zig");
+const capture = @import("../audio/capture.zig");
 
 var prevValue: f32 = 0;
 pub var rot_offset: f32 = 0.0;
@@ -37,6 +38,15 @@ pub fn processInput() void {
         else => unreachable,
     };
 
+    if (rl.isKeyPressed(.M)) {
+        if (capture.active) {
+            capture.stop();
+        } else {
+            if (rl.IsMusicValid(playback.music)) rl.PauseMusicStream(playback.music);
+            capture.start(.system, -1) catch {};
+        }
+    }
+
     if (rl.isKeyPressed(.ONE)) {
         event.onTabChange(.none);
     } else if (rl.isKeyPressed(.TWO)) {
@@ -57,7 +67,7 @@ pub fn processInput() void {
         if (!rl.IsWindowState(rl.FLAG_BORDERLESS_WINDOWED_MODE)) rl.SetWindowPosition(0, 0);
         rl.ToggleBorderlessWindowed();
     }
-    if (rl.isKeyPressed(.P)) {
+    if (rl.isKeyPressed(.P) and !capture.active) {
         if (rl.IsMusicValid(playback.music)) {
             if (rl.IsMusicStreamPlaying(playback.music)) {
                 rl.PauseMusicStream(playback.music);

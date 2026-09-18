@@ -62,6 +62,7 @@ pub fn build(b: *std.Build) !void {
     b.installArtifact(exe);
     exe.root_module.addImport("raylib", raylib.module("raylib"));
     exe.root_module.addImport("tracy", tracy_mod);
+    if (target.result.os.tag != .emscripten) addCapture(b, exe.root_module, raylib);
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
     if (b.args) |args| {
@@ -76,6 +77,7 @@ pub fn build(b: *std.Build) !void {
     exe_unit_tests.root_module.addImport("raylib", raylib.module("raylib"));
     exe_unit_tests.root_module.addImport("tracy", tracy_mod);
     exe_unit_tests.root_module.addOptions("options", opts);
+    if (target.result.os.tag != .emscripten) addCapture(b, exe_unit_tests.root_module, raylib);
 
     const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
     const test_step = b.step("test", "Run unit tests");
@@ -121,6 +123,13 @@ fn addReleaseStep(b: *std.Build, opts: *std.Build.Step.Options) !void {
         release_exe.root_module.addOptions("options", opts);
         release_exe.root_module.addImport("raylib", raylib.module("raylib"));
         release_exe.root_module.addImport("tracy", tracy_mod);
+        addCapture(b, release_exe.root_module, raylib);
         release_step.dependOn(&b.addInstallArtifact(release_exe, .{ .dest_dir = .{ .override = .{ .custom = try t.zigTriple(b.allocator) } } }).step);
     }
+}
+
+fn addCapture(b: *std.Build, module: *std.Build.Module, raylib: *std.Build.Dependency) void {
+    const source = raylib.builder.dependency("raylib", .{});
+    module.addIncludePath(source.path("src/external"));
+    module.addCSourceFile(.{ .file = b.path("src/audio/capture.c") });
 }

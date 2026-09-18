@@ -40,7 +40,7 @@ pub fn audioStreamCallback(ptr: ?*anyopaque, frames: c_uint) callconv(.c) void {
 
 /// Process a stereo interleaved PCM buffer
 /// Performance-critical: Called at audio stream rate
-fn processBuffer(buffer: []const f32) void {
+pub fn processBuffer(buffer: []const f32) void {
     const curr_len = buffer.len / 2;
 
     processFrame(buffer, curr_len);

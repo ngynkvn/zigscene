@@ -34,7 +34,23 @@ zig build test
 
 ## Usage
 
-`zig build run`, then drag and drop an audio file onto the window. Simple hotkeys are available: **TODO**
+`zig build run`, then drag and drop an audio file onto the window. Press **M** to
+capture system playback audio instead. Press **M** again to stop capture. Dropping
+a file switches back to file playback.
+
+You can start capture from the command line:
+
+```bash
+zig build run -- --system-audio
+zig build run -- --input-audio
+zig build run -- --list-audio-devices
+zig build run -- --system-audio --audio-device=0
+```
+
+On Windows, system audio uses the playback device's loopback stream. On Linux,
+it selects the first input device with `Monitor` in its name; use
+`--list-audio-devices` and `--audio-device=N` to choose a different device.
+On macOS, select a virtual loopback input using `--audio-device=N`.
 
 ## Screenshots
 
