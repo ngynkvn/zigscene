@@ -8,14 +8,15 @@ const Rectangle = @import("ext/structs.zig").Rectangle;
 const controls = @import("gui/controls.zig");
 const rl = @import("raylib.zig");
 
-pub const Tab = enum(c_int) { none, scalar, color };
+pub const Tab = enum(c_int) { none, scalar, color, motion, scene };
 var active_tab: Tab = .scalar;
 var gui_xoffset: f32 = 0;
 pub const onTabChange = to;
 
 /// Moves the gui state to the desired tab
 fn to(next: Tab) void {
-    if (Layout.Scalars.editState != null or active_tab == next) return;
+    if (active_tab == next) return;
+    Layout.Scalars.editState = null;
     active_tab = next;
     gui_xoffset = -300;
 }
@@ -27,10 +28,10 @@ pub fn frame() void {
         gui_xoffset = @trunc(std.math.lerp(gui_xoffset, 0, @min(0.3, 30 * rl.GetFrameTime())));
     }
     const base = Layout.Base;
-    const grouptxt = std.fmt.comptimePrint("#{}#;#{}#;#{}#", .{ rl.ICON_ARROW_LEFT, rl.ICON_FX, rl.ICON_COLOR_PICKER });
+    const grouptxt = std.fmt.comptimePrint("#{}#;#{}#;#{}#;#{}#;#{}#", .{ rl.ICON_ARROW_LEFT, rl.ICON_FX, rl.ICON_COLOR_PICKER, rl.ICON_GEAR, rl.ICON_EYE_ON });
     _ = rl.GuiToggleGroup(base.into(), grouptxt, @ptrCast(&active_tab));
 
-    const guiStatusBar = base.translate(base.width * 4 + 10, 0).resize(800, base.height).into();
+    const guiStatusBar = base.translate(base.width * 6 + 10, 0).resize(800, base.height).into();
     if (capture.active) {
         _ = std.fmt.bufPrintZ(&Layout.txt, "{s} audio capture active (M to stop)", .{if (capture.mode == .system) "System" else "Input"}) catch unreachable;
     } else if (rl.IsMusicValid(playback.music)) {
@@ -65,8 +66,10 @@ pub fn frame() void {
             const PanelSize = Layout.Base.translate(-310 - gui_xoffset, 20).resize(300, 700);
             _ = rl.GuiPanel(PanelSize.into(), "");
         },
-        .scalar => Layout.Scalars.draw(),
+        .scalar => Layout.Scalars.draw(false),
         .color => Layout.Colors.draw(),
+        .motion => Layout.Scalars.draw(true),
+        .scene => Layout.Scene.draw(),
     }
 }
 
@@ -84,13 +87,14 @@ const Layout = struct {
         const label: []const u8 = "Scalars";
         const offset: usize = 24;
         const initialOffset = 60;
-        fn draw() void {
+        fn draw(comptime motion_controls: bool) void {
+            const fields = if (motion_controls) MotionFields else ShapeFields;
             const anchor = PanelSize.translate(gui_xoffset, 0);
             const label_rect = LabelSize.translate(gui_xoffset, 0);
-            _ = rl.GuiPanel(anchor.into(), label.ptr);
+            _ = rl.GuiPanel(anchor.into(), if (motion_controls) "Motion" else label.ptr);
             comptime var nth_field = 0;
             // TODO: refactor this is such a mess
-            inline for (Fields, 0..) |sf, gi| {
+            inline for (fields, 0..) |sf, gi| {
                 const name, const group = sf;
                 const y = initialOffset + offset * nth_field + offset * gi;
                 _ = rl.GuiLabel(label_rect.translate(5, y).into(), name.ptr);
@@ -114,13 +118,34 @@ const Layout = struct {
                 nth_field += group.len;
             }
         }
-        const Fields = [_]struct { []const u8, []const controls.Scalar }{
+        const ShapeFields = [_]struct { []const u8, []const controls.Scalar }{
             .{ "WaveFormLine", &config.Visualizer.WaveFormLine.Scalars },
             .{ "WaveFormBar", &config.Visualizer.WaveFormBar.Scalars },
             .{ "Bubble", &config.Visualizer.Bubble.Scalars },
-            .{ "Audio Controls", &config.Audio.Scalars },
             .{ "Shader", &config.Shader.Scalars },
         };
+        const MotionFields = [_]struct { []const u8, []const controls.Scalar }{
+            .{ "Energy motion", &config.Motion.Scalars },
+            .{ "Audio Controls", &config.Audio.Scalars },
+            .{ "Spectrum", &config.Visualizer.Spectrum.Scalars },
+            .{ "Halo", &config.Visualizer.Halo.Scalars },
+        };
+    };
+    const Scene = struct {
+        const items = [_]struct { [*:0]const u8, *bool }{
+            .{ "Waveform lines", &config.Scene.wave_lines },
+            .{ "Waveform bars", &config.Scene.wave_bars },
+            .{ "Spectrum", &config.Scene.spectrum },
+            .{ "3D bubble", &config.Scene.bubble },
+            .{ "Frequency halo", &config.Scene.halo },
+        };
+        fn draw() void {
+            const anchor = Base.translate(gui_xoffset + 2, 20).resize(280, 700);
+            _ = rl.GuiPanel(anchor.into(), "Scene elements");
+            inline for (items, 0..) |item, i| {
+                _ = rl.GuiCheckBox(anchor.resize(20, 20).translate(18, 40 + i * 38).into(), item[0], item[1]);
+            }
+        }
     };
     const Colors = struct {
         const slider_w = 100;
@@ -148,6 +173,7 @@ const Layout = struct {
             .{ "WaveFormLine", &config.Visualizer.WaveFormLine.Colors },
             .{ "WaveFormBar", &config.Visualizer.WaveFormBar.Colors },
             .{ "Bubble", &config.Visualizer.Bubble.Colors },
+            .{ "Halo", &config.Visualizer.Halo.Colors },
         };
     };
     /// Length of values in value buffer (+1 for zero)
