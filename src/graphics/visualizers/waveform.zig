@@ -1,3 +1,4 @@
+const std = @import("std");
 const processor = @import("../../audio/processor.zig");
 var screenWidth: c_int = @import("../../core/config.zig").Window.width;
 const hsv = @import("../../ext/color.zig").Color.hsv.vec3;
@@ -17,7 +18,7 @@ pub const WaveFormLine = struct {
         const color2 = Config.color2;
         const SPACING = ffi(f32, screenWidth) / ffi(f32, processor.curr_buffer.len);
         const x = ffi(f32, i) * SPACING;
-        const y = -(v * amplitude);
+        const y = -std.math.clamp(v * amplitude, -250, 250);
         // "plot" x and y
         const px = x + center.x;
         const py = y + center.y;
@@ -37,23 +38,26 @@ pub const WaveFormBar = struct {
     const color1 = &WaveConfig.color1;
     const color2 = &WaveConfig.color2;
     const trail_color = &WaveConfig.trail_color;
-    var maxes: [N]f32 = @splat(0);
+    maxes: [N]f32 = @splat(0),
 
-    pub fn render(center: rl.Vector2, i: usize, v: f32) void {
+    pub fn advance(self: *WaveFormBar, dt_seconds: f32) void {
+        const factor = @exp(-@min(dt_seconds, 0.1) / @max(WaveConfig.trail_decay, 0.01));
+        for (&self.maxes) |*value| value.* = @max(base_h.*, value.* * factor);
+    }
+
+    pub fn render(self: *WaveFormBar, center: rl.Vector2, i: usize, v: f32) void {
         const SPACING = ffi(f32, screenWidth) / ffi(f32, processor.curr_buffer.len);
         const x = ffi(f32, i) * SPACING;
-        const y = (v * amplitude.*);
+        const y = std.math.clamp(@abs(v) * amplitude.*, 0, 350);
         const px = x;
         const c1 = hsv(color1.*).into();
         const c2 = hsv(color2.*).into();
-        // TODO: configurable
-        maxes[i] = @max(y + base_h.*, maxes[i]);
-        maxes[i] *= 0.99;
+        self.maxes[i] = @max(y + base_h.*, self.maxes[i]);
         rl.DrawRectangleRec(.{
             .x = px,
-            .y = center.y * 2 - maxes[i],
+            .y = center.y * 2 - self.maxes[i],
             .width = SPACING,
-            .height = maxes[i],
+            .height = self.maxes[i],
         }, hsv(trail_color.*).into());
         rl.DrawRectangleGradientEx(.{
             .x = px,
