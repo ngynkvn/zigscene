@@ -10,7 +10,7 @@ const capture = @import("../audio/capture.zig");
 pub const Resize = struct { width: i32, height: i32 };
 
 pub const State = struct {
-    previous_release: f32 = 0,
+    previous_blend: f32 = 0,
     rotation_offset: f32 = 0,
     camera: rl.Camera3D = .{
         .position = Config.Camera.initial_position,
@@ -55,15 +55,19 @@ pub fn process(state: *State) ?Resize {
         event.onTabChange(.scalar);
     } else if (rl.isKeyPressed(.THREE)) {
         event.onTabChange(.color);
+    } else if (rl.isKeyPressed(.FOUR)) {
+        event.onTabChange(.motion);
+    } else if (rl.isKeyPressed(.FIVE)) {
+        event.onTabChange(.scene);
     }
 
     // The key was not pressed before but it's down now
     if (rl.isKeyPressed(.SPACE)) {
         // :)
-        state.previous_release = Config.Audio.release;
-        Config.Audio.release = 1.0;
+        state.previous_blend = Config.Audio.wave_blend;
+        Config.Audio.wave_blend = 0.98;
         // The key was pressed before but it's up now
-    } else if (rl.isKeyReleased(.SPACE)) Config.Audio.release = state.previous_release;
+    } else if (rl.isKeyReleased(.SPACE)) Config.Audio.wave_blend = state.previous_blend;
 
     if (rl.isKeyPressed(.F)) {
         if (!rl.IsWindowState(rl.FLAG_BORDERLESS_WINDOWED_MODE)) rl.SetWindowPosition(0, 0);

@@ -8,6 +8,11 @@ pub var beat_sensitivity: f32 = 1.5142857;
 pub var var_sensititvity: f32 = -0.0025714;
 pub var min_beat_interval = 10;
 
+pub fn reset() void {
+    energy_history = @splat(0);
+    history_pos = 0;
+}
+
 /// The core concept comes from the observation that musical beats often
 /// come with sudden spikes in the energy of the signal So, we can try to
 /// detect the beat by checking the current energy level against the mean

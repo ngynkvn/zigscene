@@ -5,6 +5,7 @@ pub const FFTSpectrum = spectrum.FFTSpectrum;
 const waveform = @import("graphics/visualizers/waveform.zig");
 pub const WaveFormLine = waveform.WaveFormLine;
 pub const WaveFormBar = waveform.WaveFormBar;
+pub const Halo = @import("graphics/visualizers/halo.zig").Halo;
 
 pub inline fn onWindowResize(width: i32, height: i32) void {
     spectrum.onWindowResize(width, height);
