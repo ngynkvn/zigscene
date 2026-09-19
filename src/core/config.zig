@@ -7,6 +7,10 @@ pub const Window = struct {
     pub const height = 768;
     pub const title = "zigscene";
     pub const fps_target: c_int = 60;
+    pub var opacity: f32 = 1.0;
+    pub const Scalars = [_]controls.Scalar{
+        .{ "Window opacity", &opacity, .{ 0.15, 1.0 } },
+    };
 };
 
 pub const Audio = struct {
@@ -16,11 +20,34 @@ pub const Audio = struct {
     pub const volume: f32 = 0.40;
 
     pub const Scalars = [_]controls.Scalar{
-        .{ "Attack", &attack, .{ 0.0, 1 } },
-        .{ "Release", &release, .{ 0.0, 1 } },
+        .{ "Wave blend", &wave_blend, .{ 0.0, 0.98 } },
+        .{ "Wave gain", &wave_gain, .{ 0.1, 3.0 } },
     };
-    pub var attack: f32 = 0.8;
-    pub var release: f32 = 0.90;
+    pub var wave_blend: f32 = 0.55;
+    pub var wave_gain: f32 = 1.0;
+};
+
+pub const Motion = struct {
+    pub var energy_gain: f32 = 3.0;
+    pub var compression: f32 = 1.2;
+    pub var attack_seconds: f32 = 0.08;
+    pub var release_seconds: f32 = 0.35;
+    pub var beat_decay_seconds: f32 = 0.28;
+    pub const Scalars = [_]controls.Scalar{
+        .{ "Energy gain", &energy_gain, .{ 0.2, 6.0 } },
+        .{ "Compression", &compression, .{ 0.0, 8.0 } },
+        .{ "Rise time", &attack_seconds, .{ 0.01, 0.5 } },
+        .{ "Fall time", &release_seconds, .{ 0.03, 1.5 } },
+        .{ "Beat decay", &beat_decay_seconds, .{ 0.05, 1.0 } },
+    };
+};
+
+pub const Scene = struct {
+    pub var wave_lines = true;
+    pub var wave_bars = true;
+    pub var spectrum = true;
+    pub var bubble = true;
+    pub var halo = true;
 };
 
 pub const Shader = struct {
@@ -30,7 +57,7 @@ pub const Shader = struct {
     pub const Scalars = [_]controls.Scalar{
         .{ "Chroma", &chroma_factor, .{ 0.0, 0.01 } },
         .{ "Noise", &noise_factor, .{ 0.0, 0.5 } },
-        .{ "Alpha", &alpha_factor, .{ 0.0, 1.0 } },
+        .{ "Background alpha", &alpha_factor, .{ 0.0, 1.0 } },
     };
 };
 
@@ -52,6 +79,7 @@ pub const Visualizer = struct {
         pub var Scalars = [_]controls.Scalar{
             .{ "amplitude", &amplitude, .{ 0, 100 } },
             .{ "base height", &base_h, .{ 0, 100 } },
+            .{ "trail decay", &trail_decay, .{ 0.05, 2.0 } },
         };
         pub var Colors = [_]controls.Color{
             .{ "color1", &color1.x },
@@ -60,9 +88,34 @@ pub const Visualizer = struct {
         };
         pub var amplitude: f32 = 50;
         pub var base_h: f32 = 20;
+        pub var trail_decay: f32 = 0.6;
         pub var color1 = Vector3{ .x = 250, .y = 1, .z = 0.94 };
         pub var color2 = Vector3{ .x = 270, .y = 1, .z = 0.9 };
         pub var trail_color = Vector3{ .x = 210, .y = 1, .z = 0.473 };
+    };
+
+    pub const Spectrum = struct {
+        pub var gain: f32 = 3.0;
+        pub var height: f32 = 160;
+        pub const Scalars = [_]controls.Scalar{
+            .{ "Spectrum gain", &gain, .{ 0.2, 10.0 } },
+            .{ "Spectrum height", &height, .{ 20, 300 } },
+        };
+    };
+
+    pub const Halo = struct {
+        pub var radius: f32 = 135;
+        pub var depth: f32 = 100;
+        pub var spin: f32 = 0.12;
+        pub var hue: f32 = 195;
+        pub const Scalars = [_]controls.Scalar{
+            .{ "Halo radius", &radius, .{ 40, 260 } },
+            .{ "Halo depth", &depth, .{ 0, 220 } },
+            .{ "Halo spin", &spin, .{ -1, 1 } },
+        };
+        pub const Colors = [_]controls.Color{
+            .{ "Halo hue", &hue },
+        };
     };
 
     pub const Bubble = struct {

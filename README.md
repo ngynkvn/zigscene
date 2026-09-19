@@ -38,6 +38,14 @@ zig build test
 capture system playback audio instead. Press **M** again to stop capture. Dropping
 a file switches back to file playback.
 
+Use **1** to hide the settings, **2** for shape and shader controls, **3** for
+colors, **4** for motion and audio response, and **5** to show or hide individual
+scene elements. The motion tab controls energy gain, compression, rise and fall
+times, and beat pulse decay. The frequency halo has its own radius, depth, spin,
+and hue controls. Hold **Space** to temporarily smooth the waveform more heavily.
+The motion tab also has a Window opacity slider for the entire window. The
+Background alpha slider in the shape tab controls only the window background.
+
 You can start capture from the command line:
 
 ```bash

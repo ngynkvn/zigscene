@@ -25,6 +25,7 @@ var fft_buffer = std.mem.zeroes([N]fft.ComplexF32);
 
 // Analysis
 pub var on_beat = false;
+var beat_cooldown: usize = 0;
 pub var past_beats: [N]bool = @splat(false);
 pub var bi: usize = 0;
 /// Root mean square of signal
@@ -49,17 +50,24 @@ pub fn selectSource(source: SampleQueue.Source) void {
     @memset(&raw_sample, 0);
     @memset(&fft_buffer, .init(0, 0));
     rms_energy = 0;
+    on_beat = false;
+    beat_cooldown = 0;
     past_beats = @splat(false);
     bi = 0;
+    beat.reset();
 }
 
 /// Run fixed-size analysis on the render thread, outside device callbacks.
-pub fn update() void {
+pub fn update() bool {
     var block: [N * 2]f32 = undefined;
+    var processed = false;
+    on_beat = false;
     for (0..4) |_| {
         if (!samples.popBlock(&block)) break;
         processBuffer(&block);
+        processed = true;
     }
+    return processed;
 }
 
 fn processBuffer(buffer: []const f32) void {
@@ -69,7 +77,11 @@ fn processBuffer(buffer: []const f32) void {
     processFrame(buffer, curr_len);
     processWindowed(curr_len);
     fft.fft(fft_buffer[0..curr_len]);
-    past_beats[bi] = beat.process(buffer);
+    const detected = beat.process(buffer);
+    if (beat_cooldown > 0) beat_cooldown -= 1;
+    past_beats[bi] = detected and beat_cooldown == 0;
+    if (past_beats[bi]) beat_cooldown = 8;
+    on_beat = on_beat or past_beats[bi];
     bi = (bi + 1) % N;
 
     raw_buffer = raw_sample[0..curr_len];
@@ -92,16 +104,18 @@ fn processFrame(buffer: []const f32, len: usize) void {
 
         raw_sample[fi] = mono;
 
-        audio_buffer[fi] =
-            (Config.Audio.attack * mono) +
-            (Config.Audio.release * audio_buffer[fi]);
+        audio_buffer[fi] = std.math.clamp(
+            Config.Audio.wave_blend * audio_buffer[fi] +
+                (1 - Config.Audio.wave_blend) * mono * Config.Audio.wave_gain,
+            -2.0,
+            2.0,
+        );
 
         fft_buffer[fi] = fft.ComplexF32.init(l + r, 0);
         rms += (l * l + r * r);
     }
 
-    const ool: f32 = 1 / ffi(f32, len);
-    rms_energy = 0.65 * rms_energy + 0.90 * @sqrt(rms * ool);
+    rms_energy = @sqrt(rms / (2 * ffi(f32, len)));
 }
 
 fn processWindowed(len: usize) void {
