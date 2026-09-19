@@ -7,21 +7,21 @@ pub const debug = @import("debug.zig");
 pub const event = @import("event.zig");
 const capture = @import("../audio/capture.zig");
 
-var prevValue: f32 = 0;
-pub var rot_offset: f32 = 0.0;
+pub const Resize = struct { width: i32, height: i32 };
 
-// TODO: Move to Camera namespace
-pub var camera3d: rl.Camera3D = .{
-    // zig fmt: off
-    .position   = Config.Camera.initial_position,       // Camera position
-    .target     = Config.Camera.initial_target,         // Camera looking at point
-    .up         = .{ .x = 0.0, .y = 1.0, .z = 0.0  },   // Camera up vector (rotation towards target)
-    .fovy       = Config.Camera.fov,                    // Camera field-of-view Y
-    .projection = rl.CAMERA_PERSPECTIVE,                // Camera projection type
-    // zig fmt: on
+pub const State = struct {
+    previous_release: f32 = 0,
+    rotation_offset: f32 = 0,
+    camera: rl.Camera3D = .{
+        .position = Config.Camera.initial_position,
+        .target = Config.Camera.initial_target,
+        .up = .{ .x = 0, .y = 1, .z = 0 },
+        .fovy = Config.Camera.fov,
+        .projection = rl.CAMERA_PERSPECTIVE,
+    },
 };
 
-pub fn processInput() void {
+pub fn process(state: *State) ?Resize {
     const ctx = @import("tracy").traceNamed(@src(), "input_processing");
     defer ctx.end();
     if (rl.IsFileDropped()) {
@@ -32,7 +32,7 @@ pub fn processInput() void {
         event.onFilenameInput(file[0..len]);
     }
 
-    if (rl.isKeyPressed(.C)) camera3d.projection = switch (camera3d.projection) {
+    if (rl.isKeyPressed(.C)) state.camera.projection = switch (state.camera.projection) {
         rl.CAMERA_PERSPECTIVE => rl.CAMERA_ORTHOGRAPHIC,
         rl.CAMERA_ORTHOGRAPHIC => rl.CAMERA_PERSPECTIVE,
         else => unreachable,
@@ -60,10 +60,10 @@ pub fn processInput() void {
     // The key was not pressed before but it's down now
     if (rl.isKeyPressed(.SPACE)) {
         // :)
-        prevValue = Config.Audio.release;
+        state.previous_release = Config.Audio.release;
         Config.Audio.release = 1.0;
         // The key was pressed before but it's up now
-    } else if (rl.isKeyReleased(.SPACE)) Config.Audio.release = prevValue;
+    } else if (rl.isKeyReleased(.SPACE)) Config.Audio.release = state.previous_release;
 
     if (rl.isKeyPressed(.F)) {
         if (!rl.IsWindowState(rl.FLAG_BORDERLESS_WINDOWED_MODE)) rl.SetWindowPosition(0, 0);
@@ -78,20 +78,23 @@ pub fn processInput() void {
             }
         }
     }
-    if (rl.isKeyDown(.LEFT)) rot_offset -= 100 * rl.GetFrameTime();
-    if (rl.isKeyDown(.RIGHT)) rot_offset += 100 * rl.GetFrameTime();
+    if (rl.isKeyDown(.LEFT)) state.rotation_offset -= 100 * rl.GetFrameTime();
+    if (rl.isKeyDown(.RIGHT)) state.rotation_offset += 100 * rl.GetFrameTime();
 
+    var resize: ?Resize = null;
     if (rl.IsWindowResized()) {
-        event.onWindowResize(rl.GetScreenWidth(), rl.GetScreenHeight());
+        resize = .{ .width = rl.GetScreenWidth(), .height = rl.GetScreenHeight() };
+        event.onWindowResize(resize.?.width, resize.?.height);
     }
     const wheelMove = rl.GetMouseWheelMoveV();
     if (@abs(wheelMove.x) > @abs(wheelMove.y)) {
         event.onSwipe(.horizontal, wheelMove.x);
-        rot_offset += wheelMove.x;
+        state.rotation_offset += wheelMove.x;
     } else {
         event.onSwipe(.vertical, wheelMove.y);
-        camera3d.position.z += wheelMove.y;
+        state.camera.position.z += wheelMove.y;
     }
 
     debug.frame();
+    return resize;
 }

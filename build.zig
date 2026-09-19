@@ -82,6 +82,10 @@ pub fn build(b: *std.Build) !void {
     const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_exe_unit_tests.step);
+    const queue_tests = b.addTest(.{
+        .root_module = b.createModule(.{ .root_source_file = b.path("src/audio_test.zig"), .target = target, .optimize = optimize }),
+    });
+    test_step.dependOn(&b.addRunArtifact(queue_tests).step);
 
     const check_step = b.step("check", "Check build");
     check_step.dependOn(&exe.step);

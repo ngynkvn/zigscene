@@ -1,30 +1,38 @@
 const std = @import("std");
-pub const rl = @import("../raylib.zig");
-pub const Config = @import("../core/config.zig");
+const rl = @import("../raylib.zig");
+const Config = @import("../core/config.zig");
 
-pub var sceneTexture: rl.RenderTexture2D = undefined;
-pub var program: rl.Shader = undefined;
-pub var chromaFactorLoc: c_int = undefined;
-pub var noiseFactorLoc: c_int = undefined;
+const fragment_source = @embedFile("chromatic.fs.glsl");
+const vertex_source = @embedFile("chromatic.vs.glsl");
 
-pub var screenWidth: c_int = Config.Window.width;
-pub var screenHeight: c_int = Config.Window.height;
-pub fn onWindowResize(width: i32, height: i32) void {
-    screenWidth = width;
-    screenHeight = height;
-    rl.UnloadRenderTexture(sceneTexture);
-    sceneTexture = rl.LoadRenderTexture(screenWidth, screenHeight);
-}
+pub const Renderer = struct {
+    scene_texture: rl.RenderTexture2D,
+    program: rl.Shader,
+    chroma_factor_location: c_int,
+    noise_factor_location: c_int,
 
-var fs = @embedFile("chromatic.fs.glsl");
-var vs = @embedFile("chromatic.vs.glsl");
+    pub fn init() Renderer {
+        const program = rl.LoadShaderFromMemory(vertex_source, fragment_source);
+        const chroma = rl.rlGetLocationUniform(program.id, "chromaFactor");
+        const noise = rl.rlGetLocationUniform(program.id, "noiseFactor");
+        std.debug.assert(chroma != -1);
+        std.debug.assert(noise != -1);
+        return .{
+            .scene_texture = rl.LoadRenderTexture(Config.Window.width, Config.Window.height),
+            .program = program,
+            .chroma_factor_location = chroma,
+            .noise_factor_location = noise,
+        };
+    }
 
-// TODO: make the shader program swappable and adjust options as needed
-pub fn init() void {
-    sceneTexture = rl.LoadRenderTexture(screenWidth, screenHeight);
-    program = rl.LoadShaderFromMemory(vs, fs);
-    chromaFactorLoc = rl.rlGetLocationUniform(program.id, "chromaFactor");
-    noiseFactorLoc = rl.rlGetLocationUniform(program.id, "noiseFactor");
-    std.debug.assert(chromaFactorLoc != -1);
-    std.debug.assert(noiseFactorLoc != -1);
-}
+    pub fn deinit(self: *Renderer) void {
+        rl.UnloadRenderTexture(self.scene_texture);
+        rl.UnloadShader(self.program);
+        self.* = undefined;
+    }
+
+    pub fn resize(self: *Renderer, width: i32, height: i32) void {
+        rl.UnloadRenderTexture(self.scene_texture);
+        self.scene_texture = rl.LoadRenderTexture(width, height);
+    }
+};

@@ -4,17 +4,37 @@ const rl = @import("../raylib.zig");
 const processor = @import("processor.zig");
 
 pub var music = rl.Music{};
+var processor_attached = false;
 var fnbuff: [256]u8 = @splat(0);
 pub var filename: []u8 = fnbuff[0..0];
 
 pub fn onFilenameInput(path: []const u8) void {
+    if (rl.IsMusicValid(music)) rl.UnloadMusicStream(music);
     music = rl.LoadMusicStream(path.ptr);
+    if (!rl.IsMusicValid(music)) {
+        processor.selectSource(.none);
+        filename = fnbuff[0..0];
+        return;
+    }
     const cfilename = rl.GetFileName(path.ptr);
-    const clen = std.mem.len(cfilename);
+    const clen = @min(std.mem.len(cfilename), 160);
     @memcpy(fnbuff[0..clen], cfilename[0..clen]);
     filename = fnbuff[0..clen];
-    rl.AttachAudioMixedProcessor(processor.audioStreamCallback);
+    processor.selectSource(.file);
+    if (!processor_attached) {
+        rl.AttachAudioMixedProcessor(processor.audioStreamCallback);
+        processor_attached = true;
+    }
     rl.PlayMusicStream(music);
+}
+pub fn shutdown() void {
+    if (processor_attached) {
+        rl.DetachAudioMixedProcessor(processor.audioStreamCallback);
+        processor_attached = false;
+    }
+    if (rl.IsMusicValid(music)) rl.UnloadMusicStream(music);
+    music = .{};
+    processor.selectSource(.none);
 }
 pub fn GetMusicTimePlayed() f32 {
     return rl.GetMusicTimePlayed(music);
