@@ -2,8 +2,6 @@
 const rl = @import("../raylib.zig");
 const Config = @import("config.zig");
 const APP_NAME = Config.Window.title;
-const capture = @import("../audio/capture.zig");
-const playback = @import("../audio/playback.zig");
 
 pub fn startup() void {
     // TODO: Options menu
@@ -19,8 +17,6 @@ pub fn startup() void {
     rl.SetMasterVolume(Config.Audio.volume);
 }
 pub fn shutdown() void {
-    capture.stop();
-    playback.shutdown();
     rl.CloseAudioDevice();
     rl.CloseWindow(); // Close window and OpenGL context
 }

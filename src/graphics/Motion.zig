@@ -2,18 +2,21 @@
 const std = @import("std");
 const Config = @import("../core/config.zig").Motion;
 const Motion = @This();
+const max_frame_dt_seconds: f32 = 0.1;
+const min_response_seconds: f32 = 0.001;
+const max_energy: f32 = 1.5;
 
 energy: f32 = 0,
 pulse: f32 = 0,
 
 pub fn update(self: *Motion, dt_seconds: f32, rms: f32, beat: bool) void {
-    const dt = std.math.clamp(dt_seconds, 0, 0.1);
+    const dt = std.math.clamp(dt_seconds, 0, max_frame_dt_seconds);
     const level = @max(0, rms) * Config.energy_gain;
-    const target = std.math.clamp(level / (1 + Config.compression * level), 0, 1.5);
+    const target = std.math.clamp(level / (1 + Config.compression * level), 0, max_energy);
     const time_constant = if (target > self.energy) Config.attack_seconds else Config.release_seconds;
-    const blend = 1 - @exp(-dt / @max(time_constant, 0.001));
+    const blend = 1 - @exp(-dt / @max(time_constant, min_response_seconds));
     self.energy += (target - self.energy) * blend;
-    self.pulse *= @exp(-dt / @max(Config.beat_decay_seconds, 0.001));
+    self.pulse *= @exp(-dt / @max(Config.beat_decay_seconds, min_response_seconds));
     if (beat) self.pulse = 1;
 }
 

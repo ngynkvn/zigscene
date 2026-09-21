@@ -14,7 +14,7 @@ static void data_callback(ma_device *unused, void *output, const void *input, ma
 }
 
 // mode: 0 = input device, 1 = system playback. index: -1 = default/auto.
-int zigscene_capture_start(int mode, int index, void (*callback)(const float *, unsigned int)) {
+int zigscene_capture_start(int mode, int index, unsigned int channels, unsigned int sample_rate, void (*callback)(const float *, unsigned int)) {
     if (device_ready) return -1;
     ma_result result = ma_context_init(NULL, 0, NULL, &context);
     if (result != MA_SUCCESS) return result;
@@ -54,8 +54,8 @@ int zigscene_capture_start(int mode, int index, void (*callback)(const float *, 
     }
 #endif
     config.capture.format = ma_format_f32;
-    config.capture.channels = 2;
-    config.sampleRate = 44100;
+    config.capture.channels = channels;
+    config.sampleRate = sample_rate;
     config.dataCallback = data_callback;
     on_frames = callback;
     result = ma_device_init(&context, &config, &device);

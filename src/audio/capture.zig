@@ -1,9 +1,10 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const processor = @import("processor.zig");
+const AudioConfig = @import("../core/config.zig").Audio;
 
 const c = struct {
-    extern fn zigscene_capture_start(c_int, c_int, *const fn ([*]const f32, c_uint) callconv(.c) void) c_int;
+    extern fn zigscene_capture_start(c_int, c_int, c_uint, c_uint, *const fn ([*]const f32, c_uint) callconv(.c) void) c_int;
     extern fn zigscene_capture_stop() void;
     extern fn zigscene_capture_list(c_int, [*]u8, c_uint, c_uint) c_uint;
 };
@@ -13,16 +14,14 @@ pub var active = false;
 pub var mode: Mode = .system;
 
 fn onFrames(samples: [*]const f32, count: c_uint) callconv(.c) void {
-    processor.submitCapture(samples[0 .. @as(usize, count) * 2]);
+    processor.submitCapture(samples[0 .. @as(usize, count) * AudioConfig.channels]);
 }
 
 pub fn start(new_mode: Mode, device_index: i32) !void {
     if (builtin.os.tag == .emscripten) return error.CaptureUnsupported;
     if (active) stop();
-    processor.selectSource(.capture);
-    const result = c.zigscene_capture_start(@intFromEnum(new_mode), device_index, onFrames);
+    const result = c.zigscene_capture_start(@intFromEnum(new_mode), device_index, AudioConfig.channels, AudioConfig.sample_rate, onFrames);
     if (result != 0) {
-        processor.selectSource(.file);
         std.debug.print("Audio capture failed (miniaudio error {d}). List devices with --list-audio-devices.\n", .{result});
         return error.CaptureFailed;
     }
@@ -34,7 +33,6 @@ pub fn stop() void {
     if (!active) return;
     c.zigscene_capture_stop();
     active = false;
-    processor.selectSource(.file);
 }
 
 pub fn listDevices() void {

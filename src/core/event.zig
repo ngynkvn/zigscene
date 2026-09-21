@@ -1,16 +1,6 @@
-const music = @import("../audio/playback.zig");
 const graphics = @import("../graphics.zig");
 const gui = @import("../gui.zig");
 const debug = @import("debug.zig");
-const capture = @import("../audio/capture.zig");
-
-pub inline fn onFilenameInput(filename: []const u8) void {
-    capture.stop();
-    const modules = .{music};
-    inline for (modules) |module| {
-        module.onFilenameInput(filename);
-    }
-}
 
 pub inline fn onTabChange(tab: gui.Tab) void {
     const modules = .{gui};

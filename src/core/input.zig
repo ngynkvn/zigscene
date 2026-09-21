@@ -1,11 +1,10 @@
 const std = @import("std");
 
-pub const playback = @import("../audio/playback.zig");
+const AudioSession = @import("../audio/Session.zig");
 pub const rl = @import("../raylib.zig");
 pub const Config = @import("config.zig");
 pub const debug = @import("debug.zig");
 pub const event = @import("event.zig");
-const capture = @import("../audio/capture.zig");
 
 pub const Resize = struct { width: i32, height: i32 };
 
@@ -21,7 +20,7 @@ pub const State = struct {
     },
 };
 
-pub fn process(state: *State) ?Resize {
+pub fn process(state: *State, audio: *AudioSession) ?Resize {
     const ctx = @import("tracy").traceNamed(@src(), "input_processing");
     defer ctx.end();
     if (rl.IsFileDropped()) {
@@ -29,7 +28,7 @@ pub fn process(state: *State) ?Resize {
         defer rl.UnloadDroppedFiles(files);
         const file = files.paths[0];
         const len = std.mem.len(file);
-        event.onFilenameInput(file[0..len]);
+        audio.playFile(file[0..len]);
     }
 
     if (rl.isKeyPressed(.C)) state.camera.projection = switch (state.camera.projection) {
@@ -38,16 +37,7 @@ pub fn process(state: *State) ?Resize {
         else => unreachable,
     };
 
-    if (rl.isKeyPressed(.M)) {
-        if (capture.active) {
-            capture.stop();
-        } else {
-            if (rl.IsMusicValid(playback.music)) rl.PauseMusicStream(playback.music);
-            capture.start(.system, -1) catch {
-                if (rl.IsMusicValid(playback.music)) rl.ResumeMusicStream(playback.music);
-            };
-        }
-    }
+    if (rl.isKeyPressed(.M)) audio.toggleSystemCapture();
 
     if (rl.isKeyPressed(.ONE)) {
         event.onTabChange(.none);
@@ -73,15 +63,7 @@ pub fn process(state: *State) ?Resize {
         if (!rl.IsWindowState(rl.FLAG_BORDERLESS_WINDOWED_MODE)) rl.SetWindowPosition(0, 0);
         rl.ToggleBorderlessWindowed();
     }
-    if (rl.isKeyPressed(.P) and !capture.active) {
-        if (rl.IsMusicValid(playback.music)) {
-            if (rl.IsMusicStreamPlaying(playback.music)) {
-                rl.PauseMusicStream(playback.music);
-            } else {
-                rl.PlayMusicStream(playback.music);
-            }
-        }
-    }
+    if (rl.isKeyPressed(.P)) audio.togglePlayback();
     if (rl.isKeyDown(.LEFT)) state.rotation_offset -= 100 * rl.GetFrameTime();
     if (rl.isKeyDown(.RIGHT)) state.rotation_offset += 100 * rl.GetFrameTime();
 
