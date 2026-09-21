@@ -1,7 +1,6 @@
 const std = @import("std");
 
-const playback = @import("audio/playback.zig");
-const capture = @import("audio/capture.zig");
+const AudioSession = @import("audio/Session.zig");
 const config = @import("core/config.zig");
 const Direction = @import("core/event.zig").Direction;
 const Rectangle = @import("ext/structs.zig").Rectangle;
@@ -23,7 +22,7 @@ fn to(next: Tab) void {
 
 var draggingSlider = false;
 
-pub fn frame() void {
+pub fn frame(audio: *AudioSession) void {
     if (gui_xoffset < 0) {
         gui_xoffset = @trunc(std.math.lerp(gui_xoffset, 0, @min(0.3, 30 * rl.GetFrameTime())));
     }
@@ -32,34 +31,27 @@ pub fn frame() void {
     _ = rl.GuiToggleGroup(base.into(), grouptxt, @ptrCast(&active_tab));
 
     const guiStatusBar = base.translate(base.width * 6 + 10, 0).resize(800, base.height).into();
-    if (capture.active) {
-        _ = std.fmt.bufPrintZ(&Layout.txt, "{s} audio capture active (M to stop)", .{if (capture.mode == .system) "System" else "Input"}) catch unreachable;
-    } else if (rl.IsMusicValid(playback.music)) {
-        var mtp = playback.GetMusicTimePlayed();
-        const mtl = playback.GetMusicTimeLength();
-        _ = std.fmt.bufPrintZ(&Layout.txt, "{s} |{d:7.2}s/{d:7.2}s", .{ playback.filename, mtp, mtl }) catch unreachable;
+    if (audio.captureActive()) {
+        _ = std.fmt.bufPrintZ(&Layout.txt, "{s} audio capture active (M to stop)", .{if (audio.captureMode() == .system) "System" else "Input"}) catch unreachable;
+    } else if (audio.hasFile()) {
+        var mtp = audio.timePlayed();
+        const mtl = audio.timeLength();
+        _ = std.fmt.bufPrintZ(&Layout.txt, "{s} |{d:7.2}s/{d:7.2}s", .{ audio.filename(), mtp, mtl }) catch unreachable;
         if (rl.GuiSliderBar(guiStatusBar, null, null, &mtp, 0, mtl) != 0) {
             draggingSlider = true;
-            rl.PauseMusicStream(playback.music);
-            rl.SeekMusicStream(playback.music, mtp);
+            audio.seekTo(mtp);
         } else if (draggingSlider) { // was dragging, now released
             draggingSlider = false;
-            rl.ResumeMusicStream(playback.music);
+            audio.endSeek();
         }
     } else {
         _ = std.fmt.bufPrintZ(&Layout.txt, "M: capture system audio | Drop a file to play", .{}) catch unreachable;
     }
-    const musicOn = rl.IsMusicStreamPlaying(playback.music) or !rl.IsMusicValid(playback.music);
+    const musicOn = audio.isFilePlaying() or !audio.hasFile();
     var playIconBuffer: [16]u8 = @splat(0);
     const playIconTxt = std.fmt.bufPrintZ(&playIconBuffer, "#{}#", .{if (musicOn) rl.ICON_PLAYER_PLAY else rl.ICON_PLAYER_PAUSE}) catch unreachable;
     _ = rl.GuiStatusBar(guiStatusBar, &Layout.txt);
-    if (rl.GuiButton(base.translate(base.width * 3 + 8, 0).into(), playIconTxt) != 0 and !capture.active and rl.IsMusicValid(playback.music)) {
-        if (rl.IsMusicStreamPlaying(playback.music)) {
-            rl.PauseMusicStream(playback.music);
-        } else {
-            rl.ResumeMusicStream(playback.music);
-        }
-    }
+    if (rl.GuiButton(base.translate(base.width * 3 + 8, 0).into(), playIconTxt) != 0) audio.togglePlayback();
 
     switch (active_tab) {
         .none => {

@@ -2,8 +2,7 @@ const App = @This();
 const std = @import("std");
 const tracy = @import("tracy");
 
-const capture = @import("audio/capture.zig");
-const playback = @import("audio/playback.zig");
+const AudioSession = @import("audio/Session.zig");
 const processor = @import("audio/processor.zig");
 const Config = @import("core/config.zig");
 const cli = @import("core/cli.zig");
@@ -15,8 +14,10 @@ const gui = @import("gui.zig");
 const rl = @import("raylib.zig");
 const Renderer = @import("shader/shader.zig").Renderer;
 const Motion = @import("graphics/Motion.zig");
+const audio_hold_seconds: f32 = 0.12;
 
 input: input_mod.State = .{},
+audio: AudioSession = .{},
 renderer: Renderer,
 elapsed: f32 = 0,
 seconds_since_audio: f32 = 0,
@@ -34,6 +35,7 @@ pub fn create(options: cli.Options) App {
 }
 
 pub fn destroy(self: *App) void {
+    self.audio.shutdown();
     self.renderer.deinit();
     init.shutdown();
     self.* = undefined;
@@ -44,24 +46,20 @@ pub fn run(self: *App) void {
 }
 
 fn applyOptions(self: *App, options: cli.Options) void {
-    _ = self;
-    if (options.list_audio_devices) capture.listDevices();
-    if (options.file) |path| playback.onFilenameInput(path);
+    if (options.list_audio_devices) AudioSession.listDevices();
+    if (options.file) |path| self.audio.playFile(path);
     if (options.capture_mode) |mode| {
-        if (rl.IsMusicValid(playback.music)) rl.PauseMusicStream(playback.music);
-        capture.start(mode, options.capture_device) catch {
-            if (rl.IsMusicValid(playback.music)) rl.ResumeMusicStream(playback.music);
-        };
+        self.audio.startCapture(mode, options.capture_device) catch {};
     }
 }
 
 fn frame(self: *App) void {
     defer tracy.frameMarkNamed("zigscene");
     const dt = rl.GetFrameTime();
-    if (playback.IsMusicStreamPlaying()) playback.UpdateMusicStream();
-    if (input_mod.process(&self.input)) |size| self.renderer.resize(size.width, size.height);
+    self.audio.update();
+    if (input_mod.process(&self.input, &self.audio)) |size| self.renderer.resize(size.width, size.height);
     if (processor.update()) self.seconds_since_audio = 0 else self.seconds_since_audio += dt;
-    self.motion.update(dt, if (self.seconds_since_audio < 0.12) processor.rms_energy else 0, processor.on_beat);
+    self.motion.update(dt, if (self.seconds_since_audio < audio_hold_seconds) processor.rms_energy else 0, processor.on_beat);
     self.halo.update(dt, processor.curr_fft);
     self.wave_bars.advance(dt);
     const center = rl.GetWorldToScreen(.{}, self.input.camera);
@@ -131,5 +129,5 @@ fn renderWindow(self: *App) void {
     rl.EndShaderMode();
 
     debug.render();
-    gui.frame();
+    gui.frame(&self.audio);
 }

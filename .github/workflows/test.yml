@@ -17,3 +17,20 @@ jobs:
 
       - name: Run tests
         run: zig build test --summary all
+
+      - name: Check native and Windows release builds
+        run: zig build release-build
+
+  macos-release-build:
+    runs-on: macos-14
+    name: Check macOS release build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Zig setup
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+
+      - name: Build release binary
+        run: zig build -Doptimize=ReleaseSafe

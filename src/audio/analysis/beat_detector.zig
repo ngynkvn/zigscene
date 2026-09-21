@@ -1,7 +1,8 @@
 const std = @import("std");
+const AudioConfig = @import("../../core/config.zig").Audio;
 
-// Assuming a sample rate of 44100, 43 samples approximates 1 second
-const N = 43;
+// One energy value is measured per analysis block, so this covers about one second.
+const N = @divTrunc(@as(usize, AudioConfig.sample_rate), AudioConfig.buffer_size);
 pub var energy_history: [N]f32 = std.mem.zeroes([N]f32);
 pub var history_pos: usize = 0;
 pub var beat_sensitivity: f32 = 1.5142857;

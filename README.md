@@ -36,7 +36,8 @@ zig build test
 
 `zig build run`, then drag and drop an audio file onto the window. Press **M** to
 capture system playback audio instead. Press **M** again to stop capture. Dropping
-a file switches back to file playback.
+a file switches back to file playback. When capture stops, the previous file
+resumes if it was playing before capture started.
 
 Use **1** to hide the settings, **2** for shape and shader controls, **3** for
 colors, **4** for motion and audio response, and **5** to show or hide individual

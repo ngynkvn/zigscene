@@ -6,15 +6,19 @@ const hsv = @import("../../ext/color.zig").Color.hsv.vec3;
 
 pub const Halo = struct {
     const bands = 96;
+    const first_fft_bin = 2;
+    const fft_bins_per_band = 3;
+    const level_smoothing_seconds: f32 = 0.09;
+    const max_frame_dt_seconds: f32 = 0.1;
     levels: [bands]f32 = @splat(0),
     phase: f32 = 0,
 
     pub fn update(self: *Halo, dt_seconds: f32, spectrum: []const Complex) void {
-        const dt = std.math.clamp(dt_seconds, 0, 0.1);
+        const dt = std.math.clamp(dt_seconds, 0, max_frame_dt_seconds);
         self.phase = @mod(self.phase + dt * Config.spin, std.math.tau);
-        const blend = 1 - @exp(-dt / 0.09);
+        const blend = 1 - @exp(-dt / level_smoothing_seconds);
         for (&self.levels, 0..) |*level, i| {
-            const bin = 2 + i * 3;
+            const bin = first_fft_bin + i * fft_bins_per_band;
             if (bin >= spectrum.len) break;
             const magnitude = spectrum[bin].magnitude() / @as(f32, @floatFromInt(spectrum.len));
             const target = std.math.clamp(@sqrt(magnitude) / (1 + @sqrt(magnitude)), 0, 1);

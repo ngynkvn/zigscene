@@ -2,6 +2,12 @@ const std = @import("std");
 
 const Config = @import("../core/config.zig");
 const N = Config.Audio.buffer_size;
+const channels = Config.Audio.channels;
+const max_blocks_per_frame = 4;
+const beat_retrigger_blocks = 8;
+comptime {
+    if (channels != 2) @compileError("audio analysis expects stereo input");
+}
 const cnv = @import("../ext/convert.zig");
 const ffi = cnv.ffi;
 const beat = @import("analysis/beat_detector.zig");
@@ -36,7 +42,7 @@ pub var rms_energy: f32 = 0;
 /// that were passed to raylib / miniaudio.h
 pub fn audioStreamCallback(ptr: ?*anyopaque, frames: c_uint) callconv(.c) void {
     const data = ptr orelse return;
-    const buffer: []const f32 = @as([*]f32, @ptrCast(@alignCast(data)))[0 .. frames * 2];
+    const buffer: []const f32 = @as([*]f32, @ptrCast(@alignCast(data)))[0 .. frames * channels];
     samples.submit(.file, buffer);
 }
 
@@ -59,10 +65,10 @@ pub fn selectSource(source: SampleQueue.Source) void {
 
 /// Run fixed-size analysis on the render thread, outside device callbacks.
 pub fn update() bool {
-    var block: [N * 2]f32 = undefined;
+    var block: [N * channels]f32 = undefined;
     var processed = false;
     on_beat = false;
-    for (0..4) |_| {
+    for (0..max_blocks_per_frame) |_| {
         if (!samples.popBlock(&block)) break;
         processBuffer(&block);
         processed = true;
@@ -71,8 +77,8 @@ pub fn update() bool {
 }
 
 fn processBuffer(buffer: []const f32) void {
-    std.debug.assert(buffer.len == N * 2);
-    const curr_len = buffer.len / 2;
+    std.debug.assert(buffer.len == N * channels);
+    const curr_len = buffer.len / channels;
 
     processFrame(buffer, curr_len);
     processWindowed(curr_len);
@@ -80,7 +86,7 @@ fn processBuffer(buffer: []const f32) void {
     const detected = beat.process(buffer);
     if (beat_cooldown > 0) beat_cooldown -= 1;
     past_beats[bi] = detected and beat_cooldown == 0;
-    if (past_beats[bi]) beat_cooldown = 8;
+    if (past_beats[bi]) beat_cooldown = beat_retrigger_blocks;
     on_beat = on_beat or past_beats[bi];
     bi = (bi + 1) % N;
 
@@ -98,8 +104,8 @@ fn processFrame(buffer: []const f32, len: usize) void {
     // For now, process frame-by-frame
     for (0..len) |fi| {
         // Stereo -> Mono
-        l = buffer[fi * 2 + 0];
-        r = buffer[fi * 2 + 1];
+        l = buffer[fi * channels + 0];
+        r = buffer[fi * channels + 1];
         const mono = (l + r) * 0.5;
 
         raw_sample[fi] = mono;
@@ -115,7 +121,7 @@ fn processFrame(buffer: []const f32, len: usize) void {
         rms += (l * l + r * r);
     }
 
-    rms_energy = @sqrt(rms / (2 * ffi(f32, len)));
+    rms_energy = @sqrt(rms / (channels * ffi(f32, len)));
 }
 
 fn processWindowed(len: usize) void {

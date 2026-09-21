@@ -8,24 +8,28 @@ var processor_attached = false;
 var fnbuff: [256]u8 = @splat(0);
 pub var filename: []u8 = fnbuff[0..0];
 
-pub fn onFilenameInput(path: []const u8) void {
+pub fn loadFile(path: []const u8) bool {
     if (rl.IsMusicValid(music)) rl.UnloadMusicStream(music);
-    music = rl.LoadMusicStream(path.ptr);
-    if (!rl.IsMusicValid(music)) {
-        processor.selectSource(.none);
+    const path_z = std.heap.page_allocator.dupeZ(u8, path) catch {
+        music = .{};
         filename = fnbuff[0..0];
-        return;
+        return false;
+    };
+    defer std.heap.page_allocator.free(path_z);
+    music = rl.LoadMusicStream(path_z.ptr);
+    if (!rl.IsMusicValid(music)) {
+        filename = fnbuff[0..0];
+        return false;
     }
-    const cfilename = rl.GetFileName(path.ptr);
+    const cfilename = rl.GetFileName(path_z.ptr);
     const clen = @min(std.mem.len(cfilename), 160);
     @memcpy(fnbuff[0..clen], cfilename[0..clen]);
     filename = fnbuff[0..clen];
-    processor.selectSource(.file);
     if (!processor_attached) {
         rl.AttachAudioMixedProcessor(processor.audioStreamCallback);
         processor_attached = true;
     }
-    rl.PlayMusicStream(music);
+    return true;
 }
 pub fn shutdown() void {
     if (processor_attached) {
@@ -34,7 +38,6 @@ pub fn shutdown() void {
     }
     if (rl.IsMusicValid(music)) rl.UnloadMusicStream(music);
     music = .{};
-    processor.selectSource(.none);
 }
 pub fn GetMusicTimePlayed() f32 {
     return rl.GetMusicTimePlayed(music);
