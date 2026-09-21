@@ -114,6 +114,7 @@ const Layout = struct {
                         _ = std.fmt.bufPrintZ(&value_buffer, "{d}", .{fval.*}) catch unreachable;
                         @memcpy(&editing_buffer, &value_buffer);
                     }
+                    controls.constrainScalar(optinfo);
                 }
                 nth_field += group.len;
             }
