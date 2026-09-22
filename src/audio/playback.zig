@@ -2,14 +2,17 @@ const std = @import("std");
 
 const rl = @import("../raylib.zig");
 const processor = @import("processor.zig");
+const WaveformPreview = @import("WaveformPreview.zig");
 
 pub var music = rl.Music{};
 var processor_attached = false;
 var fnbuff: [256]u8 = @splat(0);
 pub var filename: []u8 = fnbuff[0..0];
+pub var waveform: WaveformPreview = .{};
 
 pub fn loadFile(path: []const u8) bool {
     if (rl.IsMusicValid(music)) rl.UnloadMusicStream(music);
+    waveform.clear();
     const path_z = std.heap.page_allocator.dupeZ(u8, path) catch {
         music = .{};
         filename = fnbuff[0..0];
@@ -25,12 +28,25 @@ pub fn loadFile(path: []const u8) bool {
     const clen = @min(std.mem.len(cfilename), 160);
     @memcpy(fnbuff[0..clen], cfilename[0..clen]);
     filename = fnbuff[0..clen];
+    buildWaveform(path_z.ptr);
     if (!processor_attached) {
         rl.AttachAudioMixedProcessor(processor.audioStreamCallback);
         processor_attached = true;
     }
     return true;
 }
+
+fn buildWaveform(path: [*:0]const u8) void {
+    const wave = rl.LoadWave(path);
+    if (!rl.IsWaveValid(wave)) return;
+    defer rl.UnloadWave(wave);
+    const samples = rl.LoadWaveSamples(wave);
+    if (samples == null) return;
+    defer rl.UnloadWaveSamples(samples);
+    const sample_count = @as(usize, wave.frameCount) * @as(usize, wave.channels);
+    waveform.build(samples[0..sample_count], wave.channels);
+}
+
 pub fn shutdown() void {
     if (processor_attached) {
         rl.DetachAudioMixedProcessor(processor.audioStreamCallback);
@@ -38,6 +54,7 @@ pub fn shutdown() void {
     }
     if (rl.IsMusicValid(music)) rl.UnloadMusicStream(music);
     music = .{};
+    waveform.clear();
 }
 pub fn GetMusicTimePlayed() f32 {
     return rl.GetMusicTimePlayed(music);

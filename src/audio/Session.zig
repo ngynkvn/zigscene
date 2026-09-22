@@ -124,3 +124,8 @@ pub fn timePlayed(_: *const Session) f32 {
 pub fn timeLength(_: *const Session) f32 {
     return playback.GetMusicTimeLength();
 }
+
+pub fn waveform(_: *const Session) []const f32 {
+    if (!playback.waveform.available) return &.{};
+    return &playback.waveform.peaks;
+}

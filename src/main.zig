@@ -55,6 +55,7 @@ extern fn emscripten_set_main_loop(callback: *const fn () callconv(.c) void, fps
 
 test "root" {
     _ = @import("audio/playback.zig");
+    _ = @import("audio/WaveformPreview.zig");
     _ = @import("audio/processor.zig");
     _ = @import("graphics.zig");
     _ = @import("gui.zig");
