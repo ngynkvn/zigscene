@@ -9,6 +9,7 @@ pub fn startup() void {
 
     // Setup
     rl.InitWindow(Config.Window.width, Config.Window.height, APP_NAME);
+    rl.SetTargetFPS(Config.Window.fps_target);
 
     rl.InitAudioDevice();
 

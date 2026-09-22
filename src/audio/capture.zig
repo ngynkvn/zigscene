@@ -30,12 +30,20 @@ pub fn start(new_mode: Mode, device_index: i32) !void {
 }
 
 pub fn stop() void {
+    if (builtin.os.tag == .emscripten) {
+        active = false;
+        return;
+    }
     if (!active) return;
     c.zigscene_capture_stop();
     active = false;
 }
 
 pub fn listDevices() void {
+    if (builtin.os.tag == .emscripten) {
+        std.debug.print("Audio capture is not available in the web build.\n", .{});
+        return;
+    }
     var names: [32][128]u8 = @splat(@splat(0));
     for ([_]Mode{ .system, .input }) |kind| {
         if (builtin.os.tag != .windows and kind == .system) {

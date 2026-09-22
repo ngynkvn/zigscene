@@ -34,3 +34,37 @@ jobs:
 
       - name: Build release binary
         run: zig build -Doptimize=ReleaseSafe
+
+  web-build:
+    runs-on: ubuntu-latest
+    name: Check web build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Zig setup
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+
+      - name: Emscripten setup
+        uses: emscripten-core/setup-emsdk@v16
+        with:
+          version: 6.0.5
+          actions-cache-folder: emsdk-cache
+
+      - name: Build web application
+        run: zig build web -Dtarget=wasm32-emscripten -Doptimize=ReleaseSafe --sysroot "$EMSDK/upstream/emscripten"
+
+      - name: Validate web bundle
+        run: |
+          test -s zig-out/web/index.html
+          test -s zig-out/web/index.js
+          test -s zig-out/web/index.wasm
+          node --check zig-out/web/index.js
+          od -An -tx1 -N4 zig-out/web/index.wasm | grep -q '00 61 73 6d'
+
+      - name: Upload web bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: zigscene-web
+          path: zig-out/web

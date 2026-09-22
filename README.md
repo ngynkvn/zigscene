@@ -32,6 +32,23 @@ zig build -Doptimize=ReleaseFast
 zig build test
 ```
 
+### Web build
+
+Install and activate the [Emscripten SDK](https://emscripten.org/docs/getting_started/downloads.html), then run:
+
+```bash
+zig build web -Dtarget=wasm32-emscripten -Doptimize=ReleaseSafe \
+  --sysroot "$EMSDK/upstream/emscripten"
+
+# Serve the generated bundle locally with emrun
+zig build web-run -Dtarget=wasm32-emscripten -Doptimize=ReleaseSafe \
+  --sysroot "$EMSDK/upstream/emscripten"
+```
+
+The deployable browser files are written to `zig-out/web`. Browser builds
+support dropped audio files; native system audio capture is unavailable in a
+browser.
+
 ## Usage
 
 `zig build run`, then drag and drop an audio file onto the window. Press **M** to

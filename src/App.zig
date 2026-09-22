@@ -53,7 +53,7 @@ fn applyOptions(self: *App, options: cli.Options) void {
     }
 }
 
-fn frame(self: *App) void {
+pub fn frame(self: *App) void {
     defer tracy.frameMarkNamed("zigscene");
     const dt = rl.GetFrameTime();
     self.audio.update();
