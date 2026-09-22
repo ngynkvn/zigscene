@@ -5,6 +5,7 @@ const config = @import("core/config.zig");
 const Direction = @import("core/event.zig").Direction;
 const Rectangle = @import("ext/structs.zig").Rectangle;
 const controls = @import("gui/controls.zig");
+const PanelLayout = @import("gui/panel_layout.zig");
 const rl = @import("raylib.zig");
 
 pub const Tab = enum(c_int) { none, scalar, color, motion, scene };
@@ -75,40 +76,38 @@ const Layout = struct {
     pub const Scalars = struct {
         var editState: ?usize = null;
         const PanelSize = Base.translate(2, 20).resize(280, 700);
-        const LabelSize = Base.resize(200, 8);
         const label: []const u8 = "Scalars";
         const offset: usize = 24;
         const initialOffset = 60;
         fn draw(comptime motion_controls: bool) void {
             const fields = if (motion_controls) MotionFields else ShapeFields;
             const anchor = PanelSize.translate(gui_xoffset, 0);
-            const label_rect = LabelSize.translate(gui_xoffset, 0);
             _ = rl.GuiPanel(anchor.into(), if (motion_controls) "Motion" else label.ptr);
-            comptime var nth_field = 0;
-            // TODO: refactor this is such a mess
-            inline for (fields, 0..) |sf, gi| {
+            var layout = PanelLayout.init(anchor, initialOffset);
+            var field_index: usize = 0;
+            inline for (fields) |sf| {
                 const name, const group = sf;
-                const y = initialOffset + offset * nth_field + offset * gi;
-                _ = rl.GuiLabel(label_rect.translate(5, y).into(), name.ptr);
-                inline for (group, 0..) |optinfo, fi| {
+                _ = rl.GuiLabel(layout.groupLabel().into(), name.ptr);
+                inline for (group) |optinfo| {
                     const fname, const fval, const frange = optinfo;
-                    const j = nth_field + fi;
-                    _ = rl.GuiSlider(anchor.resize(120, 16).translate(100, y + fi * offset).into(), fname.ptr, "", fval, frange[0], frange[1]);
+                    const row = layout.row(offset);
+                    _ = rl.GuiSlider(row.resize(120, 16).translate(100, 0).into(), fname.ptr, "", fval, frange[0], frange[1]);
 
-                    const buf = if (editState == j)
+                    const buf = if (editState == field_index)
                         &editing_buffer
                     else
                         std.fmt.bufPrintZ(&value_buffer, tunable_fmt, .{fval.*}) catch unreachable;
 
-                    if (rl.GuiValueBoxFloat(anchor.resize(50, 16).translate(225, y + fi * offset).into(), "", buf.ptr, fval, editState == j) != 0) {
-                        editState = if (editState == j) null else j;
+                    if (rl.GuiValueBoxFloat(row.resize(50, 16).translate(225, 0).into(), "", buf.ptr, fval, editState == field_index) != 0) {
+                        editState = if (editState == field_index) null else field_index;
                         @memset(&value_buffer, 0);
                         _ = std.fmt.bufPrintZ(&value_buffer, "{d}", .{fval.*}) catch unreachable;
                         @memcpy(&editing_buffer, &value_buffer);
                     }
                     controls.constrainScalar(optinfo);
+                    field_index += 1;
                 }
-                nth_field += group.len;
+                layout.advance(offset);
             }
         }
         const ShapeFields = [_]struct { []const u8, []const controls.Scalar }{
@@ -136,8 +135,10 @@ const Layout = struct {
         fn draw() void {
             const anchor = Base.translate(gui_xoffset + 2, 20).resize(280, 700);
             _ = rl.GuiPanel(anchor.into(), "Scene elements");
-            inline for (items, 0..) |item, i| {
-                _ = rl.GuiCheckBox(anchor.resize(20, 20).translate(18, 40 + i * 38).into(), item[0], item[1]);
+            var layout = PanelLayout.init(anchor, 40);
+            inline for (items) |item| {
+                const row = layout.row(38);
+                _ = rl.GuiCheckBox(row.resize(20, 20).translate(18, 0).into(), item[0], item[1]);
             }
         }
     };
@@ -146,21 +147,17 @@ const Layout = struct {
         const offset = 24;
         fn draw() void {
             const anchor = Base.translate(gui_xoffset + 2, 20).resize(200, 700);
-            const panel = anchor.resize(slider_w, 16);
             _ = rl.GuiPanel(anchor.into(), "Colors");
-
-            comptime var yoff: f32 = 32;
+            var layout = PanelLayout.init(anchor, 32);
             inline for (Fields) |info| {
                 const name, const cfg = info;
-                comptime var i: usize = 0;
-                _ = rl.GuiLabel(anchor.resize(200, 8).translate(5, yoff).into(), name.ptr);
+                _ = rl.GuiLabel(layout.groupLabel().into(), name.ptr);
+                layout.advance(offset);
                 inline for (cfg) |optinfo| {
                     const fname, const fval = optinfo;
-                    _ = rl.GuiColorBarHueH(panel.translate(40, offset + yoff).into(), fname.ptr, fval);
-                    yoff += offset;
-                    i += 1;
+                    const row = layout.row(offset);
+                    _ = rl.GuiColorBarHueH(row.resize(slider_w, 16).translate(40, 0).into(), fname.ptr, fval);
                 }
-                yoff += offset;
             }
         }
         const Fields = [_]struct { []const u8, []const controls.Color }{

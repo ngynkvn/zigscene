@@ -46,6 +46,8 @@ times, and beat pulse decay. The frequency halo has its own radius, depth, spin,
 and hue controls. Hold **Space** to temporarily smooth the waveform more heavily.
 The motion tab also has a Window opacity slider for the entire window. The
 Background alpha slider in the shape tab controls only the window background.
+Press **D** to toggle a debug panel with frame timing, mouse input, and audio
+response values.
 
 You can start capture from the command line:
 
