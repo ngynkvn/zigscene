@@ -24,6 +24,7 @@ fn to(next: Tab) void {
 var draggingSlider = false;
 
 pub fn frame(audio: *AudioSession) void {
+    if (draggingSlider and (audio.captureActive() or !audio.hasFile())) draggingSlider = false;
     if (gui_xoffset < 0) {
         gui_xoffset = @trunc(std.math.lerp(gui_xoffset, 0, @min(0.3, 30 * rl.GetFrameTime())));
     }
@@ -35,16 +36,9 @@ pub fn frame(audio: *AudioSession) void {
     if (audio.captureActive()) {
         _ = std.fmt.bufPrintZ(&Layout.txt, "{s} audio capture active (M to stop)", .{if (audio.captureMode() == .system) "System" else "Input"}) catch unreachable;
     } else if (audio.hasFile()) {
-        var mtp = audio.timePlayed();
+        const mtp = audio.timePlayed();
         const mtl = audio.timeLength();
         _ = std.fmt.bufPrintZ(&Layout.txt, "{s} |{d:7.2}s/{d:7.2}s", .{ audio.filename(), mtp, mtl }) catch unreachable;
-        if (rl.GuiSliderBar(guiStatusBar, null, null, &mtp, 0, mtl) != 0) {
-            draggingSlider = true;
-            audio.seekTo(mtp);
-        } else if (draggingSlider) { // was dragging, now released
-            draggingSlider = false;
-            audio.endSeek();
-        }
     } else {
         _ = std.fmt.bufPrintZ(&Layout.txt, "M: capture system audio | Drop a file to play", .{}) catch unreachable;
     }
@@ -52,6 +46,7 @@ pub fn frame(audio: *AudioSession) void {
     var playIconBuffer: [16]u8 = @splat(0);
     const playIconTxt = std.fmt.bufPrintZ(&playIconBuffer, "#{}#", .{if (musicOn) rl.ICON_PLAYER_PLAY else rl.ICON_PLAYER_PAUSE}) catch unreachable;
     _ = rl.GuiStatusBar(guiStatusBar, &Layout.txt);
+    if (!audio.captureActive() and audio.hasFile()) drawWaveformScrubber(audio, guiStatusBar);
     if (rl.GuiButton(base.translate(base.width * 3 + 8, 0).into(), playIconTxt) != 0) audio.togglePlayback();
 
     switch (active_tab) {
@@ -64,6 +59,50 @@ pub fn frame(audio: *AudioSession) void {
         .motion => Layout.Scalars.draw(true),
         .scene => Layout.Scene.draw(),
     }
+}
+
+fn drawWaveformScrubber(audio: *AudioSession, status: rl.Rectangle) void {
+    const inset: f32 = 2;
+    const bounds = rl.Rectangle{
+        .x = status.x + inset,
+        .y = status.y + inset,
+        .width = status.width - inset * 2,
+        .height = status.height - inset * 2,
+    };
+    const duration = audio.timeLength();
+    const mouse = rl.GetMousePosition();
+    if (duration > 0 and rl.CheckCollisionPointRec(mouse, bounds) and rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT)) {
+        draggingSlider = true;
+        audio.beginSeek();
+    }
+    if (draggingSlider and rl.IsMouseButtonDown(rl.MOUSE_BUTTON_LEFT)) {
+        const fraction = std.math.clamp((mouse.x - bounds.x) / bounds.width, 0, 1);
+        audio.seekTo(duration * fraction);
+    }
+    if (draggingSlider and rl.IsMouseButtonReleased(rl.MOUSE_BUTTON_LEFT)) {
+        draggingSlider = false;
+        audio.endSeek();
+    }
+
+    rl.DrawRectangleRec(bounds, .{ .r = 12, .g = 16, .b = 24, .a = 220 });
+    const peaks = audio.waveform();
+    if (peaks.len == 0) return;
+    const played = std.math.clamp(audio.timePlayed() / @max(duration, 0.001), 0, 1);
+    const columns: usize = @intFromFloat(@max(1, @floor(bounds.width)));
+    for (0..columns) |column| {
+        const peak = peaks[@min(column * peaks.len / columns, peaks.len - 1)];
+        const x = bounds.x + @as(f32, @floatFromInt(column));
+        const half_height = @max(1, peak * (bounds.height * 0.46));
+        const color: rl.Color = if (@as(f32, @floatFromInt(column)) / @as(f32, @floatFromInt(columns)) <= played)
+            .{ .r = 56, .g = 210, .b = 255, .a = 255 }
+        else
+            .{ .r = 115, .g = 128, .b = 150, .a = 210 };
+        rl.DrawLineV(.{ .x = x, .y = bounds.y + bounds.height * 0.5 - half_height }, .{ .x = x, .y = bounds.y + bounds.height * 0.5 + half_height }, color);
+    }
+    const playhead_x = bounds.x + bounds.width * played;
+    rl.DrawLineV(.{ .x = playhead_x, .y = bounds.y }, .{ .x = playhead_x, .y = bounds.y + bounds.height }, rl.WHITE);
+    rl.DrawText(&Layout.txt, @intFromFloat(bounds.x + 4), @intFromFloat(bounds.y + 2), 10, .{ .r = 4, .g = 8, .b = 14, .a = 255 });
+    rl.DrawText(&Layout.txt, @intFromFloat(bounds.x + 3), @intFromFloat(bounds.y + 1), 10, rl.WHITE);
 }
 
 const Layout = struct {
