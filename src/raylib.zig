@@ -108,6 +108,7 @@ pub const SeekMusicStream = rl.SeekMusicStream;
 pub const SetConfigFlags = rl.SetConfigFlags;
 pub const SetMasterVolume = rl.SetMasterVolume;
 pub const SetShaderValue = rl.SetShaderValue;
+pub const SetTargetFPS = rl.SetTargetFPS;
 pub const SetWindowPosition = rl.SetWindowPosition;
 pub const SetWindowOpacity = rl.SetWindowOpacity;
 pub const Shader = rl.Shader;

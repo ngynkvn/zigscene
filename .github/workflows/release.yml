@@ -65,3 +65,67 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: zig-out/bin/${{env.RELEASE_NAME}}
+
+  build-release-windows-x86_64:
+    runs-on: windows-latest
+    env:
+      RELEASE_NAME: zigscene-windows-x86_64
+    permissions:
+      contents: write
+
+    name: Build and Release Windows
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Zig Setup
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+
+      - name: Build
+        shell: pwsh
+        run: |
+          zig build -Doptimize=ReleaseSafe
+          New-Item -ItemType Directory -Path "zig-out/$env:RELEASE_NAME"
+          Copy-Item "zig-out/bin/zigscene.exe" "zig-out/$env:RELEASE_NAME/zigscene.exe"
+          Compress-Archive -Path "zig-out/$env:RELEASE_NAME" -DestinationPath "zig-out/$env:RELEASE_NAME.zip"
+
+      - name: Upload for Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: zig-out/${{env.RELEASE_NAME}}.zip
+
+  build-release-web:
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_NAME: zigscene-web
+    permissions:
+      contents: write
+
+    name: Build and Release Web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Zig Setup
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+
+      - name: Emscripten Setup
+        uses: emscripten-core/setup-emsdk@v16
+        with:
+          version: 6.0.5
+          actions-cache-folder: emsdk-cache
+
+      - name: Build
+        run: |
+          zig build web -Dtarget=wasm32-emscripten -Doptimize=ReleaseSafe --sysroot "$EMSDK/upstream/emscripten"
+          cd zig-out/web
+          zip -r ../${{env.RELEASE_NAME}}.zip .
+
+      - name: Upload for Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: zig-out/${{env.RELEASE_NAME}}.zip

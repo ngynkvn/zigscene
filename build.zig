@@ -5,6 +5,7 @@ const emcc = @import("deps/build/emcc.zig");
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+    emcc.hookSysrootIfNeeded(b, target);
 
     const opts = b.addOptions();
     const tracy_enable = b.option(bool, "tracy_enable", "Enable Tracy integration. Supply path to Tracy source") orelse false;
@@ -34,10 +35,11 @@ pub fn build(b: *std.Build) !void {
         .linux_display_backend = .X11,
     });
 
-    const run_option = b.step("web", "Build and run for web");
+    const web_step = b.step("web", "Build the web application");
+    const web_run_step = b.step("web-run", "Build and run the web application");
     if (target.result.os.tag == .emscripten) {
-        const run_step = try emcc.emscriptenRunStep(b);
-        run_option.dependOn(&run_step.step);
+        const run_step = try emcc.runStep(b);
+        web_run_step.dependOn(&run_step.step);
 
         const exe_lib = b.addLibrary(.{
             .name = "zigscene",
@@ -46,9 +48,11 @@ pub fn build(b: *std.Build) !void {
         });
         const cache_include = b.pathResolve(&.{ b.sysroot.?, "cache", "sysroot", "include" });
         exe_lib.root_module.addIncludePath(.{ .cwd_relative = cache_include });
+        exe_lib.root_module.addOptions("options", opts);
         exe_lib.root_module.addImport("raylib", raylib.module("raylib"));
         exe_lib.root_module.addImport("tracy", tracy_mod);
-        const link_step = try emcc.linkWithEmscripten(b, &[_]*std.Build.Step.Compile{ exe_lib, raylib.artifact("raylib") });
+        const link_step = try emcc.link(b, &[_]*std.Build.Step.Compile{ exe_lib, raylib.artifact("raylib") });
+        web_step.dependOn(&link_step.step);
         run_step.step.dependOn(&link_step.step);
     }
 
