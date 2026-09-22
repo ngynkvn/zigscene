@@ -1,53 +1,41 @@
+//! Optional runtime diagnostics, toggled with D.
 const std = @import("std");
-
 const processor = @import("../audio/processor.zig");
-const cnv = @import("../ext/convert.zig");
-const ffi = cnv.ffi;
 const Rectangle = @import("../ext/structs.zig").Rectangle;
 const rl = @import("../raylib.zig");
-var screenWidth: c_int = @import("config.zig").Window.width;
+
+const panel_width: f32 = 280;
+const panel_height: f32 = 166;
+const panel_margin: f32 = 12;
+var screen_width: i32 = @import("config.zig").Window.width;
+var visible = false;
 
 pub fn onWindowResize(width: i32, _: i32) void {
-    screenWidth = width;
-}
-
-var pos: rl.Rectangle = .{ .x = 300, .y = 300, .width = 10, .height = 10 };
-var visible = false;
-pub fn render() void {
-    if (!visible) return;
-    var txt = std.mem.zeroes([256]u8);
-    const buf = std.fmt.bufPrintZ(txt[0..64], "{d:4}", .{rl.GetFPS()}) catch txt[0..0];
-    rl.DrawText(buf.ptr, screenWidth - 100, 200, 24, rl.RAYWHITE);
-    pos.height = 10 + 100 * processor.rms_energy;
-    rl.DrawRectangleRec(pos, rl.RED);
-    // timeseries beats
-    const tsbeats = Rectangle.from(10, 64, 1, 10);
-    // Go past last written and scan from there
-    const bi = processor.bi;
-    for (1..processor.past_beats.len + 1) |b| {
-        const i = (bi + b) % processor.past_beats.len;
-        const value = processor.past_beats[i];
-        rl.DrawRectangleRec(tsbeats.translate(ffi(f32, b * 2), 0).into(), if (!value) rl.BLUE else rl.RED);
-    }
+    screen_width = width;
 }
 
 pub fn frame() void {
     if (rl.isKeyPressed(.D)) visible = !visible;
-    const mp = rl.GetMousePosition();
-    const delta = rl.GetMouseDelta();
-    const dragging = rl.IsMouseButtonDown(rl.MOUSE_LEFT_BUTTON) and
-        (rl.CheckCollisionPointRec(mp, pos) or rl.CheckCollisionPointRec(.{ .x = mp.x - delta.x, .y = mp.y - delta.y }, pos));
-    if (dragging) {
-        pos.x += delta.x;
-        pos.y += delta.y;
-    }
 }
 
-// TODO: enum
-pub const RL_TEXTURE_FILTER_NEAREST = @as(c_int, 0x2600);
-pub const RL_TEXTURE_FILTER_LINEAR = @as(c_int, 0x2601);
-pub const RL_TEXTURE_FILTER_MIP_NEAREST = @as(c_int, 0x2700);
-pub const RL_TEXTURE_FILTER_NEAREST_MIP_LINEAR = @as(c_int, 0x2702);
-pub const RL_TEXTURE_FILTER_LINEAR_MIP_NEAREST = @as(c_int, 0x2701);
-pub const RL_TEXTURE_FILTER_MIP_LINEAR = @as(c_int, 0x2703);
-pub const RL_TEXTURE_FILTER_ANISOTROPIC = @as(c_int, 0x3000);
+pub fn render() void {
+    if (!visible) return;
+    const x = @max(panel_margin, @as(f32, @floatFromInt(screen_width)) - panel_width - panel_margin);
+    const panel = Rectangle.from(x, 32, panel_width, panel_height);
+    _ = rl.GuiPanel(panel.into(), "Debug");
+
+    const mouse = rl.GetMousePosition();
+    const delta = rl.GetMouseDelta();
+    const wheel = rl.GetMouseWheelMoveV();
+    drawLine(panel, 30, "FPS: {d}  Frame: {d:.1} ms", .{ rl.GetFPS(), rl.GetFrameTime() * 1000 });
+    drawLine(panel, 54, "Mouse: {d:.0}, {d:.0}", .{ mouse.x, mouse.y });
+    drawLine(panel, 78, "Move: {d:.1}, {d:.1}", .{ delta.x, delta.y });
+    drawLine(panel, 102, "Wheel: {d:.1}, {d:.1}  Left: {}", .{ wheel.x, wheel.y, rl.IsMouseButtonDown(rl.MOUSE_BUTTON_LEFT) });
+    drawLine(panel, 126, "Audio RMS: {d:.3}  Beat: {}", .{ processor.rms_energy, processor.on_beat });
+}
+
+fn drawLine(panel: Rectangle, y: f32, comptime format: []const u8, args: anytype) void {
+    var buffer: [128]u8 = undefined;
+    const line = std.fmt.bufPrintZ(&buffer, format, args) catch return;
+    _ = rl.GuiLabel(panel.resize(panel.width - 24, 18).translate(12, y).into(), line.ptr);
+}
