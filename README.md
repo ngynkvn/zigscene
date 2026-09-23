@@ -60,7 +60,12 @@ The studio interface uses labeled tabs and scrollable settings panels.
 Use the wheel or drag the scrollbar to explore each panel. The playback bar provides
 Play/Pause, System audio capture, and a Volume slider. Drag the waveform to seek;
 the elapsed/total timer sits on the waveform, with the track name above it. Hover
-over the waveform to preview a seek time. Tabs remember their scroll positions,
+over the waveform to preview a seek time. The waveform preserves linear sample
+peaks with a brighter RMS body and up to 8,192 analysis bins, reduced to display
+pixels without skipping transients. Its three colors show low frequencies (red,
+below 250 Hz), mids (green, 250 Hz–4 kHz), and highs (blue, above 4 kHz), using
+filters at the file's sample rate. Colored layer thickness reflects relative band
+RMS; filter transitions overlap around the crossover frequencies. Tabs remember their scroll positions,
 and Scene provides Show all / Hide all controls. Hover over an element's settings
 to highlight it in the scene; the highlight stays active while dragging a slider.
 Hidden layers stay hidden, and global controls do not single out a layer.

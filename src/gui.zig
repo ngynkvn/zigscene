@@ -38,7 +38,7 @@ fn height() f32 {
     return @floatFromInt(rl.GetScreenHeight());
 }
 fn panel() rl.Rectangle {
-    return ui.rect(16, 88, if (width() < 800) 280 else 320, @max(180, height() - 248));
+    return ui.rect(16, 88, if (width() < 800) 280 else 320, @max(180, height() - 268));
 }
 fn viewport() rl.Rectangle {
     const p = panel();
@@ -48,7 +48,7 @@ fn viewport() rl.Rectangle {
 /// UI wheel gestures must not also move the scene camera.
 pub fn pointerOverUi() bool {
     return ui.hovered(ui.rect(16, 16, width() - 32, 58)) or
-        ui.hovered(ui.rect(16, height() - 144, width() - 32, 128)) or
+        ui.hovered(ui.rect(16, height() - 164, width() - 32, 148)) or
         (active_tab != .none and ui.hovered(panel()));
 }
 
@@ -367,21 +367,34 @@ fn applyScroll(dir: Direction, amount: f32, pointer_over_panel: bool) void {
     }
 }
 
+const waveform_colors = [_]rl.Color{
+    .{ .r = 244, .g = 107, .b = 112, .a = 255 },
+    .{ .r = 105, .g = 220, .b = 150, .a = 255 },
+    .{ .r = 100, .g = 174, .b = 255, .a = 255 },
+};
+
 fn drawPlayer(audio: *AudioSession) void {
-    const dock = ui.rect(16, height() - 144, width() - 32, 128);
+    const dock = ui.rect(16, height() - 164, width() - 32, 148);
     ui.card(dock);
     const live = audio.captureActive();
     const file = audio.hasFile() and !live;
     const text_x: f32 = 32;
     var title_buffer: [512]u8 = undefined;
     const title = if (live) (if (audio.captureMode() == .system) "LIVE INPUT  /  System audio" else "LIVE INPUT  /  Input audio") else if (file) std.fmt.bufPrintZ(&title_buffer, "{s}  /  {s}", .{ if (audio.seeking) "SEEKING" else if (audio.isFilePlaying()) "PLAYING" else "PAUSED", audio.filename() }) catch "Audio file" else "Your sound. Your scene.";
-    rl.BeginScissorMode(@intFromFloat(text_x), @intFromFloat(dock.y + 10), @intFromFloat(dock.width - (if (audio.notice != null) @as(f32, 112) else 32)), 24);
+    rl.BeginScissorMode(@intFromFloat(text_x), @intFromFloat(dock.y + 10), @intFromFloat(dock.width - (if (audio.notice != null) @as(f32, 112) else if (file) @as(f32, 188) else 32)), 24);
     if (audio.notice) |notice| {
         ui.label(notice, text_x, dock.y + 12, 14, rl.GetColor(0xffd28aff));
     } else ui.label(title, text_x, dock.y + 12, 15, ui.text);
     rl.EndScissorMode();
     if (audio.notice != null and ui.button(ui.rect(width() - 108, dock.y + 8, 76, 26), "Dismiss", false, true)) audio.notice = null;
 
+    if (file and audio.notice == null) {
+        for ([_][:0]const u8{ "Low", "Mid", "High" }, waveform_colors, 0..) |label, color, index| {
+            const x = dock.x + dock.width - 166 + @as(f32, @floatFromInt(index)) * 52;
+            rl.DrawCircleV(.{ .x = x, .y = dock.y + 20 }, 3, color);
+            ui.label(label, x + 8, dock.y + 14, 12, color);
+        }
+    }
     const play = ui.rect(30, dock.y + 38, 104, 30);
     ui.rounded(play, 7, if (file) ui.accent_soft else ui.raised);
     const ink = if (file) ui.accent else ui.muted;
@@ -404,11 +417,11 @@ fn drawPlayer(audio: *AudioSession) void {
     const volume = std.fmt.bufPrintZ(&volume_buffer, "{d}%", .{@as(u32, @intFromFloat(config.Audio.volume * 100))}) catch unreachable;
     ui.label(volume, width() - 74, dock.y + 46, 13, ui.text);
     if (file) {
-        drawWaveformScrubber(audio, ui.rect(30, dock.y + 78, width() - 60, 38));
+        drawWaveformScrubber(audio, ui.rect(30, dock.y + 78, width() - 60, 56));
     } else {
-        ui.rounded(ui.rect(30, dock.y + 80, width() - 60, 34), 6, ui.background);
-        rl.DrawCircleV(.{ .x = 44, .y = dock.y + 97 }, 3, if (live) ui.accent else ui.muted);
-        ui.label(if (live) "Listening live. Drop a file to switch to playback." else "Drop an audio file anywhere to start listening.", 56, dock.y + 90, 13, if (live) ui.accent else ui.muted);
+        ui.rounded(ui.rect(30, dock.y + 80, width() - 60, 54), 6, ui.background);
+        rl.DrawCircleV(.{ .x = 44, .y = dock.y + 107 }, 3, if (live) ui.accent else ui.muted);
+        ui.label(if (live) "Listening live. Drop a file to switch to playback." else "Drop an audio file anywhere to start listening.", 56, dock.y + 100, 13, if (live) ui.accent else ui.muted);
     }
 }
 
@@ -427,18 +440,35 @@ fn drawWaveformScrubber(audio: *AudioSession, bounds: rl.Rectangle) void {
     }
     if (hovering or dragging_seek) rl.SetMouseCursor(rl.MOUSE_CURSOR_POINTING_HAND);
     ui.rounded(bounds, 6, ui.background);
-    const peaks = audio.waveform();
+    const waveform = audio.waveform();
     const played = std.math.clamp(audio.timePlayed() / @max(duration, 0.001), 0, 1);
-    const columns: usize = @intFromFloat(@max(1, @floor(bounds.width / 3)));
-    for (0..if (peaks.len == 0) 0 else columns) |column| {
-        // Take the peak of every covered bin so narrow views retain transients.
-        const start = column * peaks.len / columns;
-        const end = @min(peaks.len, @max(start + 1, (column + 1) * peaks.len / columns));
-        var peak: f32 = 0;
-        for (peaks[start..end]) |value| peak = @max(peak, value);
-        const x = bounds.x + @as(f32, @floatFromInt(column)) * bounds.width / @as(f32, @floatFromInt(columns));
-        const half_height = @max(1, peak * (bounds.height * 0.42));
-        ui.rounded(ui.rect(x, bounds.y + bounds.height / 2 - half_height, 2, half_height * 2), 1, if (x <= bounds.x + played * bounds.width) ui.accent else ui.border);
+    const scale = @max(1, rl.GetWindowScaleDPI().x);
+    const columns: usize = @intFromFloat(@max(1, @floor(bounds.width * scale)));
+    const column_width = bounds.width / @as(f32, @floatFromInt(columns));
+    const center_y = bounds.y + bounds.height / 2;
+    const amplitude = bounds.height * 0.44;
+    rl.DrawLineEx(.{ .x = bounds.x, .y = center_y }, .{ .x = bounds.x + bounds.width, .y = center_y }, 1 / scale, ui.border);
+    for (0..if (waveform.len == 0) 0 else columns) |column| {
+        const bin = waveform.column(column, columns);
+        const x = bounds.x + @as(f32, @floatFromInt(column)) * column_width;
+        const peak_height = @min(1, bin.peak) * amplitude;
+        const rms_height = @min(1, bin.rms()) * amplitude;
+        const opacity: f32 = if (x <= bounds.x + played * bounds.width) 1 else 0.65;
+        var offset: f32 = 0;
+        for (bin.bandWeights(), waveform_colors) |weight, color| {
+            const band_height = peak_height * weight;
+            if (band_height > 0) {
+                // Stack low/mid/high symmetrically within the actual peak.
+                rl.DrawRectangleRec(ui.rect(x, center_y - offset - band_height, column_width, band_height), rl.Fade(color, opacity * 0.5));
+                rl.DrawRectangleRec(ui.rect(x, center_y + offset, column_width, band_height), rl.Fade(color, opacity * 0.5));
+                const body_height = @min(band_height, @max(0, rms_height - offset));
+                if (body_height > 0) {
+                    rl.DrawRectangleRec(ui.rect(x, center_y - offset - body_height, column_width, body_height), rl.Fade(color, opacity));
+                    rl.DrawRectangleRec(ui.rect(x, center_y + offset, column_width, body_height), rl.Fade(color, opacity));
+                }
+            }
+            offset += band_height;
+        }
     }
     const playhead_x = bounds.x + bounds.width * played;
     rl.DrawLineEx(.{ .x = playhead_x, .y = bounds.y + 2 }, .{ .x = playhead_x, .y = bounds.y + bounds.height - 2 }, 1, ui.text);

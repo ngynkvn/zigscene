@@ -150,9 +150,8 @@ pub fn timeLength(_: *const Session) f32 {
     return playback.GetMusicTimeLength();
 }
 
-pub fn waveform(_: *const Session) []const f32 {
-    if (!playback.waveform.available) return &.{};
-    return &playback.waveform.peaks;
+pub fn waveform(_: *const Session) *const @import("WaveformPreview.zig") {
+    return &playback.waveform;
 }
 
 test "master volume stays within the mixer range" {

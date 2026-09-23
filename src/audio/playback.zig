@@ -44,7 +44,7 @@ fn buildWaveform(path: [*:0]const u8) void {
     if (samples == null) return;
     defer rl.UnloadWaveSamples(samples);
     const sample_count = @as(usize, wave.frameCount) * @as(usize, wave.channels);
-    waveform.build(samples[0..sample_count], wave.channels);
+    waveform.build(samples[0..sample_count], wave.channels, wave.sampleRate);
 }
 
 pub fn shutdown() void {
