@@ -1,6 +1,8 @@
 //! Owns transitions between file playback and live capture.
 const Session = @This();
+const std = @import("std");
 const capture = @import("capture.zig");
+const config = @import("../core/config.zig");
 const playback = @import("playback.zig");
 const processor = @import("processor.zig");
 const rl = @import("../raylib.zig");
@@ -8,6 +10,7 @@ const rl = @import("../raylib.zig");
 resume_file_after_capture: bool = false,
 resume_file_after_seek: bool = false,
 seeking: bool = false,
+applied_volume: f32 = -1,
 
 pub fn playFile(self: *Session, path: []const u8) void {
     capture.stop();
@@ -83,7 +86,21 @@ pub fn endSeek(self: *Session) void {
 }
 
 pub fn update(self: *Session) void {
+    self.applyVolume();
     if (self.isFilePlaying()) playback.UpdateMusicStream();
+}
+
+/// Clamps the GUI value before it reaches raylib's global audio mixer.
+pub fn normalizeVolume(value: f32) f32 {
+    return std.math.clamp(value, 0, 1);
+}
+
+fn applyVolume(self: *Session) void {
+    const volume = normalizeVolume(config.Audio.volume);
+    config.Audio.volume = volume;
+    if (volume == self.applied_volume) return;
+    rl.SetMasterVolume(volume);
+    self.applied_volume = volume;
 }
 
 pub fn shutdown(self: *Session) void {
@@ -128,4 +145,10 @@ pub fn timeLength(_: *const Session) f32 {
 pub fn waveform(_: *const Session) []const f32 {
     if (!playback.waveform.available) return &.{};
     return &playback.waveform.peaks;
+}
+
+test "master volume stays within the mixer range" {
+    try std.testing.expectEqual(@as(f32, 0), normalizeVolume(-0.1));
+    try std.testing.expectEqual(@as(f32, 0.4), normalizeVolume(0.4));
+    try std.testing.expectEqual(@as(f32, 1), normalizeVolume(1.1));
 }
