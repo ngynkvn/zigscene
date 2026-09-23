@@ -56,12 +56,15 @@ capture system playback audio instead. Press **M** again to stop capture. Droppi
 a file switches back to file playback. When capture stops, the previous file
 resumes if it was playing before capture started.
 
-The labeled tabs open scrollable settings panels. The playback bar provides
+The studio interface uses labeled tabs and scrollable settings panels.
+Use the wheel or drag the scrollbar to explore each panel. The playback bar provides
 Play/Pause, System audio capture, and a Volume slider. Drag the waveform to seek;
 the elapsed/total timer sits on the waveform, with the track name above it. Hover
 over the waveform to preview a seek time. Tabs remember their scroll positions,
-and Scene provides Show all / Hide all controls. Audio loading and capture
-failures appear in the playback bar with a Dismiss button.
+and Scene provides Show all / Hide all controls. Hover over an element's settings
+to highlight it in the scene; the highlight stays active while dragging a slider.
+Hidden layers stay hidden, and global controls do not single out a layer.
+Audio loading and capture failures appear in the playback bar with a Dismiss button.
 
 Use **1** to hide the settings, **2** for shape and shader controls, **3** for
 colors, **4** for motion and audio response, and **5** to show or hide individual
@@ -69,7 +72,8 @@ scene elements. The motion tab controls master volume, energy gain, compression,
 rise and fall times, and beat pulse decay. The frequency halo has its own radius, depth, spin,
 and hue controls. Hold **Space** to temporarily smooth the waveform more heavily.
 The motion tab also has a Window opacity slider for the entire window. The
-Background opacity slider in the shape tab controls only the window background.
+Background opacity slider in the shape tab controls only the window background;
+reduce it from the default opaque navy to reveal the desktop.
 Press **D** to toggle a debug panel with frame timing, mouse input, and audio
 response values.
 
@@ -98,3 +102,8 @@ On macOS, select a virtual loopback input using `--audio-device=N`.
 
 [1]: https://github.com/marler8997/zigup?tab=readme-ov-file#how-to-install
 [2]: https://github.com/tristanisham/zvm?tab=readme-ov-file#installing-zvm
+
+## UI font
+
+The interface embeds Lato Regular by the Lato Project Authors, distributed under
+the SIL Open Font License. See [the bundled license](src/gui/assets/OFL.txt).

@@ -1,3 +1,4 @@
+const Highlight = @import("../Highlight.zig");
 const std = @import("std");
 
 const processor = @import("../../audio/processor.zig");
@@ -13,7 +14,7 @@ comptime {
 pub const Bubble = struct {
     const Config = @import("../../core/config.zig").Visualizer.Bubble;
     // Radii
-    pub fn render(camera3d: rl.Camera3D, rot_offset: f32, t: f32, energy: f32, pulse: f32) void {
+    pub fn render(camera3d: rl.Camera3D, rot_offset: f32, t: f32, energy: f32, pulse: f32, focus: Highlight) void {
         var color1 = Config.color1;
         const color2 = Config.color2;
         const r_ring: f32 = Config.ring_radius;
@@ -29,7 +30,7 @@ pub const Bubble = struct {
             rl.rlPushMatrix();
             rl.rlRotatef(t * 32, 1, 1, 1);
             color1.x += energy * bubble_color_scale + pulse * 20;
-            rl.DrawSphereWires(.{}, r_sphere + energy * effect + pulse * 0.3, 10, 10, hsv(color1).into());
+            rl.DrawSphereWires(.{}, r_sphere + energy * effect + pulse * 0.3, 10, 10, focus.tint(.bubble, hsv(color1).into()));
             rl.rlPopMatrix();
         }
         rl.rlPushMatrix();
@@ -52,7 +53,7 @@ pub const Bubble = struct {
 
             var col = color2;
             col.x += energy * color_scale + v * 30 + pulse * 20;
-            rl.DrawCubeWires(.{}, 0.05, height_ring + v * effect + energy * 0.2 + pulse * 0.15, 0.05, hsv(col).into());
+            rl.DrawCubeWires(.{}, 0.05, height_ring + v * effect + energy * 0.2 + pulse * 0.15, 0.05, focus.tint(.bubble, hsv(col).into()));
             rl.rlPopMatrix();
         }
         rl.rlPopMatrix();

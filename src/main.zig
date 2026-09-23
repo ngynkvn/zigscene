@@ -59,6 +59,7 @@ test "root" {
     _ = @import("audio/WaveformPreview.zig");
     _ = @import("audio/processor.zig");
     _ = @import("graphics.zig");
+    _ = @import("graphics/Highlight.zig");
     _ = @import("gui.zig");
     _ = @import("core/debug.zig");
     _ = @import("core/config.zig");

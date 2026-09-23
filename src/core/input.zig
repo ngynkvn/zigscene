@@ -76,14 +76,12 @@ pub fn process(state: *State, audio: *AudioSession) ?Resize {
         event.onWindowResize(resize.?.width, resize.?.height);
     }
     const wheelMove = rl.GetMouseWheelMoveV();
-    if (!gui.pointerOverUi()) {
-        if (@abs(wheelMove.x) > @abs(wheelMove.y)) {
-            event.onSwipe(.horizontal, wheelMove.x);
-            state.rotation_offset += wheelMove.x;
-        } else {
-            event.onSwipe(.vertical, wheelMove.y);
-            state.camera.position.z += wheelMove.y;
-        }
+    if (@abs(wheelMove.x) > @abs(wheelMove.y)) {
+        event.onSwipe(.horizontal, wheelMove.x);
+        if (!gui.pointerOverUi()) state.rotation_offset += wheelMove.x;
+    } else {
+        event.onSwipe(.vertical, wheelMove.y);
+        if (!gui.pointerOverUi()) state.camera.position.z += wheelMove.y;
     }
 
     debug.frame();

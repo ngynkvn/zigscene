@@ -13,6 +13,7 @@ const graphics = @import("graphics.zig");
 const gui = @import("gui.zig");
 const rl = @import("raylib.zig");
 const Renderer = @import("shader/shader.zig").Renderer;
+const Highlight = @import("graphics/Highlight.zig");
 const Motion = @import("graphics/Motion.zig");
 const audio_hold_seconds: f32 = 0.12;
 
@@ -58,6 +59,7 @@ pub fn frame(self: *App) void {
     const dt = rl.GetFrameTime();
     self.audio.update();
     if (input_mod.process(&self.input, &self.audio)) |size| self.renderer.resize(size.width, size.height);
+    @import("gui/theme.zig").updateScale();
     if (processor.update()) self.seconds_since_audio = 0 else self.seconds_since_audio += dt;
     self.motion.update(dt, if (self.seconds_since_audio < audio_hold_seconds) processor.rms_energy else 0, processor.on_beat);
     self.halo.update(dt, processor.curr_fft);
@@ -81,38 +83,42 @@ fn applyWindowOpacity(self: *App) void {
 }
 
 fn renderScene(self: *App, center: rl.Vector2) void {
+    const focus = Highlight.init(gui.hoveredElement());
     rl.BeginTextureMode(self.renderer.scene_texture);
     defer rl.EndTextureMode();
     rl.ClearBackground(.{});
-    if (Config.Scene.halo) self.halo.render(center, self.motion.energy, self.motion.pulse);
+    if (Config.Scene.halo) self.halo.render(center, self.motion.energy, self.motion.pulse, focus);
 
     {
         const context = tracy.traceNamed(@src(), "2d");
         defer context.end();
         for (processor.curr_buffer, processor.curr_fft, 0..) |value, frequency, i| {
             if (Config.Scene.wave_lines) {
-                graphics.WaveFormLine.render(.{ .y = center.y - 80 }, i, value);
+                graphics.WaveFormLine.render(.{ .y = center.y - 80 }, i, value, focus);
                 graphics.WaveFormLine.render(
                     .{ .y = center.y * 2 },
                     i,
                     frequency.magnitude() / @as(f32, @floatFromInt(processor.curr_fft.len)) * 1.2,
+                    focus,
                 );
             }
-            if (Config.Scene.wave_bars) self.wave_bars.render(center, i, value);
-            if (Config.Scene.spectrum) graphics.FFTSpectrum.render(center, i, frequency.magnitude());
+            if (Config.Scene.wave_bars) self.wave_bars.render(center, i, value, focus);
+            if (Config.Scene.spectrum) graphics.FFTSpectrum.render(center, i, frequency.magnitude(), focus);
         }
     }
     {
         const context = tracy.traceNamed(@src(), "3d");
         defer context.end();
-        if (Config.Scene.bubble) graphics.Bubble.render(self.input.camera, self.input.rotation_offset, self.elapsed, self.motion.energy, self.motion.pulse);
+        if (Config.Scene.bubble) graphics.Bubble.render(self.input.camera, self.input.rotation_offset, self.elapsed, self.motion.energy, self.motion.pulse, focus);
     }
 }
 
 fn renderWindow(self: *App) void {
     rl.BeginDrawing();
     defer rl.EndDrawing();
-    rl.ClearBackground(.{ .a = @intFromFloat(@round(Config.Shader.alpha_factor * 255)) });
+    var background = @import("gui/theme.zig").background;
+    background.a = @intFromFloat(@round(Config.Shader.alpha_factor * 255));
+    rl.ClearBackground(background);
 
     rl.BeginShaderMode(self.renderer.program);
     rl.SetShaderValue(self.renderer.program, self.renderer.chroma_factor_location, &Config.Shader.chroma_factor, rl.RL_SHADER_UNIFORM_FLOAT);
