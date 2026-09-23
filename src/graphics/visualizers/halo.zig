@@ -1,3 +1,4 @@
+const Highlight = @import("../Highlight.zig");
 const std = @import("std");
 const rl = @import("../../raylib.zig");
 const Config = @import("../../core/config.zig").Visualizer.Halo;
@@ -26,7 +27,7 @@ pub const Halo = struct {
         }
     }
 
-    pub fn render(self: *const Halo, center: rl.Vector2, energy: f32, pulse: f32) void {
+    pub fn render(self: *const Halo, center: rl.Vector2, energy: f32, pulse: f32, focus: Highlight) void {
         var first_tip: rl.Vector2 = undefined;
         var previous_tip: rl.Vector2 = undefined;
         for (self.levels, 0..) |level, i| {
@@ -41,14 +42,14 @@ pub const Halo = struct {
                 .y = 0.75,
                 .z = std.math.clamp(0.35 + level * 0.55 + pulse * 0.15, 0, 1),
             }).into();
-            rl.DrawLineEx(inner, tip, 1.5 + energy * 2, color);
+            rl.DrawLineEx(inner, tip, 1.5 + energy * 2 + (if (focus.selected(.halo)) @as(f32, 1.5) else 0), focus.tint(.halo, color));
             if (i == 0) {
                 first_tip = tip;
             } else {
-                rl.DrawLineEx(previous_tip, tip, 1, color);
+                rl.DrawLineEx(previous_tip, tip, if (focus.selected(.halo)) 2 else 1, focus.tint(.halo, color));
             }
             previous_tip = tip;
         }
-        rl.DrawLineEx(previous_tip, first_tip, 1, hsv(.{ .x = Config.hue, .y = 0.75, .z = 0.55 }).into());
+        rl.DrawLineEx(previous_tip, first_tip, if (focus.selected(.halo)) 2 else 1, focus.tint(.halo, hsv(.{ .x = Config.hue, .y = 0.75, .z = 0.55 }).into()));
     }
 };

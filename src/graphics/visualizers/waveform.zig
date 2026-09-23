@@ -1,3 +1,4 @@
+const Highlight = @import("../Highlight.zig");
 const std = @import("std");
 const processor = @import("../../audio/processor.zig");
 var screenWidth: c_int = @import("../../core/config.zig").Window.width;
@@ -12,7 +13,7 @@ comptime {
 
 pub const WaveFormLine = struct {
     const Config = @import("../../core/config.zig").Visualizer.WaveFormLine;
-    pub fn render(center: rl.Vector2, i: usize, v: f32) void {
+    pub fn render(center: rl.Vector2, i: usize, v: f32, focus: Highlight) void {
         const amplitude: f32 = Config.amplitude;
         const color1 = Config.color1;
         const color2 = Config.color2;
@@ -23,8 +24,8 @@ pub const WaveFormLine = struct {
         const px = x + center.x;
         const py = y + center.y;
         // zig fmt: off
-        rl.DrawRectangleRec(.{ .x = px, .y = py,      .width = SPACING, .height = 1 }, hsv(color1).into());
-        rl.DrawRectangleRec(.{ .x = px, .y = py + 8,  .width = SPACING, .height = 2 }, hsv(color2).into());
+        rl.DrawRectangleRec(.{ .x = px, .y = py,      .width = SPACING, .height = if (focus.selected(.wave_lines)) 3 else 1 }, focus.tint(.wave_lines, hsv(color1).into()));
+        rl.DrawRectangleRec(.{ .x = px, .y = py + 8,  .width = SPACING, .height = if (focus.selected(.wave_lines)) 4 else 2 }, focus.tint(.wave_lines, hsv(color2).into()));
         // zig fmt: on
     }
 };
@@ -45,20 +46,20 @@ pub const WaveFormBar = struct {
         for (&self.maxes) |*value| value.* = @max(base_h.*, value.* * factor);
     }
 
-    pub fn render(self: *WaveFormBar, center: rl.Vector2, i: usize, v: f32) void {
+    pub fn render(self: *WaveFormBar, center: rl.Vector2, i: usize, v: f32, focus: Highlight) void {
         const SPACING = ffi(f32, screenWidth) / ffi(f32, processor.curr_buffer.len);
         const x = ffi(f32, i) * SPACING;
         const y = std.math.clamp(@abs(v) * amplitude.*, 0, 350);
         const px = x;
-        const c1 = hsv(color1.*).into();
-        const c2 = hsv(color2.*).into();
+        const c1 = focus.tint(.wave_bars, hsv(color1.*).into());
+        const c2 = focus.tint(.wave_bars, hsv(color2.*).into());
         self.maxes[i] = @max(y + base_h.*, self.maxes[i]);
         rl.DrawRectangleRec(.{
             .x = px,
             .y = center.y * 2 - self.maxes[i],
             .width = SPACING,
             .height = self.maxes[i],
-        }, hsv(trail_color.*).into());
+        }, focus.tint(.wave_bars, hsv(trail_color.*).into()));
         rl.DrawRectangleGradientEx(.{
             .x = px,
             .y = center.y * 2 - y - base_h.*,

@@ -21,7 +21,7 @@ pub fn frame() void {
 pub fn render() void {
     if (!visible) return;
     const x = @max(panel_margin, @as(f32, @floatFromInt(screen_width)) - panel_width - panel_margin);
-    const panel = Rectangle.from(x, 32, panel_width, panel_height);
+    const panel = Rectangle.from(x, 88, panel_width, panel_height);
     _ = rl.GuiPanel(panel.into(), "Debug");
 
     const mouse = rl.GetMousePosition();
