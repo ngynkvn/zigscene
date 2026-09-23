@@ -1,4 +1,6 @@
 const std = @import("std");
+const builtin = @import("builtin");
+const ui = @import("raylib");
 
 const AudioSession = @import("audio/Session.zig");
 const config = @import("core/config.zig");
@@ -10,7 +12,7 @@ const rl = @import("raylib.zig");
 
 pub const Tab = enum(c_int) { none, scalar, color, motion, scene };
 var active_tab: Tab = .scalar;
-var gui_xoffset: f32 = 0;
+var panel_scroll: rl.Vector2 = .{};
 pub const onTabChange = to;
 
 /// Moves the gui state to the desired tab
@@ -18,47 +20,87 @@ fn to(next: Tab) void {
     if (active_tab == next) return;
     Layout.Scalars.editState = null;
     active_tab = next;
-    gui_xoffset = -300;
+    panel_scroll = .{};
 }
 
 var draggingSlider = false;
 
 pub fn frame(audio: *AudioSession) void {
     if (draggingSlider and (audio.captureActive() or !audio.hasFile())) draggingSlider = false;
-    if (gui_xoffset < 0) {
-        gui_xoffset = @trunc(std.math.lerp(gui_xoffset, 0, @min(0.3, 30 * rl.GetFrameTime())));
-    }
-    const base = Layout.Base;
-    const grouptxt = std.fmt.comptimePrint("#{}#;#{}#;#{}#;#{}#;#{}#", .{ rl.ICON_ARROW_LEFT, rl.ICON_FX, rl.ICON_COLOR_PICKER, rl.ICON_GEAR, rl.ICON_EYE_ON });
-    _ = rl.GuiToggleGroup(base.into(), grouptxt, @ptrCast(&active_tab));
-
-    const guiStatusBar = base.translate(base.width * 6 + 10, 0).resize(800, base.height).into();
+    const width: f32 = @floatFromInt(rl.GetScreenWidth());
+    const height: f32 = @floatFromInt(rl.GetScreenHeight());
+    const bar = Rectangle.from(12, height - 156, width - 24, 144);
+    _ = rl.GuiPanel(bar.into(), null);
     if (audio.captureActive()) {
-        _ = std.fmt.bufPrintZ(&Layout.txt, "{s} audio capture active (M to stop)", .{if (audio.captureMode() == .system) "System" else "Input"}) catch unreachable;
+        _ = std.fmt.bufPrintZ(&Layout.txt, "LIVE  /  {s} audio", .{if (audio.captureMode() == .system) "System" else "Input"}) catch unreachable;
     } else if (audio.hasFile()) {
-        const mtp = audio.timePlayed();
-        const mtl = audio.timeLength();
-        _ = std.fmt.bufPrintZ(&Layout.txt, "{s} |{d:7.2}s/{d:7.2}s", .{ audio.filename(), mtp, mtl }) catch unreachable;
+        _ = std.fmt.bufPrintZ(&Layout.txt, "{s}  /  {s}", .{
+            if (audio.isFilePlaying()) "Playing" else "Paused",
+            audio.filename()[0..@min(audio.filename().len, 140)],
+        }) catch unreachable;
     } else {
-        _ = std.fmt.bufPrintZ(&Layout.txt, "M: capture system audio | Drop a file to play", .{}) catch unreachable;
+        _ = std.fmt.bufPrintZ(&Layout.txt, "Ready when you are - drop an audio file to begin", .{}) catch unreachable;
     }
-    const musicOn = audio.isFilePlaying() or !audio.hasFile();
-    var playIconBuffer: [16]u8 = @splat(0);
-    const playIconTxt = std.fmt.bufPrintZ(&playIconBuffer, "#{}#", .{if (musicOn) rl.ICON_PLAYER_PLAY else rl.ICON_PLAYER_PAUSE}) catch unreachable;
-    _ = rl.GuiStatusBar(guiStatusBar, &Layout.txt);
-    if (!audio.captureActive() and audio.hasFile()) drawWaveformScrubber(audio, guiStatusBar);
-    if (rl.GuiButton(base.translate(base.width * 3 + 8, 0).into(), playIconTxt) != 0) audio.togglePlayback();
+    _ = rl.GuiLabel(bar.translate(12, 6).resize(bar.width - 24, 24).into(), &Layout.txt);
+    if (audio.captureActive() or !audio.hasFile()) ui.GuiDisable();
+    if (rl.GuiButton(bar.translate(12, 38).resize(100, 30).into(), if (audio.isFilePlaying()) "Pause (P)" else "Play (P)") != 0) audio.togglePlayback();
+    ui.GuiEnable();
+    if (builtin.os.tag == .emscripten) ui.GuiDisable();
+    if (rl.GuiButton(bar.translate(122, 38).resize(166, 30).into(), if (audio.captureActive()) "Stop capture (M)" else "System audio (M)") != 0) audio.toggleSystemCapture();
+    ui.GuiEnable();
+    _ = rl.GuiSlider(bar.translate(360, 44).resize(@max(60, @min(140, bar.width - 450)), 20).into(), "Volume", "", &config.Audio.volume, 0, 1);
+    var volume_text: [16]u8 = undefined;
+    const volume_label = std.fmt.bufPrintZ(&volume_text, "{d}%", .{@as(u32, @intFromFloat(config.Audio.volume * 100))}) catch unreachable;
+    _ = rl.GuiLabel(bar.translate(@max(420, @min(500, bar.width - 90)) + 8, 40).resize(60, 28).into(), volume_label);
+    if (!audio.captureActive() and audio.hasFile()) {
+        drawWaveformScrubber(audio, bar.translate(12, 78).resize(bar.width - 24, 58).into());
+    } else {
+        _ = rl.GuiLabel(bar.translate(12, 78).resize(bar.width - 24, 24).into(), if (audio.captureActive()) "Listening live. Drop a file to switch to playback." else if (builtin.os.tag == .emscripten) "Drop a file anywhere in the window." else "Drop a file anywhere, or choose System audio to listen live.");
+    }
 
+    const tabs = [_][*:0]const u8{ "Hide (1)", "Shape (2)", "Colors (3)", "Motion (4)", "Scene (5)" };
+    for (tabs, 0..) |label, index| {
+        var selected = @intFromEnum(active_tab) == index;
+        if (ui.GuiToggle(Rectangle.from(12 + @as(f32, @floatFromInt(index)) * 104, 12, 98, 32).into(), label, &selected) != 0) to(@enumFromInt(index));
+    }
     switch (active_tab) {
-        .none => {
-            const PanelSize = Layout.Base.translate(-310 - gui_xoffset, 20).resize(300, 700);
-            _ = rl.GuiPanel(PanelSize.into(), "");
-        },
+        .none => {},
         .scalar => Layout.Scalars.draw(false),
         .color => Layout.Colors.draw(),
         .motion => Layout.Scalars.draw(true),
         .scene => Layout.Scene.draw(),
     }
+    if (!audio.hasFile() and !audio.captureActive() and width >= 860) {
+        const card = Rectangle.from(400, @max(90, height * 0.35), width - 424, 142);
+        _ = rl.GuiPanel(card.into(), "Welcome to zigscene");
+        _ = rl.GuiLabel(card.translate(20, 38).resize(card.width - 40, 28).into(), "Drop an audio file to bring the scene to life.");
+        _ = rl.GuiLabel(card.translate(20, 72).resize(card.width - 40, 24).into(), "Choose Scene to show or hide visual effects.");
+        _ = rl.GuiLabel(card.translate(20, 102).resize(card.width - 40, 24).into(), "Shape, Colors and Motion make it yours.");
+    }
+}
+
+pub fn pointerOverUi() bool {
+    const mouse = rl.GetMousePosition();
+    return mouse.y < 52 or mouse.y >= @as(f32, @floatFromInt(rl.GetScreenHeight())) - 168 or
+        (active_tab != .none and mouse.x < 384);
+}
+
+pub fn editingValue() bool {
+    return Layout.Scalars.editState != null;
+}
+
+fn beginPanel(title: [*:0]const u8, content_height: f32) Rectangle {
+    const bounds = Rectangle.from(12, 56, 368, @max(80, @as(f32, @floatFromInt(rl.GetScreenHeight())) - 224));
+    var view: rl.Rectangle = undefined;
+    _ = ui.GuiScrollPanel(bounds.into(), title, Rectangle.from(0, 0, 342, content_height).into(), &panel_scroll, &view);
+    ui.BeginScissorMode(@intFromFloat(view.x), @intFromFloat(view.y), @intFromFloat(view.width), @intFromFloat(view.height));
+    if (!rl.CheckCollisionPointRec(rl.GetMousePosition(), view)) ui.GuiLock();
+    return Rectangle.from(view.x, view.y + panel_scroll.y, 342, content_height);
+}
+
+fn endPanel() void {
+    ui.GuiUnlock();
+    ui.EndScissorMode();
 }
 
 fn drawWaveformScrubber(audio: *AudioSession, status: rl.Rectangle) void {
@@ -86,10 +128,9 @@ fn drawWaveformScrubber(audio: *AudioSession, status: rl.Rectangle) void {
 
     rl.DrawRectangleRec(bounds, .{ .r = 12, .g = 16, .b = 24, .a = 220 });
     const peaks = audio.waveform();
-    if (peaks.len == 0) return;
     const played = std.math.clamp(audio.timePlayed() / @max(duration, 0.001), 0, 1);
     const columns: usize = @intFromFloat(@max(1, @floor(bounds.width)));
-    for (0..columns) |column| {
+    for (0..if (peaks.len == 0) 0 else columns) |column| {
         const peak = peaks[@min(column * peaks.len / columns, peaks.len - 1)];
         const x = bounds.x + @as(f32, @floatFromInt(column));
         const half_height = @max(1, peak * (bounds.height * 0.46));
@@ -101,8 +142,18 @@ fn drawWaveformScrubber(audio: *AudioSession, status: rl.Rectangle) void {
     }
     const playhead_x = bounds.x + bounds.width * played;
     rl.DrawLineV(.{ .x = playhead_x, .y = bounds.y }, .{ .x = playhead_x, .y = bounds.y + bounds.height }, rl.WHITE);
-    rl.DrawText(&Layout.txt, @intFromFloat(bounds.x + 4), @intFromFloat(bounds.y + 2), 10, .{ .r = 4, .g = 8, .b = 14, .a = 255 });
-    rl.DrawText(&Layout.txt, @intFromFloat(bounds.x + 3), @intFromFloat(bounds.y + 1), 10, rl.WHITE);
+
+    // Keep the timer on the waveform, with a solid backing for busy tracks.
+    const elapsed: u32 = @intFromFloat(@max(0, audio.timePlayed()));
+    const total: u32 = @intFromFloat(@max(0, duration));
+    var timer_buffer: [48]u8 = undefined;
+    const timer = std.fmt.bufPrintZ(&timer_buffer, "{d}:{d:0>2} / {d}:{d:0>2}", .{
+        elapsed / 60, elapsed % 60, total / 60, total % 60,
+    }) catch unreachable;
+    const timer_width = ui.MeasureTextEx(ui.GuiGetFont(), timer, @floatFromInt(ui.GuiGetStyle(ui.DEFAULT, ui.TEXT_SIZE)), @floatFromInt(ui.GuiGetStyle(ui.DEFAULT, ui.TEXT_SPACING))).x + 40;
+    const timer_bounds = Rectangle.from(bounds.x + bounds.width - timer_width - 6, bounds.y + 4, timer_width, 24);
+    rl.DrawRectangleRec(timer_bounds.into(), .{ .r = 12, .g = 16, .b = 24, .a = 255 });
+    _ = rl.GuiLabel(timer_bounds.translate(8, 0).resize(timer_width - 8, 24).into(), timer);
 }
 
 const Layout = struct {
@@ -114,30 +165,34 @@ const Layout = struct {
 
     pub const Scalars = struct {
         var editState: ?usize = null;
-        const PanelSize = Base.translate(2, 20).resize(280, 700);
-        const label: []const u8 = "Scalars";
-        const offset: usize = 24;
-        const initialOffset = 60;
+        const offset: usize = 36;
+        const initialOffset = 12;
         fn draw(comptime motion_controls: bool) void {
             const fields = if (motion_controls) MotionFields else ShapeFields;
-            const anchor = PanelSize.translate(gui_xoffset, 0);
-            _ = rl.GuiPanel(anchor.into(), if (motion_controls) "Motion" else label.ptr);
+            const content_height = comptime blk: {
+                var total: usize = initialOffset;
+                for (fields) |group| total += 32 + group[1].len * offset + 16;
+                break :blk total;
+            };
+            const anchor = beginPanel(if (motion_controls) "Motion & audio - scroll for more" else "Shape & effects - scroll for more", content_height);
+            defer endPanel();
             var layout = PanelLayout.init(anchor, initialOffset);
             var field_index: usize = 0;
             inline for (fields) |sf| {
                 const name, const group = sf;
-                _ = rl.GuiLabel(layout.groupLabel().into(), name.ptr);
+                _ = rl.GuiLabel(layout.row(32).translate(12, 0).resize(310, 24).into(), name.ptr);
                 inline for (group) |optinfo| {
                     const fname, const fval, const frange = optinfo;
                     const row = layout.row(offset);
-                    _ = rl.GuiSlider(row.resize(120, 16).translate(100, 0).into(), fname.ptr, "", fval, frange[0], frange[1]);
+                    _ = rl.GuiLabel(row.translate(12, 0).resize(134, 26).into(), fname.ptr);
+                    _ = rl.GuiSlider(row.resize(110, 22).translate(150, 2).into(), "", "", fval, frange[0], frange[1]);
 
                     const buf = if (editState == field_index)
                         &editing_buffer
                     else
                         std.fmt.bufPrintZ(&value_buffer, tunable_fmt, .{fval.*}) catch unreachable;
 
-                    if (rl.GuiValueBoxFloat(row.resize(50, 16).translate(225, 0).into(), "", buf.ptr, fval, editState == field_index) != 0) {
+                    if (rl.GuiValueBoxFloat(row.resize(64, 26).translate(270, 0).into(), "", buf.ptr, fval, editState == field_index) != 0) {
                         editState = if (editState == field_index) null else field_index;
                         @memset(&value_buffer, 0);
                         _ = std.fmt.bufPrintZ(&value_buffer, "{d}", .{fval.*}) catch unreachable;
@@ -146,19 +201,19 @@ const Layout = struct {
                     controls.constrainScalar(optinfo);
                     field_index += 1;
                 }
-                layout.advance(offset);
+                layout.advance(16);
             }
         }
         const ShapeFields = [_]struct { []const u8, []const controls.Scalar }{
-            .{ "WaveFormLine", &config.Visualizer.WaveFormLine.Scalars },
-            .{ "WaveFormBar", &config.Visualizer.WaveFormBar.Scalars },
-            .{ "Bubble", &config.Visualizer.Bubble.Scalars },
-            .{ "Shader", &config.Shader.Scalars },
+            .{ "Waveform lines", &config.Visualizer.WaveFormLine.Scalars },
+            .{ "Waveform bars", &config.Visualizer.WaveFormBar.Scalars },
+            .{ "3D bubble", &config.Visualizer.Bubble.Scalars },
+            .{ "Screen effects", &config.Shader.Scalars },
         };
         const MotionFields = [_]struct { []const u8, []const controls.Scalar }{
             .{ "Window", &config.Window.Scalars },
             .{ "Energy motion", &config.Motion.Scalars },
-            .{ "Audio Controls", &config.Audio.Scalars },
+            .{ "Audio response", &config.Audio.Scalars },
             .{ "Spectrum", &config.Visualizer.Spectrum.Scalars },
             .{ "Halo", &config.Visualizer.Halo.Scalars },
         };
@@ -172,37 +227,40 @@ const Layout = struct {
             .{ "Frequency halo", &config.Scene.halo },
         };
         fn draw() void {
-            const anchor = Base.translate(gui_xoffset + 2, 20).resize(280, 700);
-            _ = rl.GuiPanel(anchor.into(), "Scene elements");
-            var layout = PanelLayout.init(anchor, 40);
+            const anchor = beginPanel("Scene elements", 280);
+            defer endPanel();
+            var layout = PanelLayout.init(anchor, 16);
+            _ = rl.GuiLabel(layout.row(40).translate(12, 0).into(), "Choose what appears in your scene.");
             inline for (items) |item| {
-                const row = layout.row(38);
-                _ = rl.GuiCheckBox(row.resize(20, 20).translate(18, 0).into(), item[0], item[1]);
+                const row = layout.row(42);
+                _ = rl.GuiCheckBox(row.resize(24, 24).translate(18, 0).into(), item[0], item[1]);
             }
         }
     };
     const Colors = struct {
-        const slider_w = 100;
-        const offset = 24;
+        const slider_w = 214;
+        const offset = 40;
         fn draw() void {
-            const anchor = Base.translate(gui_xoffset + 2, 20).resize(200, 700);
-            _ = rl.GuiPanel(anchor.into(), "Colors");
-            var layout = PanelLayout.init(anchor, 32);
+            const anchor = beginPanel("Colors - drag a hue strip", 540);
+            defer endPanel();
+            var layout = PanelLayout.init(anchor, 12);
             inline for (Fields) |info| {
                 const name, const cfg = info;
-                _ = rl.GuiLabel(layout.groupLabel().into(), name.ptr);
-                layout.advance(offset);
+                _ = rl.GuiLabel(layout.row(32).translate(12, 0).resize(310, 24).into(), name.ptr);
+                layout.advance(16);
                 inline for (cfg) |optinfo| {
                     const fname, const fval = optinfo;
                     const row = layout.row(offset);
-                    _ = rl.GuiColorBarHueH(row.resize(slider_w, 16).translate(40, 0).into(), fname.ptr, fval);
+                    const label = if (std.mem.eql(u8, fname, "color1")) "Primary" else if (std.mem.eql(u8, fname, "color2")) "Secondary" else if (std.mem.eql(u8, fname, "color3")) "Trail" else "Hue";
+                    _ = rl.GuiLabel(row.translate(12, 0).resize(88, 24).into(), label);
+                    _ = rl.GuiColorBarHueH(row.resize(slider_w, 24).translate(112, 0).into(), "", fval);
                 }
             }
         }
         const Fields = [_]struct { []const u8, []const controls.Color }{
-            .{ "WaveFormLine", &config.Visualizer.WaveFormLine.Colors },
-            .{ "WaveFormBar", &config.Visualizer.WaveFormBar.Colors },
-            .{ "Bubble", &config.Visualizer.Bubble.Colors },
+            .{ "Waveform lines", &config.Visualizer.WaveFormLine.Colors },
+            .{ "Waveform bars", &config.Visualizer.WaveFormBar.Colors },
+            .{ "3D bubble", &config.Visualizer.Bubble.Colors },
             .{ "Halo", &config.Visualizer.Halo.Colors },
         };
     };

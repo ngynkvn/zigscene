@@ -56,6 +56,10 @@ capture system playback audio instead. Press **M** again to stop capture. Droppi
 a file switches back to file playback. When capture stops, the previous file
 resumes if it was playing before capture started.
 
+The labeled tabs open scrollable settings panels. The playback bar provides
+Play/Pause, System audio capture, and a Volume slider. Drag the waveform to seek;
+the elapsed/total timer sits on the waveform, with the track name above it.
+
 Use **1** to hide the settings, **2** for shape and shader controls, **3** for
 colors, **4** for motion and audio response, and **5** to show or hide individual
 scene elements. The motion tab controls master volume, energy gain, compression,
