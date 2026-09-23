@@ -13,20 +13,23 @@ const rl = @import("raylib.zig");
 pub const Tab = enum(c_int) { none, scalar, color, motion, scene };
 var active_tab: Tab = .scalar;
 var panel_scroll: rl.Vector2 = .{};
+var saved_scroll: [5]rl.Vector2 = @splat(.{});
 pub const onTabChange = to;
 
 /// Moves the gui state to the desired tab
 fn to(next: Tab) void {
     if (active_tab == next) return;
     Layout.Scalars.editState = null;
+    saved_scroll[@intCast(@intFromEnum(active_tab))] = panel_scroll;
     active_tab = next;
-    panel_scroll = .{};
+    panel_scroll = saved_scroll[@intCast(@intFromEnum(next))];
 }
 
 var draggingSlider = false;
 
 pub fn frame(audio: *AudioSession) void {
     if (draggingSlider and (audio.captureActive() or !audio.hasFile())) draggingSlider = false;
+    ui.SetMouseCursor(ui.MOUSE_CURSOR_DEFAULT);
     const width: f32 = @floatFromInt(rl.GetScreenWidth());
     const height: f32 = @floatFromInt(rl.GetScreenHeight());
     const bar = Rectangle.from(12, height - 156, width - 24, 144);
@@ -41,12 +44,20 @@ pub fn frame(audio: *AudioSession) void {
     } else {
         _ = std.fmt.bufPrintZ(&Layout.txt, "Ready when you are - drop an audio file to begin", .{}) catch unreachable;
     }
-    _ = rl.GuiLabel(bar.translate(12, 6).resize(bar.width - 24, 24).into(), &Layout.txt);
+    if (audio.notice) |notice| {
+        const old_color = ui.GuiGetStyle(ui.LABEL, ui.TEXT_COLOR_NORMAL);
+        ui.GuiSetStyle(ui.LABEL, ui.TEXT_COLOR_NORMAL, @bitCast(@as(u32, 0xffd28aff)));
+        _ = rl.GuiLabel(bar.translate(12, 6).resize(bar.width - 106, 24).into(), notice.ptr);
+        ui.GuiSetStyle(ui.LABEL, ui.TEXT_COLOR_NORMAL, old_color);
+        if (rl.GuiButton(bar.translate(bar.width - 84, 6).resize(72, 24).into(), "Dismiss") != 0) audio.notice = null;
+    } else {
+        _ = rl.GuiLabel(bar.translate(12, 6).resize(bar.width - 24, 24).into(), &Layout.txt);
+    }
     if (audio.captureActive() or !audio.hasFile()) ui.GuiDisable();
     if (rl.GuiButton(bar.translate(12, 38).resize(100, 30).into(), if (audio.isFilePlaying()) "Pause (P)" else "Play (P)") != 0) audio.togglePlayback();
     ui.GuiEnable();
     if (builtin.os.tag == .emscripten) ui.GuiDisable();
-    if (rl.GuiButton(bar.translate(122, 38).resize(166, 30).into(), if (audio.captureActive()) "Stop capture (M)" else "System audio (M)") != 0) audio.toggleSystemCapture();
+    if (rl.GuiButton(bar.translate(122, 38).resize(166, 30).into(), if (audio.captureActive()) "Stop capture (M)" else if (builtin.os.tag == .emscripten) "Live unavailable" else "System audio (M)") != 0) audio.toggleSystemCapture();
     ui.GuiEnable();
     _ = rl.GuiSlider(bar.translate(360, 44).resize(@max(60, @min(140, bar.width - 450)), 20).into(), "Volume", "", &config.Audio.volume, 0, 1);
     var volume_text: [16]u8 = undefined;
@@ -126,6 +137,8 @@ fn drawWaveformScrubber(audio: *AudioSession, status: rl.Rectangle) void {
         audio.endSeek();
     }
 
+    const hovering = rl.CheckCollisionPointRec(mouse, bounds);
+    if (hovering and duration > 0) ui.SetMouseCursor(ui.MOUSE_CURSOR_POINTING_HAND);
     rl.DrawRectangleRec(bounds, .{ .r = 12, .g = 16, .b = 24, .a = 220 });
     const peaks = audio.waveform();
     const played = std.math.clamp(audio.timePlayed() / @max(duration, 0.001), 0, 1);
@@ -154,6 +167,18 @@ fn drawWaveformScrubber(audio: *AudioSession, status: rl.Rectangle) void {
     const timer_bounds = Rectangle.from(bounds.x + bounds.width - timer_width - 6, bounds.y + 4, timer_width, 24);
     rl.DrawRectangleRec(timer_bounds.into(), .{ .r = 12, .g = 16, .b = 24, .a = 255 });
     _ = rl.GuiLabel(timer_bounds.translate(8, 0).resize(timer_width - 8, 24).into(), timer);
+    if (hovering and duration > 0) {
+        const fraction = std.math.clamp((mouse.x - bounds.x) / bounds.width, 0, 1);
+        const seconds: u32 = @intFromFloat(duration * fraction);
+        var preview_buffer: [48]u8 = undefined;
+        const preview = std.fmt.bufPrintZ(&preview_buffer, "Seek to {d}:{d:0>2}", .{ seconds / 60, seconds % 60 }) catch unreachable;
+        const preview_width: f32 = 152;
+        const preview_x = std.math.clamp(mouse.x - preview_width / 2, bounds.x, bounds.x + bounds.width - preview_width);
+        const preview_bounds = Rectangle.from(preview_x, bounds.y + bounds.height - 26, preview_width, 24);
+        rl.DrawLineV(.{ .x = mouse.x, .y = bounds.y }, .{ .x = mouse.x, .y = bounds.y + bounds.height }, .{ .r = 101, .g = 217, .b = 197, .a = 255 });
+        rl.DrawRectangleRec(preview_bounds.into(), .{ .r = 12, .g = 16, .b = 24, .a = 255 });
+        _ = rl.GuiLabel(preview_bounds.translate(8, 0).resize(preview_width - 8, 24).into(), preview);
+    }
 }
 
 const Layout = struct {
@@ -227,10 +252,17 @@ const Layout = struct {
             .{ "Frequency halo", &config.Scene.halo },
         };
         fn draw() void {
-            const anchor = beginPanel("Scene elements", 280);
+            const anchor = beginPanel("Scene elements", 340);
             defer endPanel();
             var layout = PanelLayout.init(anchor, 16);
             _ = rl.GuiLabel(layout.row(40).translate(12, 0).into(), "Choose what appears in your scene.");
+            const actions = layout.row(48);
+            if (rl.GuiButton(actions.translate(12, 0).resize(150, 30).into(), "Show all") != 0) {
+                inline for (items) |item| item[1].* = true;
+            }
+            if (rl.GuiButton(actions.translate(174, 0).resize(150, 30).into(), "Hide all") != 0) {
+                inline for (items) |item| item[1].* = false;
+            }
             inline for (items) |item| {
                 const row = layout.row(42);
                 _ = rl.GuiCheckBox(row.resize(24, 24).translate(18, 0).into(), item[0], item[1]);
@@ -264,10 +296,9 @@ const Layout = struct {
             .{ "Halo", &config.Visualizer.Halo.Colors },
         };
     };
-    /// Length of values in value buffer (+1 for zero)
-    /// It is expected that values shouldn't go over 1000 for the tunables.
+    // Raygui accepts up to 32 input characters plus the terminating zero.
     const tunable_fmt = "{d:7.3}";
-    const vlen = std.fmt.count(tunable_fmt, .{0}) + 5;
+    const vlen = 33;
     var txt = [_]u8{0} ** 256;
     var value_buffer = [_]u8{0} ** vlen;
     var editing_buffer = [_]u8{0} ** vlen;

@@ -11,8 +11,10 @@ resume_file_after_capture: bool = false,
 resume_file_after_seek: bool = false,
 seeking: bool = false,
 applied_volume: f32 = -1,
+notice: ?[:0]const u8 = null,
 
 pub fn playFile(self: *Session, path: []const u8) void {
+    self.notice = null;
     capture.stop();
     self.resume_file_after_capture = false;
     self.seeking = false;
@@ -20,17 +22,23 @@ pub fn playFile(self: *Session, path: []const u8) void {
         processor.selectSource(.file);
         rl.PlayMusicStream(playback.music);
     } else {
+        self.notice = "Could not open audio. Try another file.";
         processor.selectSource(.none);
     }
 }
 
 pub fn startCapture(self: *Session, mode: capture.Mode, device_index: i32) !void {
+    self.notice = null;
     const was_capturing = capture.active;
     if (was_capturing) capture.stop();
     const resume_file = if (was_capturing) self.resume_file_after_capture else if (self.seeking) self.resume_file_after_seek else self.isFilePlaying();
     if (!was_capturing and !self.seeking and resume_file) rl.PauseMusicStream(playback.music);
     processor.selectSource(.capture);
     capture.start(mode, device_index) catch |err| {
+        self.notice = if (err == error.CaptureUnsupported)
+            "Live capture is unavailable here. Drop an audio file."
+        else
+            "Capture failed. Check your audio device or drop a file.";
         processor.selectSource(if (self.hasFile()) .file else .none);
         if (resume_file) rl.ResumeMusicStream(playback.music);
         self.resume_file_after_capture = false;

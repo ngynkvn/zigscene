@@ -21,8 +21,8 @@ pub const Audio = struct {
 
     pub const Scalars = [_]controls.Scalar{
         .{ "Master volume", &volume, .{ 0.0, 1.0 } },
-        .{ "Wave blend", &wave_blend, .{ 0.0, 0.98 } },
-        .{ "Wave gain", &wave_gain, .{ 0.1, 3.0 } },
+        .{ "Smoothing", &wave_blend, .{ 0.0, 0.98 } },
+        .{ "Wave strength", &wave_gain, .{ 0.1, 3.0 } },
     };
     pub var wave_blend: f32 = 0.55;
     pub var wave_gain: f32 = 1.0;
@@ -37,9 +37,9 @@ pub const Motion = struct {
     pub const Scalars = [_]controls.Scalar{
         .{ "Energy gain", &energy_gain, .{ 0.2, 6.0 } },
         .{ "Compression", &compression, .{ 0.0, 8.0 } },
-        .{ "Rise time", &attack_seconds, .{ 0.01, 0.5 } },
-        .{ "Fall time", &release_seconds, .{ 0.03, 1.5 } },
-        .{ "Beat decay", &beat_decay_seconds, .{ 0.05, 1.0 } },
+        .{ "Rise time (s)", &attack_seconds, .{ 0.01, 0.5 } },
+        .{ "Fall time (s)", &release_seconds, .{ 0.03, 1.5 } },
+        .{ "Beat decay (s)", &beat_decay_seconds, .{ 0.05, 1.0 } },
     };
 };
 
@@ -58,14 +58,14 @@ pub const Shader = struct {
     pub const Scalars = [_]controls.Scalar{
         .{ "Chroma", &chroma_factor, .{ 0.0, 0.01 } },
         .{ "Noise", &noise_factor, .{ 0.0, 0.5 } },
-        .{ "Background alpha", &alpha_factor, .{ 0.0, 1.0 } },
+        .{ "Background opacity", &alpha_factor, .{ 0.0, 1.0 } },
     };
 };
 
 pub const Visualizer = struct {
     pub const WaveFormLine = struct {
         pub const Scalars = [_]controls.Scalar{
-            .{ "amplitude", &amplitude, .{ 0, 100 } },
+            .{ "Amplitude", &amplitude, .{ 0, 100 } },
         };
         pub const Colors = [_]controls.Color{
             .{ "color1", &color1.x },
@@ -78,9 +78,9 @@ pub const Visualizer = struct {
 
     pub const WaveFormBar = struct {
         pub var Scalars = [_]controls.Scalar{
-            .{ "amplitude", &amplitude, .{ 0, 100 } },
-            .{ "base height", &base_h, .{ 0, 100 } },
-            .{ "trail decay", &trail_decay, .{ 0.05, 2.0 } },
+            .{ "Amplitude", &amplitude, .{ 0, 100 } },
+            .{ "Base height", &base_h, .{ 0, 100 } },
+            .{ "Trail decay (s)", &trail_decay, .{ 0.05, 2.0 } },
         };
         pub var Colors = [_]controls.Color{
             .{ "color1", &color1.x },
@@ -122,12 +122,12 @@ pub const Visualizer = struct {
     pub const Bubble = struct {
         pub var Scalars = [_]controls.Scalar{
             // zig fmt: off
-            .{ "ring radius",     &ring_radius,             .{ 0.1, 8 } },
-            .{ "sphere radius",   &sphere_radius,           .{ 0.1, 4 } },
-            .{ "volume effect",   &effect,             .{ 0.1, 1 } },
-            .{ "color scale",     &color_scale,        .{ 0.0, 100 } },
-            .{ "bubble color fx", &bubble_color_scale, .{ 0.0, 100 } },
-            .{ "ring height",     &height_ring,        .{ 0.0, 1 } },
+            .{ "Ring radius",     &ring_radius,             .{ 0.1, 8 } },
+            .{ "Sphere radius",   &sphere_radius,           .{ 0.1, 4 } },
+            .{ "Audio response",   &effect,             .{ 0.1, 1 } },
+            .{ "Color variation",     &color_scale,        .{ 0.0, 100 } },
+            .{ "Bubble color FX", &bubble_color_scale, .{ 0.0, 100 } },
+            .{ "Ring height",     &height_ring,        .{ 0.0, 1 } },
             // zig fmt: on
         };
         pub var Colors = [_]controls.Color{
