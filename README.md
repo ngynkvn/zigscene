@@ -28,6 +28,9 @@ zig build run
 # Build with release optimization
 zig build -Doptimize=ReleaseFast
 
+# Run with application and audio analysis optimizations too
+zig build run -Doptimize=ReleaseFast
+
 # Run tests
 zig build test
 ```
@@ -79,8 +82,16 @@ and hue controls. Hold **Space** to temporarily smooth the waveform more heavily
 The motion tab also has a Window opacity slider for the entire window. The
 Background opacity slider in the shape tab controls only the window background;
 reduce it from the default opaque navy to reveal the desktop.
-Press **D** to toggle a debug panel with frame timing, mouse input, and audio
-response values.
+The upper-right counter always shows FPS and frame time. Click it or press **D**
+to open CPU timings for audio/update, scene drawing, UI, and presentation/wait,
+plus mouse and audio response values. Rendering is uncapped by default; set
+**Motion → Window → FPS limit** to cap it (0 means unlimited). Presentation/wait
+includes any requested frame-limit sleep, so it is not a GPU-only measurement.
+
+The seek waveform is cached at display resolution and rebuilt only when the
+track or display size changes. Development builds keep the application's Debug
+checks while optimizing raylib; use `-Draylib-optimize=Debug` when debugging the
+graphics backend itself.
 
 You can start capture from the command line:
 

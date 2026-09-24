@@ -1,17 +1,59 @@
-//! Optional runtime diagnostics, toggled with D.
+//! Always-visible frame counter and optional diagnostics, toggled with D.
 const std = @import("std");
 const processor = @import("../audio/processor.zig");
-const Rectangle = @import("../ext/structs.zig").Rectangle;
+const ui = @import("../gui/theme.zig");
 const rl = @import("../raylib.zig");
 
 const panel_width: f32 = 280;
-const panel_height: f32 = 166;
-const panel_margin: f32 = 12;
+const panel_height: f32 = 186;
+const panel_margin: f32 = 16;
 var screen_width: i32 = @import("config.zig").Window.width;
 var visible = false;
 
+pub const Timings = struct {
+    audio: f64 = 0,
+    scene: f64 = 0,
+    ui: f64 = 0,
+    present: f64 = 0,
+};
+pub var latest: Timings = .{};
+var displayed: Timings = .{};
+var accumulated: Timings = .{};
+var frame_count: usize = 0;
+var elapsed: f64 = 0;
+
+/// Seconds measured on the CPU; presentation includes the frame-limit wait.
+pub fn record(timings: Timings) void {
+    latest = timings;
+    inline for (std.meta.fields(Timings)) |field| {
+        @field(accumulated, field.name) += @field(timings, field.name);
+    }
+    frame_count += 1;
+    elapsed += timings.audio + timings.scene + timings.ui + timings.present;
+    if (elapsed >= 0.25) {
+        inline for (std.meta.fields(Timings)) |field| {
+            @field(displayed, field.name) = @field(accumulated, field.name) * 1000 / @as(f64, @floatFromInt(frame_count));
+        }
+        accumulated = .{};
+        frame_count = 0;
+        elapsed = 0;
+    }
+}
+
 pub fn onWindowResize(width: i32, _: i32) void {
     screen_width = width;
+}
+
+fn badgeBounds() rl.Rectangle {
+    return ui.rect(@as(f32, @floatFromInt(screen_width)) - 212, 88, 196, 30);
+}
+
+fn panelBounds() rl.Rectangle {
+    return ui.rect(@max(panel_margin, @as(f32, @floatFromInt(screen_width)) - panel_width - panel_margin), 126, panel_width, panel_height);
+}
+
+pub fn pointerOverUi() bool {
+    return ui.hovered(badgeBounds()) or (visible and ui.hovered(panelBounds()));
 }
 
 pub fn frame() void {
@@ -19,23 +61,30 @@ pub fn frame() void {
 }
 
 pub fn render() void {
+    const badge = badgeBounds();
+    ui.card(badge);
+    var counter_buffer: [64]u8 = undefined;
+    const counter = std.fmt.bufPrintZ(&counter_buffer, "{d} FPS   {d:.1} ms   / D", .{ rl.GetFPS(), rl.GetFrameTime() * 1000 }) catch return;
+    if (ui.button(badge, counter, visible, true)) visible = !visible;
     if (!visible) return;
-    const x = @max(panel_margin, @as(f32, @floatFromInt(screen_width)) - panel_width - panel_margin);
-    const panel = Rectangle.from(x, 88, panel_width, panel_height);
-    _ = rl.GuiPanel(panel.into(), "Debug");
+    const panel = panelBounds();
+    ui.card(panel);
+    ui.label("Debug  /  D to close", panel.x + 12, panel.y + 12, 14, ui.text);
 
     const mouse = rl.GetMousePosition();
     const delta = rl.GetMouseDelta();
     const wheel = rl.GetMouseWheelMoveV();
-    drawLine(panel, 30, "FPS: {d}  Frame: {d:.1} ms", .{ rl.GetFPS(), rl.GetFrameTime() * 1000 });
-    drawLine(panel, 54, "Mouse: {d:.0}, {d:.0}", .{ mouse.x, mouse.y });
-    drawLine(panel, 78, "Move: {d:.1}, {d:.1}", .{ delta.x, delta.y });
-    drawLine(panel, 102, "Wheel: {d:.1}, {d:.1}  Left: {}", .{ wheel.x, wheel.y, rl.IsMouseButtonDown(rl.MOUSE_BUTTON_LEFT) });
-    drawLine(panel, 126, "Audio RMS: {d:.3}  Beat: {}", .{ processor.rms_energy, processor.on_beat });
+    drawLine(panel, 38, "Audio / update: {d:.2} ms", .{displayed.audio});
+    drawLine(panel, 60, "Scene: {d:.2} ms  UI: {d:.2} ms", .{ displayed.scene, displayed.ui });
+    drawLine(panel, 82, "Present / wait: {d:.2} ms", .{displayed.present});
+    drawLine(panel, 104, "Mouse: {d:.0}, {d:.0}  Move: {d:.0}, {d:.0}", .{ mouse.x, mouse.y, delta.x, delta.y });
+    drawLine(panel, 126, "Wheel: {d:.1}, {d:.1}  Left: {}", .{ wheel.x, wheel.y, rl.IsMouseButtonDown(rl.MOUSE_BUTTON_LEFT) });
+    drawLine(panel, 148, "Audio RMS: {d:.3}  Beat: {}", .{ processor.rms_energy, processor.on_beat });
+    ui.label("CPU timings; wait includes the FPS limit", panel.x + 12, panel.y + 172, 10, ui.muted);
 }
 
-fn drawLine(panel: Rectangle, y: f32, comptime format: []const u8, args: anytype) void {
+fn drawLine(panel: rl.Rectangle, y: f32, comptime format: []const u8, args: anytype) void {
     var buffer: [128]u8 = undefined;
     const line = std.fmt.bufPrintZ(&buffer, format, args) catch return;
-    _ = rl.GuiLabel(panel.resize(panel.width - 24, 18).translate(12, y).into(), line.ptr);
+    ui.label(line, panel.x + 12, panel.y + y, 12, ui.text);
 }

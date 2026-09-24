@@ -6,6 +6,13 @@ const Direction = @import("core/event.zig").Direction;
 const controls = @import("gui/controls.zig");
 const ui = @import("gui/theme.zig");
 const rl = @import("raylib");
+const WaveformCache = @import("gui/WaveformCache.zig");
+var waveform_cache: WaveformCache = .{};
+
+pub fn deinit() void {
+    waveform_cache.deinit();
+}
+
 const Element = @import("graphics/Highlight.zig").Element;
 
 pub const Tab = enum(c_int) { none, scalar, color, motion, scene };
@@ -47,7 +54,8 @@ fn viewport() rl.Rectangle {
 
 /// UI wheel gestures must not also move the scene camera.
 pub fn pointerOverUi() bool {
-    return ui.hovered(ui.rect(16, 16, width() - 32, 58)) or
+    return @import("core/debug.zig").pointerOverUi() or
+        ui.hovered(ui.rect(16, 16, width() - 32, 58)) or
         ui.hovered(ui.rect(16, height() - 164, width() - 32, 148)) or
         (active_tab != .none and ui.hovered(panel()));
 }
@@ -367,12 +375,6 @@ fn applyScroll(dir: Direction, amount: f32, pointer_over_panel: bool) void {
     }
 }
 
-const waveform_colors = [_]rl.Color{
-    .{ .r = 244, .g = 107, .b = 112, .a = 255 },
-    .{ .r = 105, .g = 220, .b = 150, .a = 255 },
-    .{ .r = 100, .g = 174, .b = 255, .a = 255 },
-};
-
 fn drawPlayer(audio: *AudioSession) void {
     const dock = ui.rect(16, height() - 164, width() - 32, 148);
     ui.card(dock);
@@ -389,7 +391,7 @@ fn drawPlayer(audio: *AudioSession) void {
     if (audio.notice != null and ui.button(ui.rect(width() - 108, dock.y + 8, 76, 26), "Dismiss", false, true)) audio.notice = null;
 
     if (file and audio.notice == null) {
-        for ([_][:0]const u8{ "Low", "Mid", "High" }, waveform_colors, 0..) |label, color, index| {
+        for ([_][:0]const u8{ "Low", "Mid", "High" }, WaveformCache.colors, 0..) |label, color, index| {
             const x = dock.x + dock.width - 166 + @as(f32, @floatFromInt(index)) * 52;
             rl.DrawCircleV(.{ .x = x, .y = dock.y + 20 }, 3, color);
             ui.label(label, x + 8, dock.y + 14, 12, color);
@@ -442,33 +444,10 @@ fn drawWaveformScrubber(audio: *AudioSession, bounds: rl.Rectangle) void {
     ui.rounded(bounds, 6, ui.background);
     const waveform = audio.waveform();
     const played = std.math.clamp(audio.timePlayed() / @max(duration, 0.001), 0, 1);
-    const scale = @max(1, rl.GetWindowScaleDPI().x);
-    const columns: usize = @intFromFloat(@max(1, @floor(bounds.width * scale)));
-    const column_width = bounds.width / @as(f32, @floatFromInt(columns));
-    const center_y = bounds.y + bounds.height / 2;
-    const amplitude = bounds.height * 0.44;
-    rl.DrawLineEx(.{ .x = bounds.x, .y = center_y }, .{ .x = bounds.x + bounds.width, .y = center_y }, 1 / scale, ui.border);
-    for (0..if (waveform.len == 0) 0 else columns) |column| {
-        const bin = waveform.column(column, columns);
-        const x = bounds.x + @as(f32, @floatFromInt(column)) * column_width;
-        const peak_height = @min(1, bin.peak) * amplitude;
-        const rms_height = @min(1, bin.rms()) * amplitude;
-        const opacity: f32 = if (x <= bounds.x + played * bounds.width) 1 else 0.65;
-        var offset: f32 = 0;
-        for (bin.bandWeights(), waveform_colors) |weight, color| {
-            const band_height = peak_height * weight;
-            if (band_height > 0) {
-                // Stack low/mid/high symmetrically within the actual peak.
-                rl.DrawRectangleRec(ui.rect(x, center_y - offset - band_height, column_width, band_height), rl.Fade(color, opacity * 0.5));
-                rl.DrawRectangleRec(ui.rect(x, center_y + offset, column_width, band_height), rl.Fade(color, opacity * 0.5));
-                const body_height = @min(band_height, @max(0, rms_height - offset));
-                if (body_height > 0) {
-                    rl.DrawRectangleRec(ui.rect(x, center_y - offset - body_height, column_width, body_height), rl.Fade(color, opacity));
-                    rl.DrawRectangleRec(ui.rect(x, center_y + offset, column_width, body_height), rl.Fade(color, opacity));
-                }
-            }
-            offset += band_height;
-        }
+    waveform_cache.draw(waveform, bounds, played);
+    if (waveform.len == 0) {
+        const center_y = bounds.y + bounds.height / 2;
+        rl.DrawLineEx(.{ .x = bounds.x, .y = center_y }, .{ .x = bounds.x + bounds.width, .y = center_y }, 1, ui.border);
     }
     const playhead_x = bounds.x + bounds.width * played;
     rl.DrawLineEx(.{ .x = playhead_x, .y = bounds.y + 2 }, .{ .x = playhead_x, .y = bounds.y + bounds.height - 2 }, 1, ui.text);
@@ -556,7 +535,7 @@ test "hover selects the current scrolled group without leaking through clipped U
     try std.testing.expectEqual(@as(?Element, .wave_bars), elementAt(.scalar, view, 0, .{ .x = 30, .y = 220 }, null));
     try std.testing.expectEqual(@as(?Element, .bubble), elementAt(.scalar, view, 284, .{ .x = 30, .y = 110 }, null));
     try std.testing.expectEqual(@as(?Element, .halo), elementAt(.color, view, 478, .{ .x = 30, .y = 110 }, null));
-    try std.testing.expectEqual(@as(?Element, .spectrum), elementAt(.motion, view, 582, .{ .x = 30, .y = 110 }, null));
+    try std.testing.expectEqual(@as(?Element, .spectrum), elementAt(.motion, view, 634, .{ .x = 30, .y = 110 }, null));
     try std.testing.expectEqual(@as(?Element, null), elementAt(.motion, view, 0, .{ .x = 30, .y = 110 }, null));
     try std.testing.expectEqual(@as(?Element, null), elementAt(.scalar, view, 634, .{ .x = 30, .y = 110 }, null));
     try std.testing.expectEqual(@as(?Element, null), elementAt(.scalar, view, 0, .{ .x = 30, .y = 90 }, null));

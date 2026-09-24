@@ -6,10 +6,11 @@ pub const Window = struct {
     pub const width = 1024;
     pub const height = 768;
     pub const title = "zigscene";
-    pub const fps_target: c_int = 60;
+    pub var fps_limit: f32 = 0;
     pub var opacity: f32 = 1.0;
     pub const Scalars = [_]controls.Scalar{
         .{ "Window opacity", &opacity, .{ 0.15, 1.0 } },
+        .{ "FPS limit (0 = unlimited)", &fps_limit, .{ 0, 360 } },
     };
 };
 

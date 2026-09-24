@@ -26,11 +26,13 @@ motion: Motion = .{},
 halo: graphics.Halo = .{},
 wave_bars: graphics.WaveFormBar = .{},
 applied_window_opacity: f32 = -1,
+applied_fps_limit: i32 = -1,
 
 pub fn create(options: cli.Options) App {
     init.startup();
     var app: App = .{ .renderer = .init() };
     app.applyWindowOpacity();
+    app.applyFpsLimit();
     app.applyOptions(options);
     return app;
 }
@@ -38,6 +40,7 @@ pub fn create(options: cli.Options) App {
 pub fn destroy(self: *App) void {
     self.audio.shutdown();
     self.renderer.deinit();
+    gui.deinit();
     init.shutdown();
     self.* = undefined;
 }
@@ -56,6 +59,7 @@ fn applyOptions(self: *App, options: cli.Options) void {
 
 pub fn frame(self: *App) void {
     defer tracy.frameMarkNamed("zigscene");
+    const frame_start = rl.rl.GetTime();
     const dt = rl.GetFrameTime();
     self.audio.update();
     if (input_mod.process(&self.input, &self.audio)) |size| self.renderer.resize(size.width, size.height);
@@ -68,10 +72,21 @@ pub fn frame(self: *App) void {
 
     const render_context = tracy.traceNamed(@src(), "Render");
     defer render_context.end();
+    const audio_end = rl.rl.GetTime();
     self.renderScene(center);
-    self.renderWindow();
+    const scene_end = rl.rl.GetTime();
+    const ui_end = self.renderWindow();
+    debug.record(.{ .audio = audio_end - frame_start, .scene = scene_end - audio_end, .ui = ui_end - scene_end, .present = rl.rl.GetTime() - ui_end });
     self.applyWindowOpacity();
+    self.applyFpsLimit();
     self.elapsed += dt;
+}
+
+fn applyFpsLimit(self: *App) void {
+    const limit: i32 = @intFromFloat(@round(std.math.clamp(Config.Window.fps_limit, 0, 360)));
+    if (limit == self.applied_fps_limit) return;
+    rl.SetTargetFPS(limit);
+    self.applied_fps_limit = limit;
 }
 
 fn applyWindowOpacity(self: *App) void {
@@ -113,9 +128,8 @@ fn renderScene(self: *App, center: rl.Vector2) void {
     }
 }
 
-fn renderWindow(self: *App) void {
+fn renderWindow(self: *App) f64 {
     rl.BeginDrawing();
-    defer rl.EndDrawing();
     var background = @import("gui/theme.zig").background;
     background.a = @intFromFloat(@round(Config.Shader.alpha_factor * 255));
     rl.ClearBackground(background);
@@ -134,6 +148,9 @@ fn renderWindow(self: *App) void {
     );
     rl.EndShaderMode();
 
-    debug.render();
     gui.frame(&self.audio);
+    debug.render();
+    const present_start = rl.rl.GetTime();
+    rl.EndDrawing();
+    return present_start;
 }

@@ -41,10 +41,12 @@ pub const Bin = struct {
 
 bins: [bin_count]Bin = @splat(.{}),
 len: usize = 0,
+revision: u64 = 0,
 
 pub fn clear(self: *WaveformPreview) void {
     @memset(&self.bins, .{});
     self.len = 0;
+    self.revision +%= 1;
 }
 
 pub fn build(self: *WaveformPreview, samples: []const f32, channels: usize, sample_rate: u32) void {

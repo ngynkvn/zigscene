@@ -29,9 +29,13 @@ pub fn build(b: *std.Build) !void {
     });
     const tracy_mod = tracy.module(if (target.query.isNative() and tracy_enable) "tracy" else "tracy-stub");
 
+    // Keep the graphics backend optimized while debugging the application's Zig
+    // code. Its per-vertex C work otherwise dominates development frame times.
+    const raylib_optimize = b.option(std.builtin.OptimizeMode, "raylib-optimize", "Optimization mode for the graphics backend") orelse
+        (if (optimize == .Debug) .ReleaseSafe else optimize);
     const raylib = b.dependency("raylib", .{
         .target = target,
-        .optimize = optimize,
+        .optimize = raylib_optimize,
         .linux_display_backend = .X11,
     });
 
