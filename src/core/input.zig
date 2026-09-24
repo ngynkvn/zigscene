@@ -1,6 +1,7 @@
 const std = @import("std");
 const gui = @import("../gui.zig");
 
+const ScriptScene = @import("../scripting/Scene.zig");
 const AudioSession = @import("../audio/Session.zig");
 pub const rl = @import("../raylib.zig");
 pub const Config = @import("config.zig");
@@ -21,15 +22,19 @@ pub const State = struct {
     },
 };
 
-pub fn process(state: *State, audio: *AudioSession) ?Resize {
+pub fn process(state: *State, audio: *AudioSession, script: *ScriptScene) ?Resize {
     const ctx = @import("tracy").traceNamed(@src(), "input_processing");
     defer ctx.end();
     if (rl.IsFileDropped()) {
         const files = rl.LoadDroppedFiles();
         defer rl.UnloadDroppedFiles(files);
-        const file = files.paths[0];
-        const len = std.mem.len(file);
-        audio.playFile(file[0..len]);
+        for (0..files.count) |i| {
+            const path = std.mem.span(files.paths[i]);
+            if (std.ascii.endsWithIgnoreCase(path, ".lua")) {
+                script.loadFile(path);
+                event.onTabChange(.scene);
+            } else audio.playFile(path);
+        }
     }
 
     if (!gui.editingValue()) {
@@ -38,6 +43,8 @@ pub fn process(state: *State, audio: *AudioSession) ?Resize {
             rl.CAMERA_ORTHOGRAPHIC => rl.CAMERA_PERSPECTIVE,
             else => unreachable,
         };
+
+        if (rl.rl.IsKeyPressed(rl.rl.KEY_F5)) script.reload();
 
         if (rl.isKeyPressed(.M)) audio.toggleSystemCapture();
 

@@ -8,6 +8,9 @@ const controls = @import("gui/controls.zig");
 const ui = @import("gui/theme.zig");
 const rl = @import("raylib");
 const WaveformCache = @import("gui/WaveformCache.zig");
+const ScriptScene = @import("scripting/Scene.zig");
+const ScriptPanel = @import("gui/ScriptPanel.zig");
+var scene_prefix: f32 = 0;
 var waveform_cache: WaveformCache = .{};
 
 pub fn deinit() void {
@@ -68,7 +71,11 @@ pub fn pointerOverUi() bool {
         (active_tab != .none and ui.hovered(ui.rect(panel().x, panel().y, panel().width + 6, panel().height + 6)));
 }
 
-pub fn frame(audio: *AudioSession) void {
+pub fn prepareScene(script: *ScriptScene) void {
+    scene_prefix = ScriptPanel.height(script, viewport().width);
+}
+
+pub fn frame(audio: *AudioSession, script: *ScriptScene) void {
     rl.SetMouseCursor(rl.MOUSE_CURSOR_DEFAULT);
     if (!rl.IsMouseButtonDown(rl.MOUSE_BUTTON_LEFT)) {
         if (dragging_seek) audio.endSeek();
@@ -83,7 +90,7 @@ pub fn frame(audio: *AudioSession) void {
     }
     resizePanel();
     drawHeader();
-    if (active_tab != .none) drawPanel();
+    if (active_tab != .none) drawPanel(script);
     drawPlayer(audio);
     if (!audio.hasFile() and !audio.captureActive() and width() >= 840) {
         const left = if (active_tab == .none) 16 else panel().x + panel().width + 24;
@@ -117,9 +124,9 @@ fn contentHeight(tab: Tab) f32 {
     return switch (tab) {
         .scalar => scalarHeight(ShapeFields),
         .motion => scalarHeight(MotionFields),
-        .settings => settings_prefix + scalarHeight(SettingsFields) + 96,
+        .settings => settings_prefix + scalarHeight(SettingsFields) + 138,
         .color => colorHeight(),
-        .scene => 48 + SceneItems.len * 76,
+        .scene => scene_prefix + 48 + SceneItems.len * 76,
         .none => 0,
     };
 }
@@ -141,7 +148,8 @@ fn elementAt(tab: Tab, view: rl.Rectangle, offset: f32, mouse: rl.Vector2, dragg
         .color => groupElementAt(ColorFields, view, offset, mouse, dragging, 100),
         .scene => blk: {
             if (!rl.CheckCollisionPointRec(mouse, view)) break :blk null;
-            var y = view.y - offset + 48;
+            if (dragging != null) break :blk null;
+            var y = view.y - offset + scene_prefix + 48;
             inline for (SceneItems) |item| {
                 if (rl.CheckCollisionPointRec(mouse, ui.rect(view.x, y, view.width, 66))) break :blk item[3];
                 y += 76;
@@ -172,14 +180,14 @@ fn groupElementAt(comptime groups: anytype, view: rl.Rectangle, offset: f32, mou
     return null;
 }
 
-fn drawPanel() void {
+fn drawPanel(script: *ScriptScene) void {
     const p = panel();
     ui.card(p);
     const title: [:0]const u8, const subtitle: [:0]const u8 = switch (active_tab) {
         .scalar => .{ "Shape & texture", "Fine-tune the form of your sound." },
         .color => .{ "Color palette", "Find a hue for every layer." },
         .motion => .{ "Motion & response", "Give every beat its own character." },
-        .scene => .{ "Scene layers", "Compose your own visual mix." },
+        .scene => .{ "Scene studio", "Script your visuals or mix built-in layers." },
         .settings => .{ "Settings", "Performance, display and workspace." },
         .none => unreachable,
     };
@@ -205,7 +213,7 @@ fn drawPanel() void {
         .motion => drawScalars(MotionFields, view, 0),
         .settings => drawSettings(view),
         .color => drawColors(view),
-        .scene => drawScene(view),
+        .scene => drawScene(view, script),
         .none => unreachable,
     }
     rl.EndScissorMode();
@@ -272,7 +280,8 @@ fn drawSettings(view: rl.Rectangle) void {
     drawScalars(SettingsFields, view, settings_prefix);
     const bottom = top + settings_prefix + scalarHeight(SettingsFields);
     if (ui.button(ui.rect(view.x, bottom, view.width, 32), if (config.Interface.show_fps) "FPS counter: On" else "FPS counter: Off", config.Interface.show_fps, bottom >= view.y and bottom + 32 <= view.y + view.height)) config.Interface.show_fps = !config.Interface.show_fps;
-    if (ui.button(ui.rect(view.x, bottom + 42, view.width, 32), "Reset UI size and panel", false, bottom + 42 >= view.y and bottom + 74 <= view.y + view.height)) {
+    if (ui.button(ui.rect(view.x, bottom + 42, view.width, 32), if (builtin.os.tag == .emscripten) "Always on top: Native only" else if (config.Window.always_on_top) "Always on top: On" else "Always on top: Off", config.Window.always_on_top, builtin.os.tag != .emscripten and bottom + 42 >= view.y and bottom + 74 <= view.y + view.height)) config.Window.always_on_top = !config.Window.always_on_top;
+    if (ui.button(ui.rect(view.x, bottom + 84, view.width, 32), "Reset UI size and panel", false, bottom + 84 >= view.y and bottom + 116 <= view.y + view.height)) {
         config.Interface.scale_percent = 100;
         config.Interface.panel_width = 320;
         config.Interface.panel_height = 0;
@@ -437,8 +446,9 @@ const SceneItems = .{
     .{ "Frequency halo", "A ring of spectral energy", &config.Scene.halo, Element.halo },
 };
 
-fn drawScene(view: rl.Rectangle) void {
-    var y = view.y - scroll;
+fn drawScene(view: rl.Rectangle, script: *ScriptScene) void {
+    ScriptPanel.draw(script, view, scroll, slider);
+    var y = view.y - scroll + scene_prefix;
     const actions_enabled = y >= view.y and y + 36 <= view.y + view.height;
     if (ui.button(ui.rect(view.x, y, (view.width - 8) / 2, 34), "Show all", false, actions_enabled)) {
         inline for (SceneItems) |item| item[2].* = true;
@@ -662,4 +672,14 @@ test "panel resize grip includes its visible corner and excludes the scrollbar" 
     try std.testing.expectEqual(ResizeMode.height, resizeModeAt(p, .{ .x = 100, .y = 588 }));
     try std.testing.expectEqual(ResizeMode.none, resizeModeAt(p, .{ .x = 328, .y = 300 }));
     try std.testing.expectEqual(ResizeMode.none, resizeModeAt(p, .{ .x = 100, .y = 300 }));
+}
+
+test "script controls do not highlight built-in scene layers" {
+    const previous_prefix = scene_prefix;
+    defer scene_prefix = previous_prefix;
+    scene_prefix = 416;
+    const view = ui.rect(20, 100, 300, 300);
+    try std.testing.expectEqual(@as(?Element, null), elementAt(.scene, view, 0, .{ .x = 30, .y = 160 }, null));
+    try std.testing.expectEqual(@as(?Element, .wave_lines), elementAt(.scene, view, 416, .{ .x = 30, .y = 160 }, null));
+    try std.testing.expectEqual(@as(?Element, null), elementAt(.scene, view, 416, .{ .x = 30, .y = 160 }, 4000));
 }

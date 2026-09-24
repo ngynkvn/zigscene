@@ -63,4 +63,5 @@ test "root" {
     _ = @import("gui.zig");
     _ = @import("core/debug.zig");
     _ = @import("core/config.zig");
+    _ = @import("scripting/tests.zig");
 }

@@ -13,10 +13,18 @@
         .tracy = .{
             .path = "./deps/tracy/",
         },
+        .lua_source = .{
+            .url = "https://www.lua.org/ftp/lua-5.4.9.tar.gz",
+            .hash = "N-V-__8AAEQ_FAAnte7Oq7KSLG9FZh_9mjvQimoekgYqkKSK",
+        },
     },
     .paths = .{
         "build.zig",
         "build.zig.zon",
         "src",
+        "deps",
+        "docs",
+        "README.md",
+        "ARCHITECTURE.md",
     },
 }
