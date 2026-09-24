@@ -10,6 +10,10 @@ pub fn startup() void {
     // Setup
     rl.InitWindow(Config.Window.width, Config.Window.height, APP_NAME);
     rl.rl.SetWindowMinSize(640, 480);
+    // Source-over alpha: translucent UI must never punch holes in an opaque
+    // window. The default blend factors incorrectly square source alpha.
+    rl.rl.rlSetBlendFactorsSeparate(rl.rl.RL_SRC_ALPHA, rl.rl.RL_ONE_MINUS_SRC_ALPHA, rl.rl.RL_ONE, rl.rl.RL_ONE_MINUS_SRC_ALPHA, rl.rl.RL_FUNC_ADD, rl.rl.RL_FUNC_ADD);
+    rl.rl.rlSetBlendMode(rl.rl.RL_BLEND_CUSTOM_SEPARATE);
     rl.SetTargetFPS(@intFromFloat(Config.Window.fps_limit));
 
     rl.InitAudioDevice();
