@@ -62,8 +62,8 @@ pub fn frame(self: *App) void {
     const frame_start = rl.rl.GetTime();
     const dt = rl.GetFrameTime();
     self.audio.update();
-    if (input_mod.process(&self.input, &self.audio)) |size| self.renderer.resize(size.width, size.height);
     @import("gui/theme.zig").updateScale();
+    if (input_mod.process(&self.input, &self.audio)) |size| self.renderer.resize(size.width, size.height);
     if (processor.update()) self.seconds_since_audio = 0 else self.seconds_since_audio += dt;
     self.motion.update(dt, if (self.seconds_since_audio < audio_hold_seconds) processor.rms_energy else 0, processor.on_beat);
     self.halo.update(dt, processor.curr_fft);
@@ -148,8 +148,10 @@ fn renderWindow(self: *App) f64 {
     );
     rl.EndShaderMode();
 
+    @import("gui/theme.zig").beginDrawing();
     gui.frame(&self.audio);
     debug.render();
+    @import("gui/theme.zig").endDrawing();
     const present_start = rl.rl.GetTime();
     rl.EndDrawing();
     return present_start;

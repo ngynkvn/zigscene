@@ -1,6 +1,5 @@
 const graphics = @import("../graphics.zig");
 const gui = @import("../gui.zig");
-const debug = @import("debug.zig");
 
 pub inline fn onTabChange(tab: gui.Tab) void {
     const modules = .{gui};
@@ -10,7 +9,7 @@ pub inline fn onTabChange(tab: gui.Tab) void {
 }
 
 pub inline fn onWindowResize(width: i32, height: i32) void {
-    const modules = .{ graphics, debug };
+    const modules = .{graphics};
     inline for (modules) |module| {
         module.onWindowResize(width, height);
     }

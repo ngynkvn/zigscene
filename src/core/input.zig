@@ -51,6 +51,8 @@ pub fn process(state: *State, audio: *AudioSession) ?Resize {
             event.onTabChange(.motion);
         } else if (rl.isKeyPressed(.FIVE)) {
             event.onTabChange(.scene);
+        } else if (rl.isKeyPressed(.SIX)) {
+            event.onTabChange(.settings);
         }
 
         if (rl.isKeyPressed(.F)) {

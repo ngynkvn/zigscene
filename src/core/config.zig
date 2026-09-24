@@ -10,8 +10,16 @@ pub const Window = struct {
     pub var opacity: f32 = 1.0;
     pub const Scalars = [_]controls.Scalar{
         .{ "Window opacity", &opacity, .{ 0.15, 1.0 } },
-        .{ "FPS limit (0 = unlimited)", &fps_limit, .{ 0, 360 } },
+        .{ "FPS limit", &fps_limit, .{ 0, 360 } },
     };
+};
+
+pub const Interface = struct {
+    pub var scale_percent: f32 = 100;
+    pub var panel_width: f32 = 320;
+    // Zero follows the available window height until manually resized.
+    pub var panel_height: f32 = 0;
+    pub var show_fps: bool = true;
 };
 
 pub const Audio = struct {

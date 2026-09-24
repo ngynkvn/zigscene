@@ -1,13 +1,13 @@
-//! Always-visible frame counter and optional diagnostics, toggled with D.
+//! Configurable frame counter and optional diagnostics, toggled with D.
 const std = @import("std");
 const processor = @import("../audio/processor.zig");
+const config = @import("config.zig");
 const ui = @import("../gui/theme.zig");
 const rl = @import("../raylib.zig");
 
 const panel_width: f32 = 280;
 const panel_height: f32 = 186;
 const panel_margin: f32 = 16;
-var screen_width: i32 = @import("config.zig").Window.width;
 var visible = false;
 
 pub const Timings = struct {
@@ -40,20 +40,16 @@ pub fn record(timings: Timings) void {
     }
 }
 
-pub fn onWindowResize(width: i32, _: i32) void {
-    screen_width = width;
-}
-
 fn badgeBounds() rl.Rectangle {
-    return ui.rect(@as(f32, @floatFromInt(screen_width)) - 212, 88, 196, 30);
+    return ui.rect(ui.width() - 212, 88, 196, 30);
 }
 
 fn panelBounds() rl.Rectangle {
-    return ui.rect(@max(panel_margin, @as(f32, @floatFromInt(screen_width)) - panel_width - panel_margin), 126, panel_width, panel_height);
+    return ui.rect(@max(panel_margin, ui.width() - panel_width - panel_margin), 126, panel_width, panel_height);
 }
 
 pub fn pointerOverUi() bool {
-    return ui.hovered(badgeBounds()) or (visible and ui.hovered(panelBounds()));
+    return ((config.Interface.show_fps or visible) and ui.hovered(badgeBounds())) or (visible and ui.hovered(panelBounds()));
 }
 
 pub fn frame() void {
@@ -61,6 +57,7 @@ pub fn frame() void {
 }
 
 pub fn render() void {
+    if (!config.Interface.show_fps and !visible) return;
     const badge = badgeBounds();
     ui.card(badge);
     var counter_buffer: [64]u8 = undefined;

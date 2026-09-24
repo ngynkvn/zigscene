@@ -59,7 +59,13 @@ capture system playback audio instead. Press **M** again to stop capture. Droppi
 a file switches back to file playback. When capture stops, the previous file
 resumes if it was playing before capture started.
 
-The studio interface uses labeled tabs and scrollable settings panels.
+The studio interface uses labeled tabs and scrollable settings panels. Open
+**Settings** in the header (or press **6**) for FPS presets/custom limits, window
+and background opacity, master volume, UI size, and the FPS counter toggle.
+Choose 75%, 100%, 125%, or 150% UI size; text, controls, and mouse targets scale
+together, automatically fitting smaller windows. Drag a panel's right or bottom
+edge, or its bottom-right grip, to resize it. **Reset UI size and panel** restores
+the default layout. These preferences apply for the current session.
 Use the wheel or drag the scrollbar to explore each panel. The playback bar provides
 Play/Pause, System audio capture, and a Volume slider. Drag the waveform to seek;
 the elapsed/total timer sits on the waveform, with the track name above it. Hover
@@ -79,13 +85,13 @@ colors, **4** for motion and audio response, and **5** to show or hide individua
 scene elements. The motion tab controls master volume, energy gain, compression,
 rise and fall times, and beat pulse decay. The frequency halo has its own radius, depth, spin,
 and hue controls. Hold **Space** to temporarily smooth the waveform more heavily.
-The motion tab also has a Window opacity slider for the entire window. The
-Background opacity slider in the shape tab controls only the window background;
+Settings has a Window opacity slider for the entire window. The
+Background opacity slider in Settings (also available in Shape) controls only the window background;
 reduce it from the default opaque navy to reveal the desktop.
-The upper-right counter always shows FPS and frame time. Click it or press **D**
+The upper-right counter shows FPS and frame time by default. Click it or press **D**
 to open CPU timings for audio/update, scene drawing, UI, and presentation/wait,
 plus mouse and audio response values. Rendering is uncapped by default; set
-**Motion → Window → FPS limit** to cap it (0 means unlimited). Presentation/wait
+**Settings → Window → FPS limit** to cap it (0 means unlimited). Presentation/wait
 includes any requested frame-limit sleep, so it is not a GPU-only measurement.
 
 The seek waveform is cached at display resolution and rebuilt only when the

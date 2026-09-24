@@ -3,6 +3,7 @@ const builtin = @import("builtin");
 const AudioSession = @import("audio/Session.zig");
 const config = @import("core/config.zig");
 const Direction = @import("core/event.zig").Direction;
+const geometry = @import("gui/geometry.zig");
 const controls = @import("gui/controls.zig");
 const ui = @import("gui/theme.zig");
 const rl = @import("raylib");
@@ -15,20 +16,26 @@ pub fn deinit() void {
 
 const Element = @import("graphics/Highlight.zig").Element;
 
-pub const Tab = enum(c_int) { none, scalar, color, motion, scene };
+pub const Tab = enum(c_int) { none, scalar, color, motion, scene, settings };
 var active_tab: Tab = .scalar;
 var scroll: f32 = 0;
-var saved_scroll: [5]f32 = @splat(0);
+var saved_scroll: [6]f32 = @splat(0);
 var active_slider: ?usize = null;
 var editing: ?usize = null;
 var editing_buffer: [128]u8 = @splat(0);
 var dragging_seek = false;
 const seek_id = 1000;
+const resize_id = 3000;
+const ResizeMode = enum { none, width, height, both };
+var resize_mode: ResizeMode = .none;
+var resize_origin: rl.Vector2 = .{};
+var resize_size: geometry.Size = .{ .width = 320, .height = 500 };
 
 pub fn onTabChange(next: Tab) void {
     if (active_tab == next) return;
     editing = null;
     active_slider = null;
+    resize_mode = .none;
     saved_scroll[@intCast(@intFromEnum(active_tab))] = scroll;
     active_tab = next;
     scroll = saved_scroll[@intCast(@intFromEnum(next))];
@@ -39,13 +46,14 @@ pub fn editingValue() bool {
 }
 
 fn width() f32 {
-    return @floatFromInt(rl.GetScreenWidth());
+    return ui.width();
 }
 fn height() f32 {
-    return @floatFromInt(rl.GetScreenHeight());
+    return ui.height();
 }
 fn panel() rl.Rectangle {
-    return ui.rect(16, 88, if (width() < 800) 280 else 320, @max(180, height() - 268));
+    const size = geometry.panelSize(config.Interface.panel_width, config.Interface.panel_height, width(), height());
+    return ui.rect(16, 88, size.width, size.height);
 }
 fn viewport() rl.Rectangle {
     const p = panel();
@@ -54,10 +62,10 @@ fn viewport() rl.Rectangle {
 
 /// UI wheel gestures must not also move the scene camera.
 pub fn pointerOverUi() bool {
-    return @import("core/debug.zig").pointerOverUi() or
+    return resize_mode != .none or @import("core/debug.zig").pointerOverUi() or
         ui.hovered(ui.rect(16, 16, width() - 32, 58)) or
         ui.hovered(ui.rect(16, height() - 164, width() - 32, 148)) or
-        (active_tab != .none and ui.hovered(panel()));
+        (active_tab != .none and ui.hovered(ui.rect(panel().x, panel().y, panel().width + 6, panel().height + 6)));
 }
 
 pub fn frame(audio: *AudioSession) void {
@@ -66,12 +74,14 @@ pub fn frame(audio: *AudioSession) void {
         if (dragging_seek) audio.endSeek();
         dragging_seek = false;
         active_slider = null;
+        resize_mode = .none;
     }
     if (dragging_seek and (!audio.seeking or active_slider != seek_id or audio.captureActive() or !audio.hasFile())) {
         audio.endSeek();
         dragging_seek = false;
         if (active_slider == seek_id) active_slider = null;
     }
+    resizePanel();
     drawHeader();
     if (active_tab != .none) drawPanel();
     drawPlayer(audio);
@@ -89,13 +99,17 @@ fn drawHeader() void {
     ui.label("zigscene", 68, 26, 22, ui.text);
     ui.label("AUDIO / VISUAL", 69, 51, 9, ui.muted);
     const tabs = .{ .{ "Shape", Tab.scalar }, .{ "Color", Tab.color }, .{ "Motion", Tab.motion }, .{ "Scene", Tab.scene } };
-    const tab_w: f32 = if (width() < 800) 72 else 88;
+    const tab_w: f32 = if (width() < 900) 64 else 88;
+    const tab_x: f32 = if (width() < 900) 174 else 190;
     inline for (tabs, 0..) |tab, i| {
-        const bounds = ui.rect(190 + @as(f32, @floatFromInt(i)) * tab_w, 27, tab_w - 6, 36);
+        const bounds = ui.rect(tab_x + @as(f32, @floatFromInt(i)) * tab_w, 27, tab_w - 6, 36);
         if (ui.button(bounds, tab[0], active_tab == tab[1], true)) onTabChange(tab[1]);
     }
-    if (ui.button(ui.rect(width() - 110, 27, 78, 36), if (active_tab == .none) "Settings" else "Hide  /  1", false, true)) {
+    if (ui.button(ui.rect(width() - 184, 27, 62, 36), if (active_tab == .none) "Show / 1" else "Hide / 1", false, true)) {
         onTabChange(if (active_tab == .none) .scalar else .none);
+    }
+    if (ui.button(ui.rect(width() - 116, 27, 84, 36), "Settings", active_tab == .settings, true)) {
+        onTabChange(if (active_tab == .settings) .none else .settings);
     }
 }
 
@@ -103,6 +117,7 @@ fn contentHeight(tab: Tab) f32 {
     return switch (tab) {
         .scalar => scalarHeight(ShapeFields),
         .motion => scalarHeight(MotionFields),
+        .settings => settings_prefix + scalarHeight(SettingsFields) + 96,
         .color => colorHeight(),
         .scene => 48 + SceneItems.len * 76,
         .none => 0,
@@ -111,11 +126,12 @@ fn contentHeight(tab: Tab) f32 {
 
 /// Resolve against current logical UI coordinates before the scene is drawn.
 pub fn hoveredElement() ?Element {
+    if (resize_mode != .none) return null;
     const view = viewport();
     const offset = std.math.clamp(scroll, 0, @max(0, contentHeight(active_tab) - view.height));
     const dragging = if (rl.IsMouseButtonDown(rl.MOUSE_BUTTON_LEFT)) active_slider else null;
     if (dragging == null and !rl.IsCursorOnScreen()) return null;
-    return elementAt(active_tab, view, offset, rl.GetMousePosition(), dragging);
+    return elementAt(active_tab, view, offset, ui.mousePosition(), dragging);
 }
 
 fn elementAt(tab: Tab, view: rl.Rectangle, offset: f32, mouse: rl.Vector2, dragging: ?usize) ?Element {
@@ -132,7 +148,7 @@ fn elementAt(tab: Tab, view: rl.Rectangle, offset: f32, mouse: rl.Vector2, dragg
             }
             break :blk null;
         },
-        .none => null,
+        .none, .settings => null,
     };
 }
 
@@ -164,6 +180,7 @@ fn drawPanel() void {
         .color => .{ "Color palette", "Find a hue for every layer." },
         .motion => .{ "Motion & response", "Give every beat its own character." },
         .scene => .{ "Scene layers", "Compose your own visual mix." },
+        .settings => .{ "Settings", "Performance, display and workspace." },
         .none => unreachable,
     };
     ui.label(title, p.x + 20, p.y + 16, 21, ui.text);
@@ -173,19 +190,20 @@ fn drawPanel() void {
     const max_scroll = @max(0, content_h - view.height);
     scroll = std.math.clamp(scroll, 0, max_scroll);
     // The scrollbar is draggable as well as wheel-controlled.
-    const track = ui.rect(p.x + p.width - 12, view.y, 12, view.height);
-    if (max_scroll > 0 and ui.hovered(track) and rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT)) {
+    const track = ui.rect(p.x + p.width - 14, view.y, 8, view.height);
+    if (max_scroll > 0 and active_slider == null and ui.hovered(track) and rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT)) {
         active_slider = 2000;
         editing = null;
     }
     if (max_scroll > 0 and active_slider == 2000) {
         const thumb_h = @max(24, view.height * view.height / content_h);
-        scroll = std.math.clamp((rl.GetMousePosition().y - view.y - thumb_h / 2) / (view.height - thumb_h), 0, 1) * max_scroll;
+        scroll = std.math.clamp((ui.mousePosition().y - view.y - thumb_h / 2) / (view.height - thumb_h), 0, 1) * max_scroll;
     }
-    rl.BeginScissorMode(@intFromFloat(view.x), @intFromFloat(view.y), @intFromFloat(view.width), @intFromFloat(view.height));
+    ui.beginScissor(view);
     switch (active_tab) {
-        .scalar => drawScalars(ShapeFields, view),
-        .motion => drawScalars(MotionFields, view),
+        .scalar => drawScalars(ShapeFields, view, 0),
+        .motion => drawScalars(MotionFields, view, 0),
+        .settings => drawSettings(view),
         .color => drawColors(view),
         .scene => drawScene(view),
         .none => unreachable,
@@ -197,7 +215,10 @@ fn drawPanel() void {
         ui.rounded(ui.rect(p.x + p.width - 7, view.y + (view.height - thumb_h) * scroll / max_scroll, 3, thumb_h), 1.5, ui.muted);
     }
     ui.label(if (max_scroll > 0) "SCROLL TO EXPLORE" else "MAKE IT YOUR OWN", p.x + 20, p.y + p.height - 22, 10, ui.muted);
-    ui.label("2 - 5", p.x + p.width - 50, p.y + p.height - 22, 10, ui.muted);
+    for (0..3) |i| {
+        const offset = @as(f32, @floatFromInt(i)) * 4;
+        rl.DrawLineEx(.{ .x = p.x + p.width - 15 + offset, .y = p.y + p.height - 5 }, .{ .x = p.x + p.width - 5, .y = p.y + p.height - 15 + offset }, 1, if (resize_mode != .none) ui.accent else ui.muted);
+    }
 }
 
 const ScalarGroup = struct { [:0]const u8, []const controls.Scalar, ?Element };
@@ -208,12 +229,91 @@ const ShapeFields = [_]ScalarGroup{
     .{ "TEXTURE & BACKGROUND", &config.Shader.Scalars, null },
 };
 const MotionFields = [_]ScalarGroup{
-    .{ "WINDOW", &config.Window.Scalars, null },
     .{ "ENERGY & ENVELOPE", &config.Motion.Scalars, null },
     .{ "AUDIO RESPONSE", &config.Audio.Scalars, null },
     .{ "SPECTRUM", &config.Visualizer.Spectrum.Scalars, .spectrum },
     .{ "FREQUENCY HALO", &config.Visualizer.Halo.Scalars, .halo },
 };
+const SettingsFields = [_]ScalarGroup{
+    .{ "WINDOW", &config.Window.Scalars, null },
+    .{ "BACKGROUND & AUDIO", &.{
+        .{ "Background opacity", &config.Shader.alpha_factor, .{ 0, 1 } },
+        .{ "Master volume", &config.Audio.volume, .{ 0, 1 } },
+    }, null },
+};
+const settings_prefix: f32 = 208;
+
+fn drawSettings(view: rl.Rectangle) void {
+    const top = view.y - scroll;
+    groupHeading("FPS PRESETS  /  0 = UNLIMITED", view, top);
+    const presets = [_]f32{ 0, 30, 60, 120, 144, 240 };
+    for (presets, 0..) |fps, index| {
+        const x = view.x + @as(f32, @floatFromInt(index % 3)) * (view.width + 6) / 3;
+        const y = top + 38 + @as(f32, @floatFromInt(index / 3)) * 36;
+        var buffer: [16]u8 = undefined;
+        const label = if (fps == 0) "Unlimited" else std.fmt.bufPrintZ(&buffer, "{d:.0} FPS", .{fps}) catch unreachable;
+        if (ui.button(ui.rect(x, y, (view.width - 12) / 3, 30), label, config.Window.fps_limit == fps, y >= view.y and y + 30 <= view.y + view.height)) {
+            config.Window.fps_limit = fps;
+            editing = null;
+        }
+    }
+    groupHeading("UI SIZE", view, top + 112);
+    for ([_]f32{ 75, 100, 125, 150 }, 0..) |percent, index| {
+        const x = view.x + @as(f32, @floatFromInt(index)) * (view.width + 6) / 4;
+        const y = top + 150;
+        var buffer: [16]u8 = undefined;
+        const label = std.fmt.bufPrintZ(&buffer, "{d:.0}%", .{percent}) catch unreachable;
+        if (ui.button(ui.rect(x, y, (view.width - 18) / 4, 30), label, config.Interface.scale_percent == percent, y >= view.y and y + 30 <= view.y + view.height)) {
+            config.Interface.scale_percent = percent;
+            editing = null;
+        }
+    }
+    ui.label("Automatically fits smaller windows", view.x + 8, top + 186, 11, ui.muted);
+    drawScalars(SettingsFields, view, settings_prefix);
+    const bottom = top + settings_prefix + scalarHeight(SettingsFields);
+    if (ui.button(ui.rect(view.x, bottom, view.width, 32), if (config.Interface.show_fps) "FPS counter: On" else "FPS counter: Off", config.Interface.show_fps, bottom >= view.y and bottom + 32 <= view.y + view.height)) config.Interface.show_fps = !config.Interface.show_fps;
+    if (ui.button(ui.rect(view.x, bottom + 42, view.width, 32), "Reset UI size and panel", false, bottom + 42 >= view.y and bottom + 74 <= view.y + view.height)) {
+        config.Interface.scale_percent = 100;
+        config.Interface.panel_width = 320;
+        config.Interface.panel_height = 0;
+        scroll = 0;
+        editing = null;
+    }
+}
+
+fn resizeModeAt(p: rl.Rectangle, mouse: rl.Vector2) ResizeMode {
+    const corner = rl.CheckCollisionPointRec(mouse, ui.rect(p.x + p.width - 18, p.y + p.height - 18, 24, 24));
+    const right = rl.CheckCollisionPointRec(mouse, ui.rect(p.x + p.width - 2, p.y, 8, p.height + 6));
+    const bottom = rl.CheckCollisionPointRec(mouse, ui.rect(p.x, p.y + p.height - 4, p.width + 6, 10));
+    return if (corner or (right and bottom)) .both else if (right) .width else if (bottom) .height else .none;
+}
+
+fn resizePanel() void {
+    if (active_tab == .none) return;
+    const p = panel();
+    const mouse = ui.mousePosition();
+    const hover_mode = resizeModeAt(p, mouse);
+    if (hover_mode != .none and active_slider == null and rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT)) {
+        resize_mode = hover_mode;
+        active_slider = resize_id;
+        editing = null;
+        resize_origin = mouse;
+        resize_size = .{ .width = p.width, .height = p.height };
+    }
+    if (resize_mode != .none and rl.IsMouseButtonDown(rl.MOUSE_BUTTON_LEFT)) {
+        const size = geometry.panelSize(resize_size.width + mouse.x - resize_origin.x, resize_size.height + mouse.y - resize_origin.y, width(), height());
+        if (resize_mode == .width or resize_mode == .both) config.Interface.panel_width = size.width;
+        if (resize_mode == .height or resize_mode == .both) config.Interface.panel_height = size.height;
+    }
+    const cursor_mode = if (resize_mode != .none) resize_mode else if (active_slider == null) hover_mode else .none;
+    switch (cursor_mode) {
+        .width => rl.SetMouseCursor(rl.MOUSE_CURSOR_RESIZE_EW),
+        .height => rl.SetMouseCursor(rl.MOUSE_CURSOR_RESIZE_NS),
+        .both => rl.SetMouseCursor(rl.MOUSE_CURSOR_RESIZE_NWSE),
+        .none => {},
+    }
+}
+
 fn scalarHeight(comptime groups: anytype) f32 {
     comptime var total: f32 = 0;
     inline for (groups) |group| total += 38 + group[1].len * 52;
@@ -227,8 +327,8 @@ fn rowVisible(y: f32, view: rl.Rectangle) bool {
     return y >= view.y and y + 46 <= view.y + view.height;
 }
 
-fn drawScalars(comptime groups: anytype, view: rl.Rectangle) void {
-    var y = view.y - scroll;
+fn drawScalars(comptime groups: anytype, view: rl.Rectangle, offset: f32) void {
+    var y = view.y - scroll + offset;
     var id: usize = 0;
     inline for (groups) |group| {
         groupHeading(group[0], view, y);
@@ -242,7 +342,7 @@ fn drawScalars(comptime groups: anytype, view: rl.Rectangle) void {
             ui.label(label, view.x + 8, y + 4, 14, ui.text);
             const box = ui.rect(view.x + view.width - 76, y, 68, 24);
             if (editing == id) {
-                if (rl.GuiValueBoxFloat(box, null, &editing_buffer, value, true) != 0 or
+                if (ui.valueBox(box, &editing_buffer, value) or
                     (rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT) and !ui.hovered(box))) editing = null;
             } else {
                 var buf: [32]u8 = undefined;
@@ -278,7 +378,7 @@ fn slider(id: usize, bounds: rl.Rectangle, value: *f32, min: f32, max: f32, enab
     }
     const dragging = active_slider == id;
     if (dragging and rl.IsMouseButtonDown(rl.MOUSE_BUTTON_LEFT)) {
-        value.* = min + std.math.clamp((rl.GetMousePosition().x - bounds.x) / bounds.width, 0, 1) * (max - min);
+        value.* = min + std.math.clamp((ui.mousePosition().x - bounds.x) / bounds.width, 0, 1) * (max - min);
     }
     if (over or dragging) rl.SetMouseCursor(rl.MOUSE_CURSOR_POINTING_HAND);
     const ratio = if (max > min) std.math.clamp((value.* - min) / (max - min), 0, 1) else 0;
@@ -383,7 +483,7 @@ fn drawPlayer(audio: *AudioSession) void {
     const text_x: f32 = 32;
     var title_buffer: [512]u8 = undefined;
     const title = if (live) (if (audio.captureMode() == .system) "LIVE INPUT  /  System audio" else "LIVE INPUT  /  Input audio") else if (file) std.fmt.bufPrintZ(&title_buffer, "{s}  /  {s}", .{ if (audio.seeking) "SEEKING" else if (audio.isFilePlaying()) "PLAYING" else "PAUSED", audio.filename() }) catch "Audio file" else "Your sound. Your scene.";
-    rl.BeginScissorMode(@intFromFloat(text_x), @intFromFloat(dock.y + 10), @intFromFloat(dock.width - (if (audio.notice != null) @as(f32, 112) else if (file) @as(f32, 188) else 32)), 24);
+    ui.beginScissor(ui.rect(text_x, dock.y + 10, dock.width - (if (audio.notice != null) @as(f32, 112) else if (file) @as(f32, 188) else 32), 24));
     if (audio.notice) |notice| {
         ui.label(notice, text_x, dock.y + 12, 14, rl.GetColor(0xffd28aff));
     } else ui.label(title, text_x, dock.y + 12, 15, ui.text);
@@ -429,7 +529,7 @@ fn drawPlayer(audio: *AudioSession) void {
 
 fn drawWaveformScrubber(audio: *AudioSession, bounds: rl.Rectangle) void {
     const duration = audio.timeLength();
-    const mouse = rl.GetMousePosition();
+    const mouse = ui.mousePosition();
     const hovering = ui.hovered(bounds) and duration > 0;
     if (hovering and rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT) and active_slider == null) {
         active_slider = seek_id;
@@ -535,7 +635,7 @@ test "hover selects the current scrolled group without leaking through clipped U
     try std.testing.expectEqual(@as(?Element, .wave_bars), elementAt(.scalar, view, 0, .{ .x = 30, .y = 220 }, null));
     try std.testing.expectEqual(@as(?Element, .bubble), elementAt(.scalar, view, 284, .{ .x = 30, .y = 110 }, null));
     try std.testing.expectEqual(@as(?Element, .halo), elementAt(.color, view, 478, .{ .x = 30, .y = 110 }, null));
-    try std.testing.expectEqual(@as(?Element, .spectrum), elementAt(.motion, view, 634, .{ .x = 30, .y = 110 }, null));
+    try std.testing.expectEqual(@as(?Element, .spectrum), elementAt(.motion, view, 492, .{ .x = 30, .y = 110 }, null));
     try std.testing.expectEqual(@as(?Element, null), elementAt(.motion, view, 0, .{ .x = 30, .y = 110 }, null));
     try std.testing.expectEqual(@as(?Element, null), elementAt(.scalar, view, 634, .{ .x = 30, .y = 110 }, null));
     try std.testing.expectEqual(@as(?Element, null), elementAt(.scalar, view, 0, .{ .x = 30, .y = 90 }, null));
@@ -553,4 +653,13 @@ test "scene hover excludes bulk actions and drag focus follows its owner" {
     try std.testing.expectEqual(@as(?Element, .wave_lines), elementAt(.color, view, 0, .{ .x = 900, .y = 600 }, 100));
     try std.testing.expectEqual(@as(?Element, null), elementAt(.scalar, view, 0, .{ .x = 30, .y = 110 }, 1001));
     try std.testing.expectEqual(@as(?Element, null), elementAt(.none, view, 0, .{ .x = 30, .y = 110 }, 0));
+}
+
+test "panel resize grip includes its visible corner and excludes the scrollbar" {
+    const p = ui.rect(16, 88, 320, 500);
+    try std.testing.expectEqual(ResizeMode.both, resizeModeAt(p, .{ .x = 326, .y = 578 }));
+    try std.testing.expectEqual(ResizeMode.width, resizeModeAt(p, .{ .x = 336, .y = 300 }));
+    try std.testing.expectEqual(ResizeMode.height, resizeModeAt(p, .{ .x = 100, .y = 588 }));
+    try std.testing.expectEqual(ResizeMode.none, resizeModeAt(p, .{ .x = 328, .y = 300 }));
+    try std.testing.expectEqual(ResizeMode.none, resizeModeAt(p, .{ .x = 100, .y = 300 }));
 }

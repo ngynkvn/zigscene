@@ -22,8 +22,8 @@ pub fn deinit(self: *WaveformCache) void {
 pub fn draw(self: *WaveformCache, preview: *const Preview, bounds: rl.Rectangle, played: f32) void {
     if (preview.len == 0) return;
     const scale = rl.GetWindowScaleDPI();
-    const pixel_width: i32 = @intFromFloat(@max(1, @round(bounds.width * @max(1, scale.x))));
-    const pixel_height: i32 = @intFromFloat(@max(1, @round(bounds.height * @max(1, scale.y))));
+    const pixel_width: i32 = @intFromFloat(@max(1, @round(bounds.width * ui.scale_factor * @max(1, scale.x))));
+    const pixel_height: i32 = @intFromFloat(@max(1, @round(bounds.height * ui.scale_factor * @max(1, scale.y))));
     if (self.texture == null or self.texture.?.texture.width != pixel_width or self.texture.?.texture.height != pixel_height) {
         self.deinit();
         const texture = rl.LoadRenderTexture(pixel_width, pixel_height);
@@ -51,6 +51,9 @@ fn rasterize(self: *WaveformCache, preview: *const Preview) void {
     const height: f32 = @floatFromInt(texture.texture.height);
     const center = height / 2;
     const amplitude = height * 0.44;
+    // Texture pixels have their own projection, independent of the UI matrix.
+    ui.endDrawing();
+    defer ui.beginDrawing();
     rl.BeginTextureMode(texture);
     defer rl.EndTextureMode();
     rl.ClearBackground(ui.background);

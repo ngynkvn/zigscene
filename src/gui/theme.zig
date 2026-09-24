@@ -1,5 +1,8 @@
 //! Shared palette, typography and drawing primitives for the studio UI.
 const rl = @import("raylib");
+const config = @import("../core/config.zig");
+const geometry = @import("geometry.zig");
+pub var scale_factor: f32 = 1;
 
 pub const background = rl.Color{ .r = 11, .g = 15, .b = 24, .a = 255 };
 pub const surface = rl.Color{ .r = 19, .g = 25, .b = 37, .a = 250 };
@@ -9,12 +12,13 @@ pub const text = rl.Color{ .r = 230, .g = 237, .b = 246, .a = 255 };
 pub const muted = rl.Color{ .r = 147, .g = 161, .b = 181, .a = 255 };
 pub const accent = rl.Color{ .r = 119, .g = 225, .b = 203, .a = 255 };
 pub const accent_soft = rl.Color{ .r = 33, .g = 66, .b = 66, .a = 255 };
-// Bake the sizes we actually draw instead of shrinking one atlas for every
-// label. A 14-point label on a 2x Retina display gets a 28-pixel glyph bitmap.
+// Bake each font size at the largest UI scale. Resizing the UI then reuses
+// the atlases instead of rebuilding every font while the window is dragged.
 const font_sizes = [_]f32{ 9, 10, 11, 12, 13, 14, 15, 16, 21, 22 };
 const FontEntry = struct { font: rl.Font, owned: bool };
 var fonts: [font_sizes.len]FontEntry = undefined;
 var fonts_loaded = false;
+var font_scale: f32 = 0;
 var display_scale = rl.Vector2{ .x = 1, .y = 1 };
 
 pub fn init() void {
@@ -41,10 +45,13 @@ pub fn init() void {
 
 /// Called before drawing, including after a move between different-DPI screens.
 pub fn updateScale() void {
-    const scale = rl.GetWindowScaleDPI();
-    if (fonts_loaded and scale.x == display_scale.x and scale.y == display_scale.y) return;
+    scale_factor = geometry.scaleForWindow(config.Interface.scale_percent, @floatFromInt(rl.GetScreenWidth()), @floatFromInt(rl.GetScreenHeight()));
+    const dpi = rl.GetWindowScaleDPI();
+    display_scale = .{ .x = @max(1, dpi.x) * scale_factor, .y = @max(1, dpi.y) * scale_factor };
+    const atlas_scale = @max(1, @max(dpi.x, dpi.y)) * 1.5;
+    if (fonts_loaded and atlas_scale == font_scale) return;
     deinit();
-    display_scale = .{ .x = @max(1, scale.x), .y = @max(1, scale.y) };
+    font_scale = atlas_scale;
     const data = @embedFile("assets/Lato-Regular.ttf");
     // ASCII and printable Latin-1 include accented filenames without requesting
     // control-code glyphs that TrueType fonts do not contain.
@@ -53,7 +60,7 @@ pub fn updateScale() void {
         codepoint.* = @intCast(if (index < 95) index + 32 else index - 95 + 161);
     }
     for (&fonts, font_sizes) |*entry, size| {
-        const pixels: c_int = @intFromFloat(@round(size * @max(display_scale.x, display_scale.y)));
+        const pixels: c_int = @intFromFloat(@round(size * font_scale));
         var font = rl.LoadFontFromMemory(".ttf", data, data.len, pixels, &codepoints, codepoints.len);
         const owned = font.texture.id != 0 and font.texture.id != rl.GetFontDefault().texture.id;
         if (!owned) font = rl.GetFontDefault();
@@ -115,7 +122,7 @@ pub fn centered(value: [:0]const u8, bounds: rl.Rectangle, size: f32, color: rl.
 }
 
 pub fn hovered(bounds: rl.Rectangle) bool {
-    return rl.CheckCollisionPointRec(rl.GetMousePosition(), bounds);
+    return rl.CheckCollisionPointRec(mousePosition(), bounds);
 }
 
 pub fn button(bounds: rl.Rectangle, value: [:0]const u8, selected: bool, enabled: bool) bool {
@@ -124,4 +131,33 @@ pub fn button(bounds: rl.Rectangle, value: [:0]const u8, selected: bool, enabled
     centered(value, bounds, 14, if (!enabled) border else if (selected) accent else if (over) text else muted);
     if (over) rl.SetMouseCursor(rl.MOUSE_CURSOR_POINTING_HAND);
     return over and rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT);
+}
+
+/// Draw and hit-test in the same logical coordinates. Scene rendering stays in
+/// window coordinates; UI scaling never changes the camera or audio visuals.
+pub fn width() f32 {
+    return @as(f32, @floatFromInt(rl.GetScreenWidth())) / scale_factor;
+}
+pub fn height() f32 {
+    return @as(f32, @floatFromInt(rl.GetScreenHeight())) / scale_factor;
+}
+pub fn mousePosition() rl.Vector2 {
+    const mouse = rl.GetMousePosition();
+    return .{ .x = mouse.x / scale_factor, .y = mouse.y / scale_factor };
+}
+pub fn beginDrawing() void {
+    rl.rlPushMatrix();
+    rl.rlScalef(scale_factor, scale_factor, 1);
+}
+pub fn endDrawing() void {
+    rl.rlPopMatrix();
+}
+pub fn beginScissor(bounds: rl.Rectangle) void {
+    rl.BeginScissorMode(@intFromFloat(bounds.x * scale_factor), @intFromFloat(bounds.y * scale_factor), @intFromFloat(bounds.width * scale_factor), @intFromFloat(bounds.height * scale_factor));
+}
+pub fn valueBox(bounds: rl.Rectangle, buffer: [*]u8, value: *f32) bool {
+    // raygui performs its own hit testing, so give it the matching mouse scale.
+    rl.SetMouseScale(1 / scale_factor, 1 / scale_factor);
+    defer rl.SetMouseScale(1, 1);
+    return rl.GuiValueBoxFloat(bounds, null, buffer, value, true) != 0;
 }
