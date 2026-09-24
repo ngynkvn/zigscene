@@ -158,6 +158,10 @@ when background opacity is 1. Window opacity remains a separate OS-level control
 
 ## UI and window settings
 
+Widgets request cursor shapes during drawing. The theme applies the final shape
+once, only when it changes; resetting the native cursor between widgets caused
+per-frame arrow/hand switching and repeated GLFW cursor allocation on hover.
+
 The UI draws in logical coordinates using a scale transform. Mouse coordinates,
 scissor rectangles and panel geometry use the same scale. Font atlases are baked
 at the largest supported UI scale and reused across size changes. Window minimums

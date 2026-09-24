@@ -76,7 +76,6 @@ pub fn prepareScene(script: *ScriptScene) void {
 }
 
 pub fn frame(audio: *AudioSession, script: *ScriptScene) void {
-    rl.SetMouseCursor(rl.MOUSE_CURSOR_DEFAULT);
     if (!rl.IsMouseButtonDown(rl.MOUSE_BUTTON_LEFT)) {
         if (dragging_seek) audio.endSeek();
         dragging_seek = false;
@@ -316,9 +315,9 @@ fn resizePanel() void {
     }
     const cursor_mode = if (resize_mode != .none) resize_mode else if (active_slider == null) hover_mode else .none;
     switch (cursor_mode) {
-        .width => rl.SetMouseCursor(rl.MOUSE_CURSOR_RESIZE_EW),
-        .height => rl.SetMouseCursor(rl.MOUSE_CURSOR_RESIZE_NS),
-        .both => rl.SetMouseCursor(rl.MOUSE_CURSOR_RESIZE_NWSE),
+        .width => ui.requestCursor(rl.MOUSE_CURSOR_RESIZE_EW),
+        .height => ui.requestCursor(rl.MOUSE_CURSOR_RESIZE_NS),
+        .both => ui.requestCursor(rl.MOUSE_CURSOR_RESIZE_NWSE),
         .none => {},
     }
 }
@@ -362,7 +361,7 @@ fn drawScalars(comptime groups: anytype, view: rl.Rectangle, offset: f32) void {
                 ui.rounded(box, 5, ui.raised);
                 ui.centered(number, box, 12, ui.muted);
                 if (row_enabled and ui.hovered(box)) {
-                    rl.SetMouseCursor(rl.MOUSE_CURSOR_IBEAM);
+                    ui.requestCursor(rl.MOUSE_CURSOR_IBEAM);
                     if (rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT)) {
                         editing = id;
                         @memset(&editing_buffer, 0);
@@ -389,7 +388,7 @@ fn slider(id: usize, bounds: rl.Rectangle, value: *f32, min: f32, max: f32, enab
     if (dragging and rl.IsMouseButtonDown(rl.MOUSE_BUTTON_LEFT)) {
         value.* = min + std.math.clamp((ui.mousePosition().x - bounds.x) / bounds.width, 0, 1) * (max - min);
     }
-    if (over or dragging) rl.SetMouseCursor(rl.MOUSE_CURSOR_POINTING_HAND);
+    if (over or dragging) ui.requestCursor(rl.MOUSE_CURSOR_POINTING_HAND);
     const ratio = if (max > min) std.math.clamp((value.* - min) / (max - min), 0, 1) else 0;
     const cy = bounds.y + bounds.height / 2;
     ui.rounded(ui.rect(bounds.x, cy - 2, bounds.width, 4), 2, ui.border);
@@ -467,7 +466,7 @@ fn drawScene(view: rl.Rectangle, script: *ScriptScene) void {
         ui.rounded(toggle, 10, if (item[2].*) ui.accent_soft else ui.border);
         rl.DrawCircleV(.{ .x = toggle.x + (if (item[2].*) @as(f32, 26) else 10), .y = toggle.y + 10 }, 6, if (item[2].*) ui.accent else ui.muted);
         if (over) {
-            rl.SetMouseCursor(rl.MOUSE_CURSOR_POINTING_HAND);
+            ui.requestCursor(rl.MOUSE_CURSOR_POINTING_HAND);
             if (rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT)) item[2].* = !item[2].*;
         }
         y += 76;
@@ -518,7 +517,7 @@ fn drawPlayer(audio: *AudioSession) void {
     }
     ui.label(if (audio.isFilePlaying()) "Pause / P" else "Play / P", play.x + 30, play.y + 8, 13, ink);
     if (file and ui.hovered(play)) {
-        rl.SetMouseCursor(rl.MOUSE_CURSOR_POINTING_HAND);
+        ui.requestCursor(rl.MOUSE_CURSOR_POINTING_HAND);
         if (rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT)) audio.togglePlayback();
     }
     const capture_supported = builtin.os.tag != .emscripten;
@@ -550,7 +549,7 @@ fn drawWaveformScrubber(audio: *AudioSession, bounds: rl.Rectangle) void {
     if (dragging_seek and rl.IsMouseButtonDown(rl.MOUSE_BUTTON_LEFT)) {
         audio.seekTo(duration * std.math.clamp((mouse.x - bounds.x) / bounds.width, 0, 1));
     }
-    if (hovering or dragging_seek) rl.SetMouseCursor(rl.MOUSE_CURSOR_POINTING_HAND);
+    if (hovering or dragging_seek) ui.requestCursor(rl.MOUSE_CURSOR_POINTING_HAND);
     ui.rounded(bounds, 6, ui.background);
     const waveform = audio.waveform();
     const played = std.math.clamp(audio.timePlayed() / @max(duration, 0.001), 0, 1);
