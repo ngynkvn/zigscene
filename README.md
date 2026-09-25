@@ -7,6 +7,40 @@ Built against Zig `0.16.0`.
 
 ## Getting Started
 
+### Download a release
+
+Download the archive for your platform from [Releases](https://github.com/ngynkvn/zigscene/releases).
+The macOS and Linux `.tar.gz` archives preserve executable permissions, so no
+`chmod +x` is needed after extraction.
+
+On macOS (Apple Silicon), run these commands from the download directory:
+
+```bash
+tar -xzf zigscene-macos-aarch64.tar.gz
+./zigscene-macos-aarch64
+```
+
+If macOS blocks the downloaded binary because it is quarantined, and you trust
+the release you downloaded, clear the quarantine attribute on that binary and
+run it again:
+
+```bash
+xattr -d com.apple.quarantine ./zigscene-macos-aarch64
+./zigscene-macos-aarch64
+```
+
+On Linux (x86_64):
+
+```bash
+tar -xzf zigscene-linux-x86_64.tar.gz
+./zigscene-linux-x86_64
+```
+
+On Windows, extract `zigscene-windows-x86_64.zip` and run `zigscene.exe` inside
+the extracted folder.
+
+### Build from source
+
 You should have:
 
 - This repository:
