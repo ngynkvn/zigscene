@@ -1,4 +1,5 @@
 test {
+    _ = @import("audio/analysis/beat_detector.zig");
     _ = @import("audio/analysis/fft.zig");
     _ = @import("audio/analysis/frame.zig");
     _ = @import("audio/SampleQueue.zig");
