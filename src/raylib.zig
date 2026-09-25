@@ -1,6 +1,4 @@
 pub const rl = @import("raylib");
-const colorPicker = @import("gui/color_picker.zig");
-pub const GuiColorBarHueH = colorPicker.GuiColorBarHueH;
 pub const AttachAudioMixedProcessor = rl.AttachAudioMixedProcessor;
 pub const DetachAudioMixedProcessor = rl.DetachAudioMixedProcessor;
 pub const BASE_COLOR_DISABLED = rl.BASE_COLOR_DISABLED;
