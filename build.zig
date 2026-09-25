@@ -84,13 +84,17 @@ pub fn build(b: *std.Build) !void {
     run_step.dependOn(&run_cmd.step);
 
     const exe_unit_tests = b.addTest(.{
+        .use_lld = if (target.result.os.tag == .linux) false else null,
         .root_module = b.createModule(.{ .root_source_file = b.path("src/main.zig"), .target = target, .optimize = optimize }),
     });
     lua.attach(b, exe_unit_tests.root_module, lua_lib);
     exe_unit_tests.root_module.addImport("raylib", raylib.module("raylib"));
     exe_unit_tests.root_module.addImport("tracy", tracy_mod);
     exe_unit_tests.root_module.addOptions("options", opts);
-    if (target.result.os.tag != .emscripten) addCapture(b, exe_unit_tests.root_module, raylib);
+    if (target.result.os.tag != .emscripten) {
+        addCapture(b, exe_unit_tests.root_module, raylib);
+        exe_unit_tests.root_module.addCSourceFile(.{ .file = b.path("tests/audio_refill_worker.c") });
+    }
 
     const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
     const test_step = b.step("test", "Run unit tests");
@@ -150,4 +154,5 @@ fn addCapture(b: *std.Build, module: *std.Build.Module, raylib: *std.Build.Depen
     const source = raylib.builder.dependency("raylib", .{});
     module.addIncludePath(source.path("src/external"));
     module.addCSourceFile(.{ .file = b.path("src/audio/capture.c") });
+    module.addCSourceFile(.{ .file = b.path("src/audio/refill_worker.c") });
 }

@@ -20,7 +20,7 @@ pub fn playFile(self: *Session, path: []const u8) void {
     self.seeking = false;
     if (playback.loadFile(path)) {
         processor.selectSource(.file);
-        rl.PlayMusicStream(playback.music);
+        playback.play();
     } else {
         self.notice = "Could not open audio. Try another file.";
         processor.selectSource(.none);
@@ -32,7 +32,7 @@ pub fn startCapture(self: *Session, mode: capture.Mode, device_index: i32) !void
     const was_capturing = capture.active;
     if (was_capturing) capture.stop();
     const resume_file = if (was_capturing) self.resume_file_after_capture else if (self.seeking) self.resume_file_after_seek else self.isFilePlaying();
-    if (!was_capturing and !self.seeking and resume_file) rl.PauseMusicStream(playback.music);
+    if (!was_capturing and !self.seeking and resume_file) playback.pause();
     processor.selectSource(.capture);
     capture.start(mode, device_index) catch |err| {
         self.notice = if (err == error.CaptureUnsupported)
@@ -40,7 +40,7 @@ pub fn startCapture(self: *Session, mode: capture.Mode, device_index: i32) !void
         else
             "Capture failed. Check your audio device or drop a file.";
         processor.selectSource(if (self.hasFile()) .file else .none);
-        if (resume_file) rl.ResumeMusicStream(playback.music);
+        if (resume_file) playback.resumePlayback();
         self.resume_file_after_capture = false;
         self.seeking = false;
         return err;
@@ -53,7 +53,7 @@ pub fn stopCapture(self: *Session) void {
     if (!capture.active) return;
     capture.stop();
     processor.selectSource(if (self.hasFile()) .file else .none);
-    if (self.resume_file_after_capture and self.hasFile()) rl.ResumeMusicStream(playback.music);
+    if (self.resume_file_after_capture and self.hasFile()) playback.resumePlayback();
     self.resume_file_after_capture = false;
 }
 
@@ -68,9 +68,9 @@ pub fn toggleSystemCapture(self: *Session) void {
 pub fn togglePlayback(self: *Session) void {
     if (capture.active or !self.hasFile()) return;
     if (self.isFilePlaying()) {
-        rl.PauseMusicStream(playback.music);
+        playback.pause();
     } else {
-        rl.ResumeMusicStream(playback.music);
+        playback.resumePlayback();
     }
 }
 
@@ -78,18 +78,18 @@ pub fn beginSeek(self: *Session) void {
     if (self.seeking or capture.active or !self.hasFile()) return;
     self.resume_file_after_seek = self.isFilePlaying();
     self.seeking = true;
-    if (self.resume_file_after_seek) rl.PauseMusicStream(playback.music);
+    if (self.resume_file_after_seek) playback.pause();
 }
 
 pub fn seekTo(self: *Session, seconds: f32) void {
     if (!self.seeking) self.beginSeek();
-    if (self.seeking) rl.SeekMusicStream(playback.music, seconds);
+    if (self.seeking) playback.seek(seconds);
 }
 
 pub fn endSeek(self: *Session) void {
     if (!self.seeking) return;
     self.seeking = false;
-    if (self.resume_file_after_seek and !capture.active and self.hasFile()) rl.ResumeMusicStream(playback.music);
+    if (self.resume_file_after_seek and !capture.active and self.hasFile()) playback.resumePlayback();
     self.resume_file_after_seek = false;
 }
 
@@ -131,11 +131,11 @@ pub fn captureMode(_: *const Session) capture.Mode {
 }
 
 pub fn hasFile(_: *const Session) bool {
-    return rl.IsMusicValid(playback.music);
+    return playback.hasFile();
 }
 
 pub fn isFilePlaying(self: *const Session) bool {
-    return self.hasFile() and rl.IsMusicStreamPlaying(playback.music);
+    return self.hasFile() and playback.IsMusicStreamPlaying();
 }
 
 pub fn filename(_: *const Session) []const u8 {

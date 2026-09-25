@@ -32,7 +32,7 @@ controller, render texture/shader, camera/input state, and visualizer history.
 
 Each `App.frame`:
 
-1. Updates audio playback and applies volume, then processes input and resizes the
+1. Applies volume (and refills browser playback), then processes input and resizes the
    render texture if necessary.
 2. Drains up to four fixed audio blocks and advances the motion envelope.
 3. Builds a Lua context from the latest analysis and input, polls any watched
@@ -71,7 +71,13 @@ settings, stops audio, releases the renderer and UI caches, then closes raylib.
 
 ## Audio and the seek waveform
 
-File playback uses raylib's mixed-audio callback. Live capture uses a thin C
+Native file playback refills on a dedicated worker every 5 ms, independently of
+rendering, Lua, and window event stalls. Playback controls and decoder access share
+a mutex; replacing a file or shutting down joins the worker before unloading it.
+Playback is primed on play/resume. Browsers, and native worker-start failures,
+retain frame-driven refills. The worker never calls UI or graphics APIs.
+
+File analysis uses raylib's mixed-audio callback. Live capture uses a thin C
 miniaudio adapter; `capture.zig` bridges it into Zig. `SampleQueue` transfers
 stereo PCM into fixed 1,024-frame blocks so device callbacks do not execute FFT,
 GUI, Lua, or GPU work. Switching sources resets analysis state. The render
