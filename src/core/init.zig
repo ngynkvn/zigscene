@@ -5,7 +5,8 @@ const APP_NAME = Config.Window.title;
 
 pub fn startup() void {
     const retina = if (@import("builtin").os.tag == .macos) rl.rl.FLAG_WINDOW_HIGHDPI else 0;
-    rl.SetConfigFlags(rl.FLAG_WINDOW_RESIZABLE | rl.FLAG_WINDOW_TRANSPARENT | rl.FLAG_WINDOW_TOPMOST | retina);
+    const topmost: c_int = if (Config.Window.always_on_top and @import("builtin").os.tag != .emscripten) rl.FLAG_WINDOW_TOPMOST else 0;
+    rl.SetConfigFlags(@intCast(rl.FLAG_WINDOW_RESIZABLE | rl.FLAG_WINDOW_TRANSPARENT | topmost | retina));
 
     // Setup
     rl.InitWindow(Config.Window.width, Config.Window.height, APP_NAME);

@@ -27,10 +27,15 @@ jobs:
           zig build -Doptimize=ReleaseSafe
           mv zig-out/bin/zigscene zig-out/bin/${{env.RELEASE_NAME}}
 
+      - name: Package executable
+        run: |
+          chmod 755 "zig-out/bin/$RELEASE_NAME"
+          tar -czf "zig-out/$RELEASE_NAME.tar.gz" -C zig-out/bin "$RELEASE_NAME"
+
       - name: Upload for Release
         uses: softprops/action-gh-release@v2
         with:
-          files: zig-out/bin/${{env.RELEASE_NAME}}
+          files: zig-out/${{env.RELEASE_NAME}}.tar.gz
 
   build-release-linux-x86_64:
     runs-on: ubuntu-latest
@@ -61,10 +66,15 @@ jobs:
           zig build -Doptimize=ReleaseSafe
           mv zig-out/bin/zigscene zig-out/bin/${{env.RELEASE_NAME}}
 
+      - name: Package executable
+        run: |
+          chmod 755 "zig-out/bin/$RELEASE_NAME"
+          tar -czf "zig-out/$RELEASE_NAME.tar.gz" -C zig-out/bin "$RELEASE_NAME"
+
       - name: Upload for Release
         uses: softprops/action-gh-release@v2
         with:
-          files: zig-out/bin/${{env.RELEASE_NAME}}
+          files: zig-out/${{env.RELEASE_NAME}}.tar.gz
 
   build-release-windows-x86_64:
     runs-on: windows-latest

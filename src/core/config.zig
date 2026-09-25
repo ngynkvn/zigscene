@@ -6,6 +6,7 @@ pub const Window = struct {
     pub const width = 1024;
     pub const height = 768;
     pub const title = "zigscene";
+    pub var always_on_top: bool = true;
     pub var fps_limit: f32 = 0;
     pub var opacity: f32 = 1.0;
     pub const Scalars = [_]controls.Scalar{

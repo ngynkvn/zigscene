@@ -61,6 +61,8 @@ test "root" {
     _ = @import("graphics.zig");
     _ = @import("graphics/Highlight.zig");
     _ = @import("gui.zig");
+    _ = @import("gui/Cursor.zig");
     _ = @import("core/debug.zig");
     _ = @import("core/config.zig");
+    _ = @import("scripting/tests.zig");
 }

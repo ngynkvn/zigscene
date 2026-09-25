@@ -1,5 +1,6 @@
 const std = @import("std");
 
+const lua = @import("deps/build/lua.zig");
 const emcc = @import("deps/build/emcc.zig");
 
 pub fn build(b: *std.Build) !void {
@@ -7,6 +8,7 @@ pub fn build(b: *std.Build) !void {
     const optimize = b.standardOptimizeOption(.{});
     emcc.hookSysrootIfNeeded(b, target);
 
+    const lua_lib = lua.build(b, target);
     const opts = b.addOptions();
     const tracy_enable = b.option(bool, "tracy_enable", "Enable Tracy integration. Supply path to Tracy source") orelse false;
     const enable_callstack = b.option(
@@ -52,10 +54,11 @@ pub fn build(b: *std.Build) !void {
         });
         const cache_include = b.pathResolve(&.{ b.sysroot.?, "cache", "sysroot", "include" });
         exe_lib.root_module.addIncludePath(.{ .cwd_relative = cache_include });
+        lua.attach(b, exe_lib.root_module, lua_lib);
         exe_lib.root_module.addOptions("options", opts);
         exe_lib.root_module.addImport("raylib", raylib.module("raylib"));
         exe_lib.root_module.addImport("tracy", tracy_mod);
-        const link_step = try emcc.link(b, &[_]*std.Build.Step.Compile{ exe_lib, raylib.artifact("raylib") });
+        const link_step = try emcc.link(b, &[_]*std.Build.Step.Compile{ exe_lib, raylib.artifact("raylib"), lua_lib });
         web_step.dependOn(&link_step.step);
         run_step.step.dependOn(&link_step.step);
     }
@@ -65,6 +68,7 @@ pub fn build(b: *std.Build) !void {
         .use_lld = if (target.result.os.tag == .linux) false else null,
         .root_module = b.createModule(.{ .root_source_file = b.path("src/main.zig"), .target = target, .optimize = optimize }),
     });
+    lua.attach(b, exe.root_module, lua_lib);
     exe.root_module.addOptions("options", opts);
 
     b.installArtifact(exe);
@@ -82,6 +86,7 @@ pub fn build(b: *std.Build) !void {
     const exe_unit_tests = b.addTest(.{
         .root_module = b.createModule(.{ .root_source_file = b.path("src/main.zig"), .target = target, .optimize = optimize }),
     });
+    lua.attach(b, exe_unit_tests.root_module, lua_lib);
     exe_unit_tests.root_module.addImport("raylib", raylib.module("raylib"));
     exe_unit_tests.root_module.addImport("tracy", tracy_mod);
     exe_unit_tests.root_module.addOptions("options", opts);
@@ -132,6 +137,7 @@ fn addReleaseStep(b: *std.Build, opts: *std.Build.Step.Options) !void {
             .use_lld = if (target.result.os.tag == .linux) false else null,
             .root_module = b.createModule(.{ .root_source_file = b.path("src/main.zig"), .target = target, .optimize = optimize }),
         });
+        lua.attach(b, release_exe.root_module, lua.build(b, target));
         release_exe.root_module.addOptions("options", opts);
         release_exe.root_module.addImport("raylib", raylib.module("raylib"));
         release_exe.root_module.addImport("tracy", tracy_mod);

@@ -2,6 +2,8 @@
 const rl = @import("raylib");
 const config = @import("../core/config.zig");
 const geometry = @import("geometry.zig");
+const Cursor = @import("Cursor.zig");
+var cursor: Cursor = .{};
 pub var scale_factor: f32 = 1;
 
 pub const background = rl.Color{ .r = 11, .g = 15, .b = 24, .a = 255 };
@@ -22,6 +24,7 @@ var font_scale: f32 = 0;
 var display_scale = rl.Vector2{ .x = 1, .y = 1 };
 
 pub fn init() void {
+    cursor = .{};
     updateScale();
     rl.GuiSetAlpha(1);
     const styles = .{
@@ -129,7 +132,7 @@ pub fn button(bounds: rl.Rectangle, value: [:0]const u8, selected: bool, enabled
     const over = enabled and hovered(bounds);
     rounded(bounds, 7, if (selected) accent_soft else if (over) raised else surface);
     centered(value, bounds, 14, if (!enabled) border else if (selected) accent else if (over) text else muted);
-    if (over) rl.SetMouseCursor(rl.MOUSE_CURSOR_POINTING_HAND);
+    if (over) requestCursor(rl.MOUSE_CURSOR_POINTING_HAND);
     return over and rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT);
 }
 
@@ -146,11 +149,18 @@ pub fn mousePosition() rl.Vector2 {
     return .{ .x = mouse.x / scale_factor, .y = mouse.y / scale_factor };
 }
 pub fn beginDrawing() void {
+    cursor.begin();
     rl.rlPushMatrix();
     rl.rlScalef(scale_factor, scale_factor, 1);
 }
 pub fn endDrawing() void {
     rl.rlPopMatrix();
+    // Raylib creates a GLFW cursor on each call. Resetting it between widgets
+    // needlessly alternates arrow/hand every frame and causes native redraws.
+    if (cursor.change()) |next| rl.SetMouseCursor(next);
+}
+pub fn requestCursor(shape: c_int) void {
+    cursor.request(shape);
 }
 pub fn beginScissor(bounds: rl.Rectangle) void {
     rl.BeginScissorMode(@intFromFloat(bounds.x * scale_factor), @intFromFloat(bounds.y * scale_factor), @intFromFloat(bounds.width * scale_factor), @intFromFloat(bounds.height * scale_factor));
