@@ -67,7 +67,7 @@ fn viewport() rl.Rectangle {
 pub fn pointerOverUi() bool {
     return resize_mode != .none or @import("core/debug.zig").pointerOverUi() or
         ui.hovered(ui.rect(16, 16, width() - 32, 58)) or
-        ui.hovered(ui.rect(16, height() - 164, width() - 32, 148)) or
+        ui.hovered(dockBounds()) or
         (active_tab != .none and ui.hovered(ui.rect(panel().x, panel().y, panel().width + 6, panel().height + 6)));
 }
 
@@ -484,8 +484,13 @@ fn applyScroll(dir: Direction, amount: f32, pointer_over_panel: bool) void {
     }
 }
 
+/// The player dock, in logical UI coordinates.
+pub fn dockBounds() rl.Rectangle {
+    return ui.rect(16, height() - 164, width() - 32, 148);
+}
+
 fn drawPlayer(audio: *AudioSession) void {
-    const dock = ui.rect(16, height() - 164, width() - 32, 148);
+    const dock = dockBounds();
     ui.card(dock);
     const live = audio.captureActive();
     const file = audio.hasFile() and !live;

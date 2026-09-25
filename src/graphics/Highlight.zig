@@ -20,6 +20,14 @@ pub const Element = enum {
             .halo => Scene.halo,
         };
     }
+
+    /// Anchored to the bottom edge, where the player dock covers most of it.
+    pub fn underDock(self: Element) bool {
+        return switch (self) {
+            .wave_bars, .spectrum => true,
+            .wave_lines, .bubble, .halo => false,
+        };
+    }
 };
 
 target: ?Element = null,
@@ -43,7 +51,8 @@ pub fn tint(self: Highlight, element: Element, color: rl.Color) rl.Color {
             .a = color.a,
         };
     }
-    return .{ .r = color.r / 3, .g = color.g / 3, .b = color.b / 3, .a = color.a };
+    // Recede strongly so the one affected layer is unambiguous.
+    return .{ .r = color.r / 5, .g = color.g / 5, .b = color.b / 5, .a = color.a };
 }
 
 test "hover emphasis leaves normal colors and hidden layers unchanged" {
