@@ -16,13 +16,11 @@ var samples: SampleQueue = .{};
 
 /// Currently loaded audio buffer data
 var audio_buffer = std.mem.zeroes([N]f32);
-var raw_windowed_buffer = std.mem.zeroes([N]f32);
+/// Unsmoothed mono samples written by frame analysis.
 var raw_sample = std.mem.zeroes([N]f32);
 
 // Buffer states
-pub var raw_buffer: []f32 = &raw_sample;
 pub var curr_buffer: []f32 = &audio_buffer;
-pub var curr_windowed_buffer: []f32 = &audio_buffer;
 pub var curr_fft: []fft.ComplexF32 = &fft_buffer;
 
 /// Currently loaded buffer for fft data
@@ -31,8 +29,6 @@ var fft_buffer = std.mem.zeroes([N]fft.ComplexF32);
 // Analysis
 pub var on_beat = false;
 var beat_cooldown: usize = 0;
-pub var past_beats: [N]bool = @splat(false);
-pub var bi: usize = 0;
 /// Root mean square of signal
 pub var rms_energy: f32 = 0;
 
@@ -57,8 +53,6 @@ pub fn selectSource(source: SampleQueue.Source) void {
     rms_energy = 0;
     on_beat = false;
     beat_cooldown = 0;
-    past_beats = @splat(false);
-    bi = 0;
     beat.reset();
 }
 
@@ -80,32 +74,17 @@ fn processBuffer(buffer: []const f32) void {
     const curr_len = buffer.len / channels;
 
     processFrame(buffer, curr_len);
-    processWindowed(curr_len);
     fft.fft(fft_buffer[0..curr_len]);
     const detected = beat.process(buffer);
     if (beat_cooldown > 0) beat_cooldown -= 1;
-    past_beats[bi] = detected and beat_cooldown == 0;
-    if (past_beats[bi]) beat_cooldown = beat_retrigger_blocks;
-    on_beat = on_beat or past_beats[bi];
-    bi = (bi + 1) % N;
+    const hit = detected and beat_cooldown == 0;
+    if (hit) beat_cooldown = beat_retrigger_blocks;
+    on_beat = on_beat or hit;
 
-    raw_buffer = raw_sample[0..curr_len];
     curr_buffer = audio_buffer[0..curr_len];
     curr_fft = fft_buffer[0..curr_len];
 }
 
 fn processFrame(buffer: []const f32, len: usize) void {
     rms_energy = frame_analysis.analyze(true, buffer, raw_sample[0..len], audio_buffer[0..len], fft_buffer[0..len], Config.Audio.wave_blend, Config.Audio.wave_gain);
-}
-
-fn processWindowed(len: usize) void {
-    var it = std.mem.window(f32, audio_buffer[0..len], 2, 2);
-    var i: usize = 0;
-    while (it.next()) |window| {
-        var sum: f32 = 0;
-        for (window) |w| sum += w;
-        raw_windowed_buffer[i] = sum / @as(f32, @floatFromInt(window.len));
-        i += 1;
-    }
-    curr_windowed_buffer = raw_windowed_buffer[0..i];
 }

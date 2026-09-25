@@ -1,32 +1,48 @@
 const std = @import("std");
 
-const Config = @import("../../core/config.zig");
-const N = Config.Audio.buffer_size;
-const cnv = @import("../../ext/convert.zig");
-const ffi = cnv.ffi;
+const N = @import("../../core/config.zig").Audio.buffer_size;
 
 pub const ComplexF32 = std.math.Complex(f32);
+
+comptime {
+    if (!std.math.isPowerOfTwo(N)) @compileError("FFT buffer size must be a power of two");
+}
+
+/// twiddles[j] = e^(-2πij/N); shared by every power-of-two length up to N.
+const twiddles = blk: {
+    @setEvalBranchQuota(100_000);
+    var table: [N / 2]ComplexF32 = undefined;
+    for (&table, 0..) |*w, j| {
+        const angle = -2 * std.math.pi * @as(f64, @floatFromInt(j)) / @as(f64, @floatFromInt(N));
+        w.* = .init(@floatCast(@cos(angle)), @floatCast(@sin(angle)));
+    }
+    break :blk table;
+};
+
+/// In-place iterative radix-2 Cooley-Tukey FFT. `values.len` must be a power of two no larger than N.
 /// https://en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm
 pub fn fft(values: []ComplexF32) void {
     const len = values.len;
     if (len <= 1) return;
-    var parts = std.mem.zeroes([2][N / 2]ComplexF32);
-    var pi: [2]usize = .{ 0, 0 };
-    for (values, 0..) |v, i| {
-        parts[i % 2][pi[i % 2]] = v;
-        pi[i % 2] += 1;
+    std.debug.assert(std.math.isPowerOfTwo(len) and len <= N);
+    const shift: std.math.Log2Int(usize) = @intCast(@bitSizeOf(usize) - @as(usize, std.math.log2_int(usize, len)));
+    for (0..len) |i| {
+        const j = @bitReverse(i) >> shift;
+        if (i < j) std.mem.swap(ComplexF32, &values[i], &values[j]);
     }
-    const evens = parts[0][0..pi[0]];
-    const odds = parts[1][0..pi[1]];
-    fft(evens);
-    fft(odds);
-    for (0..len / 2) |i| {
-        const index = ComplexF32.init(
-            @cos(-2 * std.math.pi * ffi(f32, i) / ffi(f32, len)),
-            @sin(-2 * std.math.pi * ffi(f32, i) / ffi(f32, len)),
-        ).mul(odds[i]);
-        values[i] = evens[i].add(index);
-        values[i + len / 2] = evens[i].sub(index);
+    var size: usize = 2;
+    while (size <= len) : (size *= 2) {
+        const half = size / 2;
+        const stride = N / size;
+        var start: usize = 0;
+        while (start < len) : (start += size) {
+            for (0..half) |k| {
+                const t = twiddles[k * stride].mul(values[start + k + half]);
+                const u = values[start + k];
+                values[start + k] = u.add(t);
+                values[start + k + half] = u.sub(t);
+            }
+        }
     }
 }
 
@@ -73,5 +89,24 @@ test "fft" {
             try std.testing.expectApproxEqAbs(expected.re, actual.re, 0.01);
             try std.testing.expectApproxEqAbs(expected.im, actual.im, 0.01);
         }
+    }
+}
+
+test "fft matches a direct DFT at the analysis block size" {
+    var random = std.Random.DefaultPrng.init(7);
+    var input: [N]ComplexF32 = undefined;
+    for (&input) |*value| value.* = .init(random.random().float(f32) * 2 - 1, 0);
+    var actual = input;
+    fft(&actual);
+    for ([_]usize{ 0, 1, 37, N / 4, N / 2, N - 1 }) |k| {
+        var re: f64 = 0;
+        var im: f64 = 0;
+        for (input, 0..) |value, n| {
+            const angle = -2 * std.math.pi * @as(f64, @floatFromInt(k * n % N)) / @as(f64, @floatFromInt(N));
+            re += value.re * @cos(angle);
+            im += value.re * @sin(angle);
+        }
+        try std.testing.expectApproxEqAbs(@as(f32, @floatCast(re)), actual[k].re, 0.001);
+        try std.testing.expectApproxEqAbs(@as(f32, @floatCast(im)), actual[k].im, 0.001);
     }
 }
