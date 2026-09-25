@@ -264,6 +264,38 @@ test "file watcher reloads edits, keeps a working scene after errors, and honors
     try expect(scene.runtime == null);
 }
 
+test "scene file size limit preserves the running scene and recovers after a smaller edit" {
+    var temporary = std.testing.tmpDir(.{});
+    defer temporary.cleanup();
+    const io = std.testing.io;
+    const path = try std.fmt.allocPrint(std.testing.allocator, ".zig-cache/tmp/{s}/scene.lua", .{temporary.sub_path});
+    defer std.testing.allocator.free(path);
+    var scene: Scene = .{};
+    defer scene.deinit();
+
+    const source = try std.testing.allocator.alloc(u8, c.ZS_SOURCE_LIMIT + 1);
+    defer std.testing.allocator.free(source);
+    @memset(source, ' ');
+    const script = "return {name='At limit'}";
+    @memcpy(source[0..script.len], script);
+    try temporary.dir.writeFile(io, .{ .sub_path = "scene.lua", .data = source[0..c.ZS_SOURCE_LIMIT] });
+    scene.loadFile(path);
+    try strings("At limit", scene.name());
+    try expect(scene.errorMessage().len == 0);
+
+    try temporary.dir.writeFile(io, .{ .sub_path = "scene.lua", .data = source });
+    scene.reload();
+    try strings("At limit", scene.name());
+    try expect(std.mem.indexOf(u8, scene.errorMessage(), "1 MiB") != null);
+
+    try temporary.dir.writeFile(io, .{ .sub_path = "scene.lua", .data = "return {name='Recovered'}" });
+    var tick = frame;
+    tick.dt = 1;
+    scene.update(tick);
+    try strings("Recovered", scene.name());
+    try expect(scene.errorMessage().len == 0);
+}
+
 test "settings registry has unique names and valid default ranges" {
     const snapshot = settings.snapshot();
     try expect(snapshot.len <= c.ZS_MAX_SETTINGS);

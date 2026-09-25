@@ -3,9 +3,6 @@ const Scene = @This();
 const std = @import("std");
 const settings = @import("settings.zig");
 pub const c = settings.c;
-const file = @cImport({
-    @cInclude("stdio.h");
-});
 const rl = @import("raylib");
 const renderer = @import("render.zig");
 
@@ -132,22 +129,23 @@ pub fn loadFile(self: *Scene, filename: []const u8) void {
     self.readFile(true, false);
 }
 fn readFile(self: *Scene, force: bool, preserve_params: bool) void {
-    const handle = file.fopen(self.path().ptr, "rb") orelse {
+    if (@import("builtin").os.tag == .emscripten) {
+        self.report("Lua scenes are currently supported in the native app only.");
+        return;
+    }
+    // Scene loading runs synchronously on the app thread, like the other native I/O.
+    const io = std.Io.Threaded.global_single_threaded.io();
+    const handle = std.Io.Dir.cwd().openFile(io, self.path(), .{}) catch {
         self.report("Cannot open scene file. Save it, then press F5.");
         return;
     };
-    defer _ = file.fclose(handle);
-    if (file.fseek(handle, 0, file.SEEK_END) != 0) {
+    defer handle.close(io);
+    const length = handle.length(io) catch {
         self.report("Cannot read scene file.");
         return;
-    }
-    const length = file.ftell(handle);
-    if (length < 0 or length > c.ZS_SOURCE_LIMIT) {
+    };
+    if (length > c.ZS_SOURCE_LIMIT) {
         self.report("Scene file exceeds the 1 MiB limit or cannot be read.");
-        return;
-    }
-    if (file.fseek(handle, 0, file.SEEK_SET) != 0) {
-        self.report("Cannot read scene file.");
         return;
     }
     const source = std.heap.c_allocator.alloc(u8, @intCast(length)) catch {
@@ -155,7 +153,11 @@ fn readFile(self: *Scene, force: bool, preserve_params: bool) void {
         return;
     };
     defer std.heap.c_allocator.free(source);
-    if (file.fread(source.ptr, 1, source.len, handle) != source.len) {
+    const bytes_read = handle.readPositionalAll(io, source, 0) catch {
+        self.report("Cannot read scene file.");
+        return;
+    };
+    if (bytes_read != source.len) {
         self.report("Scene file changed while reading. Save it and retry.");
         return;
     }
