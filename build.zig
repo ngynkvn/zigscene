@@ -84,6 +84,7 @@ pub fn build(b: *std.Build) !void {
     run_step.dependOn(&run_cmd.step);
 
     const exe_unit_tests = b.addTest(.{
+        .use_lld = if (target.result.os.tag == .linux) false else null,
         .root_module = b.createModule(.{ .root_source_file = b.path("src/main.zig"), .target = target, .optimize = optimize }),
     });
     lua.attach(b, exe_unit_tests.root_module, lua_lib);

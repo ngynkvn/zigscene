@@ -8,8 +8,7 @@ const beat_retrigger_blocks = 8;
 comptime {
     if (channels != 2) @compileError("audio analysis expects stereo input");
 }
-const cnv = @import("../ext/convert.zig");
-const ffi = cnv.ffi;
+const frame_analysis = @import("analysis/frame.zig");
 const beat = @import("analysis/beat_detector.zig");
 const fft = @import("analysis/fft.zig");
 const SampleQueue = @import("SampleQueue.zig");
@@ -96,32 +95,7 @@ fn processBuffer(buffer: []const f32) void {
 }
 
 fn processFrame(buffer: []const f32, len: usize) void {
-    var l: f32 = 0;
-    var r: f32 = 0;
-    var rms: f32 = 0;
-
-    // TODO: Use @Vector maybe?
-    // For now, process frame-by-frame
-    for (0..len) |fi| {
-        // Stereo -> Mono
-        l = buffer[fi * channels + 0];
-        r = buffer[fi * channels + 1];
-        const mono = (l + r) * 0.5;
-
-        raw_sample[fi] = mono;
-
-        audio_buffer[fi] = std.math.clamp(
-            Config.Audio.wave_blend * audio_buffer[fi] +
-                (1 - Config.Audio.wave_blend) * mono * Config.Audio.wave_gain,
-            -2.0,
-            2.0,
-        );
-
-        fft_buffer[fi] = fft.ComplexF32.init(l + r, 0);
-        rms += (l * l + r * r);
-    }
-
-    rms_energy = @sqrt(rms / (channels * ffi(f32, len)));
+    rms_energy = frame_analysis.analyze(true, buffer, raw_sample[0..len], audio_buffer[0..len], fft_buffer[0..len], Config.Audio.wave_blend, Config.Audio.wave_gain);
 }
 
 fn processWindowed(len: usize) void {
