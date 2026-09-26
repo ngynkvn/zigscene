@@ -22,16 +22,19 @@ pub fn submit(self: *Queue, from: Source, stereo: []const f32) void {
     defer self.mutex.unlock();
     if (from != self.source) return;
 
-    for (0..stereo.len / channels) |i| {
-        const dest = self.write_frame * channels;
-        @memcpy(self.samples[dest..][0..channels], stereo[i * channels ..][0..channels]);
-        self.write_frame = (self.write_frame + 1) % capacity_frames;
-        if (self.frame_count == capacity_frames) {
-            self.read_frame = (self.read_frame + 1) % capacity_frames;
-        } else {
-            self.frame_count += 1;
-        }
+    // A callback can exceed the entire queue. Only its newest frames can
+    // survive, so bound the work under the lock to the queue's capacity.
+    const frames: usize = @min(stereo.len / channels, capacity_frames);
+    const recent = stereo[stereo.len - frames * channels ..];
+    const first: usize = @min(frames, capacity_frames - self.write_frame);
+    @memcpy(self.samples[self.write_frame * channels ..][0 .. first * channels], recent[0 .. first * channels]);
+    @memcpy(self.samples[0 .. (frames - first) * channels], recent[first * channels ..]);
+    self.write_frame = (self.write_frame + frames) % capacity_frames;
+    const total = self.frame_count + frames;
+    if (total > capacity_frames) {
+        self.read_frame = (self.read_frame + total - capacity_frames) % capacity_frames;
     }
+    self.frame_count = @min(total, capacity_frames);
 }
 
 pub fn popBlock(self: *Queue, block: *[N * channels]f32) bool {
@@ -39,10 +42,9 @@ pub fn popBlock(self: *Queue, block: *[N * channels]f32) bool {
     defer self.mutex.unlock();
     if (self.frame_count < N) return false;
 
-    for (0..N) |i| {
-        const source = ((self.read_frame + i) % capacity_frames) * channels;
-        @memcpy(block[i * channels ..][0..channels], self.samples[source..][0..channels]);
-    }
+    const first: usize = @min(N, capacity_frames - self.read_frame);
+    @memcpy(block[0 .. first * channels], self.samples[self.read_frame * channels ..][0 .. first * channels]);
+    @memcpy(block[first * channels ..], self.samples[0 .. (N - first) * channels]);
     self.read_frame = (self.read_frame + N) % capacity_frames;
     self.frame_count -= N;
     return true;
@@ -100,4 +102,64 @@ test "source switch discards queued frames" {
     queue.submit(.capture, &recent);
     try std.testing.expect(queue.popBlock(&block));
     try std.testing.expectEqual(@as(f32, 2), block[0]);
+}
+
+test "wrapped submissions and reads preserve stereo sample order" {
+    var queue: Queue = .{};
+    queue.selectSource(.file);
+    var samples: [(capacity_frames + N) * channels]f32 = undefined;
+    for (&samples, 0..) |*sample, i| sample.* = @floatFromInt(i);
+    var block: [N * channels]f32 = undefined;
+
+    // Leave the write cursor partway through the final block of the ring.
+    const initial = capacity_frames - N / 2;
+    queue.submit(.file, samples[0 .. initial * channels]);
+    for (0..buffered_blocks - 1) |i| {
+        try std.testing.expect(queue.popBlock(&block));
+        try std.testing.expectEqualSlices(f32, samples[i * N * channels ..][0..block.len], &block);
+    }
+    queue.submit(.file, samples[initial * channels ..]);
+    // Consume both sides of the wrapped submission in order.
+    for (buffered_blocks - 1..buffered_blocks + 1) |i| {
+        try std.testing.expect(queue.popBlock(&block));
+        try std.testing.expectEqualSlices(f32, samples[i * N * channels ..][0..block.len], &block);
+    }
+    try std.testing.expect(!queue.popBlock(&block));
+}
+
+test "partial overflow discards exactly the oldest frames" {
+    var queue: Queue = .{};
+    queue.selectSource(.file);
+    var samples: [(capacity_frames + N / 2) * channels]f32 = undefined;
+    for (&samples, 0..) |*sample, i| sample.* = @floatFromInt(i);
+    var block: [N * channels]f32 = undefined;
+    queue.submit(.file, samples[0 .. capacity_frames * channels]);
+    queue.submit(.file, samples[capacity_frames * channels ..]);
+    const retained = samples[N / 2 * channels ..];
+    for (0..buffered_blocks) |i| {
+        try std.testing.expect(queue.popBlock(&block));
+        try std.testing.expectEqualSlices(f32, retained[i * N * channels ..][0..block.len], &block);
+    }
+    try std.testing.expect(!queue.popBlock(&block));
+}
+
+test "oversized submission retains only its newest frames" {
+    var queue: Queue = .{};
+    queue.selectSource(.capture);
+    var samples: [(capacity_frames + N / 2) * channels]f32 = undefined;
+    for (&samples, 0..) |*sample, i| sample.* = @floatFromInt(i);
+    var block: [N * channels]f32 = undefined;
+    // Start with pending data and a cursor that is not block-aligned.
+    queue.submit(.capture, samples[0 .. channels * 3]);
+    queue.submit(.capture, &samples);
+    queue.submit(.capture, &.{});
+    const retained = samples[samples.len - capacity_frames * channels ..];
+    for (0..buffered_blocks) |i| {
+        try std.testing.expect(queue.popBlock(&block));
+        try std.testing.expectEqualSlices(f32, retained[i * N * channels ..][0..block.len], &block);
+    }
+    try std.testing.expect(!queue.popBlock(&block));
+    queue.submit(.capture, samples[0..block.len]);
+    try std.testing.expect(queue.popBlock(&block));
+    try std.testing.expectEqualSlices(f32, samples[0..block.len], &block);
 }
