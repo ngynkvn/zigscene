@@ -20,14 +20,6 @@ pub const Element = enum {
             .halo => Scene.halo,
         };
     }
-
-    /// Anchored to the bottom edge, where the player dock covers most of it.
-    pub fn underDock(self: Element) bool {
-        return switch (self) {
-            .wave_bars, .spectrum => true,
-            .wave_lines, .bubble, .halo => false,
-        };
-    }
 };
 
 target: ?Element = null,

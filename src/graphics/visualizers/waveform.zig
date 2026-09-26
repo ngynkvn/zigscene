@@ -46,7 +46,7 @@ pub const WaveFormBar = struct {
         for (&self.maxes) |*value| value.* = @max(base_h.*, value.* * factor);
     }
 
-    pub fn render(self: *WaveFormBar, center: rl.Vector2, i: usize, v: f32, focus: Highlight) void {
+    pub fn render(self: *WaveFormBar, floor: f32, i: usize, v: f32, focus: Highlight) void {
         const SPACING = ffi(f32, screenWidth) / ffi(f32, processor.curr_buffer.len);
         const x = ffi(f32, i) * SPACING;
         const y = std.math.clamp(@abs(v) * amplitude.*, 0, 350);
@@ -56,13 +56,13 @@ pub const WaveFormBar = struct {
         self.maxes[i] = @max(y + base_h.*, self.maxes[i]);
         rl.DrawRectangleRec(.{
             .x = px,
-            .y = center.y * 2 - self.maxes[i],
+            .y = floor - self.maxes[i],
             .width = SPACING,
             .height = self.maxes[i],
         }, focus.tint(.wave_bars, hsv(trail_color.*).into()));
         rl.DrawRectangleGradientEx(.{
             .x = px,
-            .y = center.y * 2 - y - base_h.*,
+            .y = floor - y - base_h.*,
             .width = SPACING,
             .height = y + base_h.*,
         }, c1, c2, c2, c1);

@@ -112,7 +112,7 @@ pub fn frame(self: *App) void {
     const focus = Highlight.init(gui.hoveredElement());
     self.renderScene(center, focus);
     const scene_end = rl.rl.GetTime();
-    const ui_end = self.renderWindow(center, focus);
+    const ui_end = self.renderWindow();
     debug.record(.{ .audio = audio_end - frame_start, .scene = scene_end - audio_end, .ui = ui_end - scene_end, .present = rl.rl.GetTime() - ui_end });
     self.applyWindowOpacity();
     self.applyFpsLimit();
@@ -146,26 +146,23 @@ fn renderScene(self: *App, center: rl.Vector2, focus: Highlight) void {
     rl.BeginTextureMode(self.renderer.scene_texture);
     defer rl.EndTextureMode();
     rl.ClearBackground(.{});
-    if (self.script.usesBuiltin()) self.renderBuiltin(center, focus, null);
+    if (self.script.usesBuiltin()) self.renderBuiltin(center, focus);
     self.script.render(self.input.camera);
 }
 
-/// Draws every visible built-in layer, or only `only` when it is set.
-fn renderBuiltin(self: *App, center: rl.Vector2, focus: Highlight, only: ?Highlight.Element) void {
-    const draw = struct {
-        fn layer(element: Highlight.Element, filter: ?Highlight.Element) bool {
-            return element.visible() and (filter == null or filter == element);
-        }
-    }.layer;
-    if (draw(.halo, only)) self.halo.render(center, self.motion.energy, self.motion.pulse, focus);
+fn renderBuiltin(self: *App, center: rl.Vector2, focus: Highlight) void {
+    if (Config.Scene.halo) self.halo.render(center, self.motion.energy, self.motion.pulse, focus);
+    const floor = sceneFloor();
 
     {
         const context = tracy.traceNamed(@src(), "2d");
         defer context.end();
-        const lines = draw(.wave_lines, only);
-        const bars = draw(.wave_bars, only);
-        const spectrum = draw(.spectrum, only);
-        if (lines or bars or spectrum) for (processor.curr_buffer, processor.curr_fft, 0..) |value, frequency, i| {
+        const lines = Config.Scene.wave_lines;
+        const bars = Config.Scene.wave_bars;
+        // The shorter bars stand in front of the spectrum unless it is hovered.
+        const spectrum_on_top = focus.selected(.spectrum);
+        if (Config.Scene.spectrum and !spectrum_on_top) graphics.FFTSpectrum.render(floor, processor.curr_fft, focus);
+        if (lines or bars) for (processor.curr_buffer, processor.curr_fft, 0..) |value, frequency, i| {
             if (lines) {
                 graphics.WaveFormLine.render(.{ .y = center.y - 80 }, i, value, focus);
                 graphics.WaveFormLine.render(
@@ -175,32 +172,24 @@ fn renderBuiltin(self: *App, center: rl.Vector2, focus: Highlight, only: ?Highli
                     focus,
                 );
             }
-            if (bars) self.wave_bars.render(center, i, value, focus);
-            if (spectrum) graphics.FFTSpectrum.render(center, i, frequency.magnitude(), focus);
+            if (bars) self.wave_bars.render(floor, i, value, focus);
         };
+        if (Config.Scene.spectrum and spectrum_on_top) graphics.FFTSpectrum.render(floor, processor.curr_fft, focus);
     }
     {
         const context = tracy.traceNamed(@src(), "3d");
         defer context.end();
-        if (draw(.bubble, only)) graphics.Bubble.render(self.input.camera, self.input.rotation_offset, self.elapsed, self.motion.energy, self.motion.pulse, focus);
+        if (Config.Scene.bubble) graphics.Bubble.render(self.input.camera, self.input.rotation_offset, self.elapsed, self.motion.energy, self.motion.pulse, focus);
     }
 }
 
-/// Bottom-anchored layers sit under the player dock. While one is hovered,
-/// dim the dock and redraw that layer over it so the affected layer is visible.
-fn revealUnderDock(self: *App, center: rl.Vector2, focus: Highlight) void {
-    const target = focus.target orelse return;
-    if (!self.script.usesBuiltin() or !target.underDock()) return;
+/// Bottom-anchored layers stand on the player dock instead of hiding under it.
+fn sceneFloor() f32 {
     const ui = @import("gui/theme.zig");
-    const logical = gui.dockBounds();
-    const dock = ui.rect(logical.x * ui.scale_factor, logical.y * ui.scale_factor, logical.width * ui.scale_factor, logical.height * ui.scale_factor);
-    ui.rounded(dock, 12 * ui.scale_factor, rl.Fade(ui.background, 0.78));
-    rl.rl.BeginScissorMode(@intFromFloat(dock.x), @intFromFloat(dock.y), @intFromFloat(dock.width), @intFromFloat(dock.height));
-    defer rl.rl.EndScissorMode();
-    self.renderBuiltin(center, focus, target);
+    return (gui.dockBounds().y - 6) * ui.scale_factor;
 }
 
-fn renderWindow(self: *App, center: rl.Vector2, focus: Highlight) f64 {
+fn renderWindow(self: *App) f64 {
     rl.BeginDrawing();
     var background = @import("gui/theme.zig").background;
     background.a = @intFromFloat(@round(Config.Shader.alpha_factor * 255));
@@ -224,8 +213,6 @@ fn renderWindow(self: *App, center: rl.Vector2, focus: Highlight) f64 {
     gui.frame(&self.audio, &self.script);
     debug.render();
     @import("gui/theme.zig").endDrawing();
-    // Scene layers use window coordinates, so reveal after the scaled UI matrix.
-    self.revealUnderDock(center, focus);
     const present_start = rl.rl.GetTime();
     rl.EndDrawing();
     return present_start;
