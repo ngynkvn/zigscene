@@ -95,6 +95,7 @@ pub fn endSeek(self: *Session) void {
 
 pub fn update(self: *Session) void {
     self.applyVolume();
+    playback.pollPreview();
     if (self.isFilePlaying()) playback.UpdateMusicStream();
 }
 

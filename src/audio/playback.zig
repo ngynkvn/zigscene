@@ -1,5 +1,6 @@
 const std = @import("std");
-const native = @import("builtin").os.tag != .emscripten;
+const builtin = @import("builtin");
+const native = builtin.os.tag != .emscripten;
 
 const rl = @import("../raylib.zig");
 const processor = @import("processor.zig");
@@ -60,6 +61,7 @@ pub var waveform: WaveformPreview = .{};
 pub fn loadFile(path: []const u8) bool {
     stopWorker();
     if (rl.IsMusicValid(music)) rl.UnloadMusicStream(music);
+    abandonPreview();
     waveform.clear();
     const path_z = std.heap.page_allocator.dupeZ(u8, path) catch {
         music = .{};
@@ -76,7 +78,7 @@ pub fn loadFile(path: []const u8) bool {
     const clen = @min(std.mem.len(cfilename), 160);
     @memcpy(fnbuff[0..clen], cfilename[0..clen]);
     filename = fnbuff[0..clen];
-    buildWaveform(path_z.ptr);
+    startPreview(path_z);
     if (!processor_attached) {
         rl.AttachAudioMixedProcessor(processor.audioStreamCallback);
         processor_attached = true;
@@ -88,15 +90,88 @@ pub fn loadFile(path: []const u8) bool {
     return true;
 }
 
-fn buildWaveform(path: [*:0]const u8) void {
+/// Decodes the whole track, so it runs off the render thread when possible.
+fn buildWaveform(path: [*:0]const u8, out: *WaveformPreview) void {
     const wave = rl.LoadWave(path);
     if (!rl.IsWaveValid(wave)) return;
     defer rl.UnloadWave(wave);
+    const sample_count = @as(usize, wave.frameCount) * @as(usize, wave.channels);
+    // 32-bit waves are already float (MP3 decodes this way); skip a full-size copy.
+    if (wave.sampleSize == 32) {
+        const samples: [*]const f32 = @ptrCast(@alignCast(wave.data));
+        return out.build(samples[0..sample_count], wave.channels, wave.sampleRate);
+    }
     const samples = rl.LoadWaveSamples(wave);
     if (samples == null) return;
     defer rl.UnloadWaveSamples(samples);
-    const sample_count = @as(usize, wave.frameCount) * @as(usize, wave.channels);
-    waveform.build(samples[0..sample_count], wave.channels, wave.sampleRate);
+    out.build(samples[0..sample_count], wave.channels, wave.sampleRate);
+}
+
+/// A background preview build. Loading another track abandons it; whichever of
+/// the worker and the render thread sees the other's transition frees it.
+const PreviewJob = struct {
+    const State = enum(u8) { running, done, abandoned };
+    state: std.atomic.Value(State) = .init(.running),
+    path: [:0]u8,
+    preview: WaveformPreview = .{},
+    build: *const fn ([*:0]const u8, *WaveformPreview) void = buildWaveform,
+
+    fn run(job: *PreviewJob) void {
+        job.build(job.path.ptr, &job.preview);
+        if (job.state.swap(.done, .acq_rel) == .abandoned) job.destroy();
+    }
+
+    fn destroy(job: *PreviewJob) void {
+        std.heap.page_allocator.free(job.path);
+        std.heap.page_allocator.destroy(job);
+    }
+};
+const can_spawn = native and !builtin.single_threaded;
+var preview_job: ?*PreviewJob = null;
+
+fn startPreview(path: [:0]const u8) void {
+    if (can_spawn) {
+        if (spawnPreview(path, buildWaveform)) return;
+        std.debug.print("Waveform preview thread unavailable; building it inline.\n", .{});
+    }
+    buildWaveform(path.ptr, &waveform);
+}
+
+fn spawnPreview(path: [:0]const u8, build: *const fn ([*:0]const u8, *WaveformPreview) void) bool {
+    const allocator = std.heap.page_allocator;
+    const job = allocator.create(PreviewJob) catch return false;
+    job.* = .{ .path = allocator.dupeZ(u8, path) catch {
+        allocator.destroy(job);
+        return false;
+    }, .build = build };
+    const thread = std.Thread.spawn(.{}, PreviewJob.run, .{job}) catch {
+        job.destroy();
+        return false;
+    };
+    thread.detach();
+    preview_job = job;
+    return true;
+}
+
+fn abandonPreview() void {
+    const job = preview_job orelse return;
+    preview_job = null;
+    if (job.state.swap(.abandoned, .acq_rel) == .done) job.destroy();
+}
+
+/// Adopts a finished background preview. Call once per frame.
+pub fn pollPreview() void {
+    const job = preview_job orelse return;
+    if (job.state.load(.acquire) != .done) return;
+    preview_job = null;
+    const revision = waveform.revision;
+    waveform = job.preview;
+    waveform.revision = revision +% 1;
+    job.destroy();
+}
+
+pub fn previewPending() bool {
+    return preview_job != null;
 }
 
 pub fn shutdown() void {
@@ -107,6 +182,7 @@ pub fn shutdown() void {
     }
     if (rl.IsMusicValid(music)) rl.UnloadMusicStream(music);
     music = .{};
+    abandonPreview();
     waveform.clear();
 }
 pub fn GetMusicTimePlayed() f32 {
@@ -127,6 +203,52 @@ pub fn IsMusicStreamPlaying() bool {
 pub fn UpdateMusicStream() void {
     // Browsers and failed worker starts retain the single-threaded path.
     if (!worker_started) refill();
+}
+
+const preview_test = struct {
+    var release = std.atomic.Value(bool).init(false);
+    var finished = std.atomic.Value(bool).init(false);
+
+    fn build(_: [*:0]const u8, out: *WaveformPreview) void {
+        while (!release.load(.acquire)) std.atomic.spinLoopHint();
+        out.build(&.{ 0.5, -1, 0.25 }, 1, 44100);
+        finished.store(true, .release);
+    }
+
+    fn reset() void {
+        release.store(false, .release);
+        finished.store(false, .release);
+    }
+};
+
+test "background preview is adopted once it finishes" {
+    if (!can_spawn) return;
+    preview_test.reset();
+    waveform.clear();
+    const revision = waveform.revision;
+    try std.testing.expect(spawnPreview("song.wav", preview_test.build));
+    pollPreview();
+    try std.testing.expect(previewPending());
+    try std.testing.expectEqual(@as(usize, 0), waveform.len);
+    preview_test.release.store(true, .release);
+    while (previewPending()) pollPreview();
+    try std.testing.expectEqual(@as(usize, 3), waveform.len);
+    try std.testing.expectEqual(@as(f32, 1), waveform.bins[1].peak);
+    try std.testing.expect(waveform.revision != revision);
+    waveform.clear();
+}
+
+test "an abandoned preview never replaces the next track's waveform" {
+    if (!can_spawn) return;
+    preview_test.reset();
+    waveform.clear();
+    try std.testing.expect(spawnPreview("old.wav", preview_test.build));
+    abandonPreview();
+    try std.testing.expect(!previewPending());
+    preview_test.release.store(true, .release);
+    while (!preview_test.finished.load(.acquire)) std.atomic.spinLoopHint();
+    pollPreview();
+    try std.testing.expectEqual(@as(usize, 0), waveform.len);
 }
 
 extern fn test_refill_worker() c_int;
