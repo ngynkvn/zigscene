@@ -484,6 +484,14 @@ fn applyScroll(dir: Direction, amount: f32, pointer_over_panel: bool) void {
     }
 }
 
+/// Left edge of the scene viewport in logical UI coordinates: right of the
+/// open side panel, or the window edge when it is hidden.
+pub fn sceneLeft() f32 {
+    if (active_tab == .none) return 0;
+    const p = panel();
+    return p.x + p.width + 8;
+}
+
 /// The player dock, in logical UI coordinates.
 pub fn dockBounds() rl.Rectangle {
     return ui.rect(16, height() - 164, width() - 32, 148);
@@ -686,4 +694,16 @@ test "script controls do not highlight built-in scene layers" {
     try std.testing.expectEqual(@as(?Element, null), elementAt(.scene, view, 0, .{ .x = 30, .y = 160 }, null));
     try std.testing.expectEqual(@as(?Element, .wave_lines), elementAt(.scene, view, 416, .{ .x = 30, .y = 160 }, null));
     try std.testing.expectEqual(@as(?Element, null), elementAt(.scene, view, 416, .{ .x = 30, .y = 160 }, 4000));
+}
+
+test "the scene viewport starts right of the open panel and at the edge when hidden" {
+    const original_tab = active_tab;
+    defer active_tab = original_tab;
+    active_tab = .none;
+    try std.testing.expectEqual(@as(f32, 0), sceneLeft());
+    for ([_]Tab{ .scalar, .settings }) |tab| {
+        active_tab = tab;
+        const p = panel();
+        try std.testing.expectEqual(p.x + p.width + 8, sceneLeft());
+    }
 }

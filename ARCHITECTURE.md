@@ -39,7 +39,7 @@ Each `App.frame`:
    script, runs update/draw under protection, and commits valid settings changes.
 4. Advances built-in visualizer history when built-in rendering is enabled.
 5. Renders the built-in layers (unless replaced) and the Lua command buffer into
-   the scene texture.
+   the scene texture, inside the scene viewport (see below).
 6. Clears/composites the window, applies the post-processing shader, draws the UI
    and diagnostics, presents, and applies changed FPS, opacity, and topmost state.
 
@@ -55,11 +55,12 @@ caches, then closes raylib.
 | [`src/core/preferences.zig`](src/core/preferences.zig) | Native settings file loading, validation and saving |
 | [`src/core/cli.zig`](src/core/cli.zig) | Audio/capture flags and `--scene=path` parsing |
 | [`src/core/input.zig`](src/core/input.zig) | Keyboard shortcuts, Lua/audio drop routing, resize, camera gestures |
-| [`src/core/event.zig`](src/core/event.zig) | Direct tab/resize/swipe dispatch helpers |
+| [`src/core/event.zig`](src/core/event.zig) | Direct tab/swipe dispatch helpers |
 | [`src/core/init.zig`](src/core/init.zig) | Window/audio startup and alpha-compositing setup |
 | [`src/audio/Session.zig`](src/audio/Session.zig) | Playback/capture/seek transitions and user notices |
 | [`src/audio/processor.zig`](src/audio/processor.zig) | Mono waveform smoothing, FFT, RMS and beat detection |
-| [`src/graphics.zig`](src/graphics.zig) | Built-in visualizer exports and resize handling |
+| [`src/graphics.zig`](src/graphics.zig) | Built-in visualizer exports |
+| [`src/graphics/Viewport.zig`](src/graphics/Viewport.zig) | Scene area right of the side panel: 2D offset, off-axis 3D projection, slide easing |
 | [`src/graphics/Motion.zig`](src/graphics/Motion.zig) | Frame-rate independent energy/beat envelope |
 | [`src/shader/shader.zig`](src/shader/shader.zig) | Scene texture and embedded GLSL shader lifetime |
 | [`src/gui.zig`](src/gui.zig) | Tabs, panel scrolling/resizing, controls, player and seeking |
@@ -167,6 +168,15 @@ or draw state unbalanced. A `camera` command changes later custom 3D draws withi
 that frame; otherwise they use the host camera. There is no persistent camera
 state hidden in the command buffer. Textures, meshes and shader handles are not
 exposed to Lua in the current interface.
+
+All scene drawing, built-in and Lua, happens in a viewport right of the open
+side panel ([`Viewport.zig`](src/graphics/Viewport.zig)), eased toward
+`gui.sceneLeft()` so opening or hiding the panel slides the scene. 2D layers
+draw in viewport-local coordinates under a pushed translation; full-width layers
+span the viewport's width. 3D passes leave that translation (rlgl would apply it
+to 3D vertices too) and use raylib's frustum slid off-axis, which moves the image
+to the viewport's center at every depth without changing perspective or scale.
+Lua sees the viewport size as `ctx.width`/`ctx.height`.
 
 The scene texture then passes through the existing shader. UI draws afterward,
 so replacing a scene does not replace playback or settings controls. Source-over

@@ -64,6 +64,7 @@ test "root" {
     _ = @import("audio/processor.zig");
     _ = @import("graphics.zig");
     _ = @import("graphics/Highlight.zig");
+    _ = @import("graphics/Viewport.zig");
     _ = @import("graphics/visualizers/spectrum.zig");
     _ = @import("gui.zig");
     _ = @import("gui/Cursor.zig");

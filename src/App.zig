@@ -17,6 +17,9 @@ const Highlight = @import("graphics/Highlight.zig");
 const Motion = @import("graphics/Motion.zig");
 const ScriptScene = @import("scripting/Scene.zig");
 const audio_hold_seconds: f32 = 0.12;
+const Viewport = graphics.Viewport;
+/// Time constant for the scene sliding clear of the side panel.
+const viewport_slide_seconds: f32 = 0.12;
 
 preferences_path: ?[]const u8 = null,
 input: input_mod.State = .{},
@@ -25,6 +28,8 @@ script: ScriptScene = .{},
 spectrum: [Config.Audio.buffer_size / 2]f32 = @splat(0),
 renderer: Renderer,
 elapsed: f32 = 0,
+/// Animated left inset of the scene viewport, in window pixels.
+scene_left: f32 = 0,
 seconds_since_audio: f32 = 0,
 motion: Motion = .{},
 halo: graphics.Halo = .{},
@@ -78,11 +83,12 @@ pub fn frame(self: *App) void {
     if (processor.update()) self.seconds_since_audio = 0 else self.seconds_since_audio += dt;
     self.motion.update(dt, if (self.seconds_since_audio < audio_hold_seconds) processor.rms_energy else 0, processor.on_beat);
     for (&self.spectrum, processor.curr_fft[0..self.spectrum.len]) |*value, frequency| value.* = frequency.magnitude() / @as(f32, @floatFromInt(Config.Audio.buffer_size));
+    const viewport = self.updateViewport(dt);
     const mouse = rl.GetMousePosition();
     const over_ui = gui.pointerOverUi();
     self.script.update(.{
-        .width = @floatFromInt(rl.GetScreenWidth()),
-        .height = @floatFromInt(rl.GetScreenHeight()),
+        .width = viewport.width(),
+        .height = viewport.target_height,
         .time = self.elapsed,
         .dt = dt,
         .rms = processor.rms_energy,
@@ -96,7 +102,7 @@ pub fn frame(self: *App) void {
         .sample_count = processor.curr_buffer.len,
         .spectrum = &self.spectrum,
         .spectrum_count = self.spectrum.len,
-        .mouse_x = mouse.x,
+        .mouse_x = mouse.x - viewport.left,
         .mouse_y = mouse.y,
         .wheel = if (over_ui) 0 else rl.GetMouseWheelMoveV().y,
         .mouse_down = @intFromBool(!over_ui and rl.IsMouseButtonDown(rl.rl.MOUSE_BUTTON_LEFT)),
@@ -106,13 +112,13 @@ pub fn frame(self: *App) void {
         self.halo.update(dt, processor.curr_fft);
         self.wave_bars.advance(dt);
     }
-    const center = rl.GetWorldToScreen(.{}, self.input.camera);
+    const center = viewport.toLocal(rl.GetWorldToScreen(.{}, self.input.camera));
 
     const render_context = tracy.traceNamed(@src(), "Render");
     defer render_context.end();
     const audio_end = rl.rl.GetTime();
     const focus = Highlight.init(gui.hoveredElement());
-    self.renderScene(center, focus);
+    self.renderScene(viewport, center, focus);
     const scene_end = rl.rl.GetTime();
     const ui_end = self.renderWindow();
     debug.record(.{ .audio = audio_end - frame_start, .scene = scene_end - audio_end, .ui = ui_end - scene_end, .present = rl.rl.GetTime() - ui_end });
@@ -144,15 +150,29 @@ fn applyWindowOpacity(self: *App) void {
     self.applied_window_opacity = opacity;
 }
 
-fn renderScene(self: *App, center: rl.Vector2, focus: Highlight) void {
+/// Slides the scene clear of the side panel; frame-rate independent.
+fn updateViewport(self: *App, dt: f32) Viewport {
+    const target = gui.sceneLeft() * @import("gui/theme.zig").scale_factor;
+    self.scene_left = Viewport.slide(self.scene_left, target, dt, viewport_slide_seconds);
+    return .{
+        .left = self.scene_left,
+        .target_width = @floatFromInt(self.renderer.scene_texture.texture.width),
+        .target_height = @floatFromInt(self.renderer.scene_texture.texture.height),
+    };
+}
+
+fn renderScene(self: *App, viewport: Viewport, center: rl.Vector2, focus: Highlight) void {
     rl.BeginTextureMode(self.renderer.scene_texture);
     defer rl.EndTextureMode();
     rl.ClearBackground(.{});
-    if (self.script.usesBuiltin()) self.renderBuiltin(center, focus);
-    self.script.render(self.input.camera);
+    viewport.begin();
+    defer viewport.end();
+    if (self.script.usesBuiltin()) self.renderBuiltin(viewport, center, focus);
+    self.script.render(self.input.camera, viewport);
 }
 
-fn renderBuiltin(self: *App, center: rl.Vector2, focus: Highlight) void {
+fn renderBuiltin(self: *App, viewport: Viewport, center: rl.Vector2, focus: Highlight) void {
+    const width = viewport.width();
     if (Config.Scene.halo) self.halo.render(center, self.motion.energy, self.motion.pulse, focus);
     const floor = sceneFloor();
 
@@ -163,25 +183,26 @@ fn renderBuiltin(self: *App, center: rl.Vector2, focus: Highlight) void {
         const bars = Config.Scene.wave_bars;
         // The shorter bars stand in front of the spectrum unless it is hovered.
         const spectrum_on_top = focus.selected(.spectrum);
-        if (Config.Scene.spectrum and !spectrum_on_top) graphics.FFTSpectrum.render(floor, processor.curr_fft, focus);
+        if (Config.Scene.spectrum and !spectrum_on_top) graphics.FFTSpectrum.render(floor, width, processor.curr_fft, focus);
         if (lines or bars) for (processor.curr_buffer, processor.curr_fft, 0..) |value, frequency, i| {
             if (lines) {
-                graphics.WaveFormLine.render(.{ .y = center.y - 80 }, i, value, focus);
+                graphics.WaveFormLine.render(.{ .y = center.y - 80 }, width, i, value, focus);
                 graphics.WaveFormLine.render(
                     .{ .y = center.y * 2 },
+                    width,
                     i,
                     frequency.magnitude() / @as(f32, @floatFromInt(processor.curr_fft.len)) * 1.2,
                     focus,
                 );
             }
-            if (bars) self.wave_bars.render(floor, i, value, focus);
+            if (bars) self.wave_bars.render(floor, width, i, value, focus);
         };
-        if (Config.Scene.spectrum and spectrum_on_top) graphics.FFTSpectrum.render(floor, processor.curr_fft, focus);
+        if (Config.Scene.spectrum and spectrum_on_top) graphics.FFTSpectrum.render(floor, width, processor.curr_fft, focus);
     }
     {
         const context = tracy.traceNamed(@src(), "3d");
         defer context.end();
-        if (Config.Scene.bubble) graphics.Bubble.render(self.input.camera, self.input.rotation_offset, self.elapsed, self.motion.energy, self.motion.pulse, focus);
+        if (Config.Scene.bubble) graphics.Bubble.render(viewport, self.input.camera, self.input.rotation_offset, self.elapsed, self.motion.energy, self.motion.pulse, focus);
     }
 }
 
