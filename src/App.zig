@@ -18,6 +18,7 @@ const Motion = @import("graphics/Motion.zig");
 const ScriptScene = @import("scripting/Scene.zig");
 const audio_hold_seconds: f32 = 0.12;
 
+preferences_path: ?[]const u8 = null,
 input: input_mod.State = .{},
 audio: AudioSession = .{},
 script: ScriptScene = .{},
@@ -43,6 +44,7 @@ pub fn create(options: cli.Options) App {
 
 pub fn destroy(self: *App) void {
     self.script.deinit();
+    @import("core/preferences.zig").save(self.preferences_path);
     self.audio.shutdown();
     self.renderer.deinit();
     gui.deinit();

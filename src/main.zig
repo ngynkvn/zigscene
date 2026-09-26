@@ -46,7 +46,11 @@ pub fn main(process_init: std.process.Init.Minimal) !void {
         return err;
     };
 
+    const preferences = @import("core/preferences.zig");
+    const preferences_path = preferences.path(process_init.environ, allocator) catch null;
+    preferences.load(preferences_path);
     var app = App.create(options);
+    app.preferences_path = preferences_path;
     defer app.destroy();
     app.run();
 }
@@ -65,5 +69,6 @@ test "root" {
     _ = @import("gui/Cursor.zig");
     _ = @import("core/debug.zig");
     _ = @import("core/config.zig");
+    _ = @import("core/preferences.zig");
     _ = @import("scripting/tests.zig");
 }
