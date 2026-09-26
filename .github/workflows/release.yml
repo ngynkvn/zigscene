@@ -15,7 +15,7 @@ jobs:
     name: Build and Release OSX
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Zig Setup
         uses: mlugg/setup-zig@v2
@@ -33,7 +33,7 @@ jobs:
           tar -czf "zig-out/$RELEASE_NAME.tar.gz" -C zig-out/bin "$RELEASE_NAME"
 
       - name: Upload for Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: zig-out/${{env.RELEASE_NAME}}.tar.gz
 
@@ -54,7 +54,7 @@ jobs:
             libxinerama-dev libxi-dev libxext-dev libxfixes-dev libwayland-dev libxkbcommon-dev
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Zig Setup
         uses: mlugg/setup-zig@v2
@@ -72,7 +72,7 @@ jobs:
           tar -czf "zig-out/$RELEASE_NAME.tar.gz" -C zig-out/bin "$RELEASE_NAME"
 
       - name: Upload for Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: zig-out/${{env.RELEASE_NAME}}.tar.gz
 
@@ -86,7 +86,7 @@ jobs:
     name: Build and Release Windows
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Zig Setup
         uses: mlugg/setup-zig@v2
@@ -102,7 +102,7 @@ jobs:
           Compress-Archive -Path "zig-out/$env:RELEASE_NAME" -DestinationPath "zig-out/$env:RELEASE_NAME.zip"
 
       - name: Upload for Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: zig-out/${{env.RELEASE_NAME}}.zip
 
@@ -116,7 +116,7 @@ jobs:
     name: Build and Release Web
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Zig Setup
         uses: mlugg/setup-zig@v2
@@ -136,6 +136,6 @@ jobs:
           zip -r ../${{env.RELEASE_NAME}}.zip .
 
       - name: Upload for Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: zig-out/${{env.RELEASE_NAME}}.zip

@@ -8,7 +8,7 @@ jobs:
       - name: Install dependencies
         run: sudo apt install -y libasound2-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev libxcursor-dev libxinerama-dev libwayland-dev libxkbcommon-dev
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Zig setup
         uses: mlugg/setup-zig@v2
@@ -25,7 +25,7 @@ jobs:
     runs-on: macos-14
     name: Check macOS release build
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Zig setup
         uses: mlugg/setup-zig@v2
@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Check web build
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Zig setup
         uses: mlugg/setup-zig@v2
@@ -64,7 +64,7 @@ jobs:
           od -An -tx1 -N4 zig-out/web/index.wasm | grep -q '00 61 73 6d'
 
       - name: Upload web bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: zigscene-web
           path: zig-out/web
