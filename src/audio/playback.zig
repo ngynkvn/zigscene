@@ -90,8 +90,35 @@ pub fn loadFile(path: []const u8) bool {
     return true;
 }
 
-/// Decodes the whole track, so it runs off the render thread when possible.
+const PreviewDecoder = opaque {};
+extern fn zigscene_preview_open(path: [*:0]const u8, kind: c_int, frames: *u64, channels: *c_uint, rate: *c_uint) ?*PreviewDecoder;
+extern fn zigscene_preview_read(decoder: *PreviewDecoder, out: [*]f32, capacity: c_uint) c_uint;
+extern fn zigscene_preview_close(decoder: *PreviewDecoder) void;
+
+/// Common formats decode in fixed chunks; other raylib formats retain their fallback.
 fn buildWaveform(path: [*:0]const u8, out: *WaveformPreview) void {
+    const extension = std.fs.path.extension(std.mem.span(path));
+    const kind: ?c_int = if (std.ascii.eqlIgnoreCase(extension, ".mp3")) 0 else if (std.ascii.eqlIgnoreCase(extension, ".wav")) 1 else if (std.ascii.eqlIgnoreCase(extension, ".ogg")) 2 else null;
+    if (if (native) kind else null) |format| {
+        var frames: u64 = 0;
+        var channels: c_uint = 0;
+        var rate: c_uint = 0;
+        const decoder = zigscene_preview_open(path, format, &frames, &channels, &rate) orelse return;
+        defer zigscene_preview_close(decoder);
+        var builder = WaveformPreview.Builder.init(out, std.heap.page_allocator, frames, channels, rate) catch return;
+        defer builder.deinit();
+        var samples: [8192]f32 = undefined;
+        while (builder.frames < frames) {
+            const count = zigscene_preview_read(decoder, &samples, samples.len);
+            if (count == 0) break;
+            builder.append(samples[0 .. @as(usize, count) * channels]);
+        }
+        return;
+    }
+    buildWaveformFallback(path, out);
+}
+
+fn buildWaveformFallback(path: [*:0]const u8, out: *WaveformPreview) void {
     const wave = rl.LoadWave(path);
     if (!rl.IsWaveValid(wave)) return;
     defer rl.UnloadWave(wave);
@@ -254,4 +281,49 @@ test "an abandoned preview never replaces the next track's waveform" {
 extern fn test_refill_worker() c_int;
 test "native refill worker survives render stalls and serializes controls" {
     if (native) try std.testing.expectEqual(@as(c_int, 0), test_refill_worker());
+}
+
+test "streaming WAV preview matches raylib decoding and handles missing files" {
+    if (!native) return;
+    // raylib logs to stdout, which Zig uses for its test-runner protocol.
+    rl.rl.SetTraceLogLevel(rl.rl.LOG_NONE);
+    defer rl.rl.SetTraceLogLevel(rl.rl.LOG_INFO);
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    const path = try std.fmt.allocPrintSentinel(std.testing.allocator, ".zig-cache/tmp/{s}/preview.wav", .{tmp.sub_path}, 0);
+    defer std.testing.allocator.free(path);
+    const frames = 9007;
+    var wav: [44 + frames * 4]u8 = undefined;
+    @memcpy(wav[0..4], "RIFF");
+    std.mem.writeInt(u32, wav[4..8], wav.len - 8, .little);
+    @memcpy(wav[8..16], "WAVEfmt ");
+    std.mem.writeInt(u32, wav[16..20], 16, .little);
+    std.mem.writeInt(u16, wav[20..22], 1, .little);
+    std.mem.writeInt(u16, wav[22..24], 2, .little);
+    std.mem.writeInt(u32, wav[24..28], 44100, .little);
+    std.mem.writeInt(u32, wav[28..32], 44100 * 4, .little);
+    std.mem.writeInt(u16, wav[32..34], 4, .little);
+    std.mem.writeInt(u16, wav[34..36], 16, .little);
+    @memcpy(wav[36..40], "data");
+    std.mem.writeInt(u32, wav[40..44], wav.len - 44, .little);
+    for (0..frames * 2) |i| std.mem.writeInt(i16, wav[44 + i * 2 ..][0..2], @intCast(@as(i32, @intCast(i % 1000)) * 60 - 30000), .little);
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "preview.wav", .data = &wav });
+    var actual: WaveformPreview = .{};
+    var expected: WaveformPreview = .{};
+    buildWaveform(path, &actual);
+    buildWaveformFallback(path, &expected);
+    try std.testing.expectEqual(@as(usize, WaveformPreview.bin_count), actual.len);
+    for (actual.bins, expected.bins) |a, b| {
+        try std.testing.expectEqual(b.peak, a.peak);
+        try std.testing.expectEqual(b.sample_count, a.sample_count);
+        try std.testing.expectApproxEqAbs(b.square_sum, a.square_sum, 1e-10);
+        for (a.band_square_sum, b.band_square_sum) |x, y| try std.testing.expectApproxEqAbs(x, y, 1e-10);
+    }
+    try tmp.dir.deleteFile(std.testing.io, "preview.wav");
+    actual.clear();
+    buildWaveform(path, &actual);
+    try std.testing.expectEqual(@as(usize, 0), actual.len);
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "preview.wav", .data = "invalid wave" });
+    buildWaveform(path, &actual);
+    try std.testing.expectEqual(@as(usize, 0), actual.len);
 }

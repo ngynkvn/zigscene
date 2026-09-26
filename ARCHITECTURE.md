@@ -99,7 +99,11 @@ the preview on a detached worker. The render thread adopts a completed job throu
 `pollPreview()` and increments the waveform revision. Replacing or closing a
 track abandons its job; the worker and render thread coordinate ownership so
 stale results are freed rather than adopted. Browser builds and thread-start
-failures build inline. Decoding still retains the whole track temporarily. [`WaveformCache.zig`](src/gui/WaveformCache.zig) aggregates
+failures build inline. Native MP3, WAV and OGG previews decode into fixed-size
+chunks through `preview_decoder.c`, reusing raylib's decoder implementations.
+`WaveformPreview.Builder` retains filter state across chunks and maps frames to
+bins using the total source frame count. WAV and OGG retain raylib's 16-bit sample
+conversion. Browser builds and other raylib formats retain whole-file decoding. [`WaveformCache.zig`](src/gui/WaveformCache.zig) aggregates
 those bins at display resolution and caches their geometry in a texture. Playback
 progress and seeking draw over that cache; ordinary frames do not rescan the
 track. Track revision and display dimensions invalidate the cache.

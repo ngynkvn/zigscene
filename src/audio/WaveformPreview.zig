@@ -49,7 +49,70 @@ pub fn clear(self: *WaveformPreview) void {
     self.revision +%= 1;
 }
 
+/// Accumulates complete interleaved frames without retaining decoded audio.
+pub const Builder = struct {
+    const Filters = struct { low: Biquad, mid_low: Biquad, mid_high: Biquad, high: Biquad };
+    preview: *WaveformPreview,
+    filters: []Filters,
+    allocator: std.mem.Allocator,
+    total_frames: u64,
+    frames: u64 = 0,
+    bin_index: usize = 0,
+
+    pub fn init(preview: *WaveformPreview, allocator: std.mem.Allocator, total_frames: u64, channels: usize, sample_rate: u32) !Builder {
+        preview.clear();
+        if (total_frames == 0 or channels == 0 or sample_rate == 0) return error.InvalidFormat;
+        const filters = try allocator.alloc(Filters, channels);
+        for (filters) |*filter| filter.* = .{
+            .low = Biquad.init(.lowpass, low_hz, sample_rate),
+            .mid_low = Biquad.init(.highpass, low_hz, sample_rate),
+            .mid_high = Biquad.init(.lowpass, high_hz, sample_rate),
+            .high = Biquad.init(.highpass, high_hz, sample_rate),
+        };
+        preview.len = @intCast(@min(bin_count, total_frames));
+        return .{ .preview = preview, .filters = filters, .allocator = allocator, .total_frames = total_frames };
+    }
+
+    pub fn deinit(self: *Builder) void {
+        self.allocator.free(self.filters);
+    }
+
+    pub fn append(self: *Builder, samples: []const f32) void {
+        const channels = self.filters.len;
+        const count: usize = @intCast(@min(samples.len / channels, self.total_frames - self.frames));
+        var offset: usize = 0;
+        while (offset < count) {
+            // Match the whole-buffer floor boundaries, including uneven bins.
+            const end: u64 = @intCast(@as(u128, self.bin_index + 1) * self.total_frames / self.preview.len);
+            const take: usize = @intCast(@min(count - offset, end - self.frames));
+            const bin = &self.preview.bins[self.bin_index];
+            for (self.filters, 0..) |*filter, channel| {
+                for (offset..offset + take) |frame| {
+                    const raw = samples[frame * channels + channel];
+                    const value: f64 = if (std.math.isFinite(raw)) raw else 0;
+                    bin.peak = @max(bin.peak, @as(f32, @floatCast(@abs(value))));
+                    bin.square_sum += value * value;
+                    const bands = [_]f64{ filter.low.process(value), filter.mid_high.process(filter.mid_low.process(value)), filter.high.process(value) };
+                    for (&bin.band_square_sum, bands) |*sum, band| sum.* += band * band;
+                }
+            }
+            bin.sample_count += take * channels;
+            offset += take;
+            self.frames += take;
+            if (self.frames == end) self.bin_index += 1;
+        }
+    }
+};
+
 pub fn build(self: *WaveformPreview, samples: []const f32, channels: usize, sample_rate: u32) void {
+    if (channels == 0) return self.clear();
+    var builder = Builder.init(self, std.heap.page_allocator, samples.len / channels, channels, sample_rate) catch return;
+    defer builder.deinit();
+    builder.append(samples);
+}
+
+// Independent whole-buffer reference for chunk-boundary regression tests.
+fn buildReference(self: *WaveformPreview, samples: []const f32, channels: usize, sample_rate: u32) void {
     self.clear();
     if (channels == 0 or samples.len < channels or sample_rate == 0) return;
 
@@ -198,4 +261,32 @@ test "bands above Nyquist remain empty" {
     var preview: WaveformPreview = .{};
     preview.build(&.{ 0.5, -0.5, 0.5, -0.5 }, 1, 8000);
     try std.testing.expectEqual(@as(f64, 0), preview.column(0, 1).band_square_sum[2]);
+}
+
+test "chunked preview matches whole-buffer analysis across uneven boundaries" {
+    var samples: [bin_count * 6 + 14]f32 = undefined;
+    for (&samples, 0..) |*sample, i| sample.* = @floatCast(@sin(@as(f64, @floatFromInt(i)) * 0.017));
+    samples[7] = std.math.nan(f32);
+    samples[33] = std.math.inf(f32);
+    var reference: WaveformPreview = .{};
+    reference.buildReference(&samples, 2, 48000);
+    for ([_]usize{ 1, 17, 4096, samples.len / 2 }) |chunk_frames| {
+        var preview: WaveformPreview = .{};
+        var builder = try Builder.init(&preview, std.testing.allocator, samples.len / 2, 2, 48000);
+        defer builder.deinit();
+        var offset: usize = 0;
+        while (offset < samples.len) {
+            const end = @min(samples.len, offset + chunk_frames * 2);
+            builder.append(samples[offset..end]);
+            offset = end;
+        }
+        builder.append(&.{ 1, 1 }); // Extra decoded data must not overrun the bins.
+        try std.testing.expectEqual(reference.len, preview.len);
+        for (reference.bins, preview.bins) |expected, actual| {
+            try std.testing.expectEqual(expected.peak, actual.peak);
+            try std.testing.expectEqual(expected.sample_count, actual.sample_count);
+            try std.testing.expectApproxEqAbs(expected.square_sum, actual.square_sum, 1e-10);
+            for (expected.band_square_sum, actual.band_square_sum) |a, b| try std.testing.expectApproxEqAbs(a, b, 1e-10);
+        }
+    }
 }

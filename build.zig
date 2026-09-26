@@ -155,4 +155,5 @@ fn addCapture(b: *std.Build, module: *std.Build.Module, raylib: *std.Build.Depen
     module.addIncludePath(source.path("src/external"));
     module.addCSourceFile(.{ .file = b.path("src/audio/capture.c") });
     module.addCSourceFile(.{ .file = b.path("src/audio/refill_worker.c") });
+    module.addCSourceFile(.{ .file = b.path("src/audio/preview_decoder.c") });
 }
