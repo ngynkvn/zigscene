@@ -44,13 +44,15 @@ Each `App.frame`:
    and diagnostics, presents, and applies changed FPS, opacity, and topmost state.
 
 No Lua runs on audio/device threads. `destroy` closes Lua and restores its
-settings, stops audio, releases the renderer and UI caches, then closes raylib.
+settings, saves native preferences, stops audio, releases the renderer and UI
+caches, then closes raylib.
 
 ## Module map
 
 | Area | Responsibility |
 | --- | --- |
 | [`src/core/config.zig`](src/core/config.zig) | Mutable host settings and built-in GUI control metadata |
+| [`src/core/preferences.zig`](src/core/preferences.zig) | Native settings file loading, validation and saving |
 | [`src/core/cli.zig`](src/core/cli.zig) | Audio/capture flags and `--scene=path` parsing |
 | [`src/core/input.zig`](src/core/input.zig) | Keyboard shortcuts, Lua/audio drop routing, resize, camera gestures |
 | [`src/core/event.zig`](src/core/event.zig) | Direct tab/resize/swipe dispatch helpers |
@@ -92,7 +94,12 @@ receives pointers into the audio queue.
 The playback/seek waveform is a separate whole-file preview, built by
 [`WaveformPreview.zig`](src/audio/WaveformPreview.zig). It preserves peaks and RMS
 in up to 8,192 bins and analyzes bass/mid/high bands using filters at the source
-file's sample rate. [`WaveformCache.zig`](src/gui/WaveformCache.zig) aggregates
+file's sample rate. On native threaded builds, `playback.zig` decodes and builds
+the preview on a detached worker. The render thread adopts a completed job through
+`pollPreview()` and increments the waveform revision. Replacing or closing a
+track abandons its job; the worker and render thread coordinate ownership so
+stale results are freed rather than adopted. Browser builds and thread-start
+failures build inline. Decoding still retains the whole track temporarily. [`WaveformCache.zig`](src/gui/WaveformCache.zig) aggregates
 those bins at display resolution and caches their geometry in a texture. Playback
 progress and seeking draw over that cache; ordinary frames do not rescan the
 track. Track revision and display dimensions invalidate the cache.
@@ -180,8 +187,16 @@ hover/highlight mapping. Errors wrap and contribute to scroll height. Script
 reloads replace parameter storage only between frames or after that frame's
 parameter loop is skipped.
 
-Settings are session-local. Lua config files provide an explicit reusable startup
-configuration, but changing a slider does not rewrite a script. FPS 0 means
+Native host settings, including window preferences, volume, colors, panel sizes
+and UI scale, persist in a `name=value` file driven by the scripting registry.
+The file is `zigscene/settings.conf` under `$XDG_CONFIG_HOME` (or `~/.config`) on
+Linux, `%APPDATA%` on Windows, and `~/Library/Application Support` on macOS.
+Loading happens before window creation; unknown or malformed values are ignored
+and finite numeric values are clamped to their registered ranges. Missing or
+unreadable files do not prevent startup. Saving replaces the file through a
+temporary file after Lua teardown restores its owned settings, so script
+overrides do not become user preferences. Browser settings remain session-local.
+Changing a slider does not rewrite a Lua script. FPS 0 means
 uncapped. **Always on top** defaults to the app's previous behavior (on); changing
 it applies/clears raylib's native topmost flag without recreating the window.
 Browser builds disable that control.
@@ -220,7 +235,9 @@ zig build web -Dtarget=wasm32-emscripten -Doptimize=ReleaseSafe \
 
 The main test root includes audio, GUI geometry/highlighting, diagnostics and Lua
 integration tests. `audio_test.zig` is an independent test root for the queue,
-CLI, motion and geometry. Lua integration tests execute the real C bridge without
+CLI, motion, geometry, FFT, beat detection and frame analysis. Native preference
+tests cover file round trips, value validation, platform paths and restoration
+of script-owned settings before serialization. Lua integration tests execute the real C bridge without
 opening a window: lifecycle/context updates, settings/parameter rollback, failed
 reloads, file watching, invalid drawing, instruction/memory limits, library
 restrictions, and all bundled examples. GPU/window behavior still needs a native

@@ -48,7 +48,9 @@ zig run -O ReleaseSafe -mcpu=baseline --dep frame \
 Four alternating-order measurements on the development host reported
 1,321–1,423 ns/block scalar versus 707–734 ns/block SIMD, about 1.8–2.0x for
 this analysis pass. This is not an overall application speedup or a Windows
-benchmark. The recursive FFT remains unchanged and may dominate analysis cost.
+benchmark. These measurements cover the frame analysis pass only. The FFT has
+since been replaced by an iterative radix-2 implementation; the measurements
+above do not establish its cost or the current overall application speedup.
 
 Validation commands:
 
