@@ -31,6 +31,10 @@ pub var on_beat = false;
 var beat_cooldown: usize = 0;
 /// Root mean square of signal
 pub var rms_energy: f32 = 0;
+/// Space holds maximum smoothing for analysis only. It never writes the
+/// setting, so it cannot leak into saved preferences or Lua setting rollback.
+pub var smoothing_held = false;
+const held_blend: f32 = 0.98;
 
 /// Accepts a buffer of the stream + the length of the buffer
 /// The buffer is composed of PCM samples from the audio stream
@@ -86,5 +90,6 @@ fn processBuffer(buffer: []const f32) void {
 }
 
 fn processFrame(buffer: []const f32, len: usize) void {
-    rms_energy = frame_analysis.analyze(true, buffer, raw_sample[0..len], audio_buffer[0..len], fft_buffer[0..len], Config.Audio.wave_blend, Config.Audio.wave_gain);
+    const blend = if (smoothing_held) held_blend else Config.Audio.wave_blend;
+    rms_energy = frame_analysis.analyze(true, buffer, raw_sample[0..len], audio_buffer[0..len], fft_buffer[0..len], blend, Config.Audio.wave_gain);
 }
