@@ -28,13 +28,15 @@ pub fn process(state: *State, audio: *AudioSession, script: *ScriptScene) ?Resiz
     if (rl.IsFileDropped()) {
         const files = rl.LoadDroppedFiles();
         defer rl.UnloadDroppedFiles(files);
+        var last_audio_path: ?[]const u8 = null;
         for (0..files.count) |i| {
             const path = std.mem.span(files.paths[i]);
             if (std.ascii.endsWithIgnoreCase(path, ".lua")) {
                 script.loadFile(path);
                 event.onTabChange(.scene);
-            } else audio.playFile(path);
+            } else last_audio_path = path;
         }
+        if (last_audio_path) |path| audio.playFile(path);
     }
 
     if (!gui.editingValue()) {
