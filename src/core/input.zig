@@ -11,7 +11,7 @@ pub const event = @import("event.zig");
 pub const Resize = struct { width: i32, height: i32 };
 
 pub const State = struct {
-    previous_blend: f32 = 0,
+    previous_blend: ?f32 = null,
     rotation_offset: f32 = 0,
     camera: rl.Camera3D = .{
         .position = Config.Camera.initial_position,
@@ -20,6 +20,16 @@ pub const State = struct {
         .fovy = Config.Camera.fov,
         .projection = rl.CAMERA_PERSPECTIVE,
     },
+
+    fn smoothingHold(self: *State, pressed: bool, released: bool, editing: bool) void {
+        if (pressed and !editing and self.previous_blend == null) {
+            self.previous_blend = Config.Audio.wave_blend;
+            Config.Audio.wave_blend = 0.98;
+        } else if (released) {
+            if (self.previous_blend) |previous| Config.Audio.wave_blend = previous;
+            self.previous_blend = null;
+        }
+    }
 };
 
 pub fn process(state: *State, audio: *AudioSession, script: *ScriptScene) ?Resize {
@@ -73,13 +83,7 @@ pub fn process(state: *State, audio: *AudioSession, script: *ScriptScene) ?Resiz
         if (rl.isKeyDown(.RIGHT)) state.rotation_offset += 100 * rl.GetFrameTime();
     }
 
-    // The key was not pressed before but it's down now
-    if (rl.isKeyPressed(.SPACE)) {
-        // :)
-        state.previous_blend = Config.Audio.wave_blend;
-        Config.Audio.wave_blend = 0.98;
-        // The key was pressed before but it's up now
-    } else if (rl.isKeyReleased(.SPACE)) Config.Audio.wave_blend = state.previous_blend;
+    state.smoothingHold(rl.isKeyPressed(.SPACE), rl.isKeyReleased(.SPACE), gui.editingValue());
 
     var resize: ?Resize = null;
     if (rl.IsWindowResized()) {
@@ -97,4 +101,24 @@ pub fn process(state: *State, audio: *AudioSession, script: *ScriptScene) ?Resiz
 
     debug.frame();
     return resize;
+}
+
+test "space smoothing ignores editing and restores only an applied hold" {
+    const original = Config.Audio.wave_blend;
+    defer Config.Audio.wave_blend = original;
+    Config.Audio.wave_blend = 0.4;
+    var state: State = .{};
+    state.smoothingHold(true, false, true);
+    try std.testing.expectEqual(@as(f32, 0.4), Config.Audio.wave_blend);
+    // Releasing after editing ends must not write a stale/default value.
+    state.smoothingHold(false, true, false);
+    try std.testing.expectEqual(@as(f32, 0.4), Config.Audio.wave_blend);
+    state.smoothingHold(true, false, false);
+    try std.testing.expectEqual(@as(f32, 0.98), Config.Audio.wave_blend);
+    // An applied hold must still restore if editing starts before release.
+    state.smoothingHold(false, true, true);
+    try std.testing.expectEqual(@as(f32, 0.4), Config.Audio.wave_blend);
+    Config.Audio.wave_blend = 0.6;
+    state.smoothingHold(false, true, false);
+    try std.testing.expectEqual(@as(f32, 0.6), Config.Audio.wave_blend);
 }

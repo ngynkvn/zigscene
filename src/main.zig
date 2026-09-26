@@ -69,6 +69,7 @@ test "root" {
     _ = @import("gui/Cursor.zig");
     _ = @import("core/debug.zig");
     _ = @import("core/config.zig");
+    _ = @import("core/input.zig");
     _ = @import("core/preferences.zig");
     _ = @import("scripting/tests.zig");
 }
