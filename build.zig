@@ -93,6 +93,7 @@ pub fn build(b: *std.Build) !void {
     exe_unit_tests.root_module.addOptions("options", opts);
     if (target.result.os.tag != .emscripten) {
         addCapture(b, exe_unit_tests.root_module, raylib);
+        exe_unit_tests.root_module.addCMacro("ZIGSCENE_CAPTURE_TEST", "1");
         exe_unit_tests.root_module.addCSourceFile(.{ .file = b.path("tests/audio_refill_worker.c") });
     }
 

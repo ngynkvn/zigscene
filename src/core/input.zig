@@ -53,7 +53,7 @@ pub fn process(state: *State, audio: *AudioSession, script: *ScriptScene) ?Resiz
 
         if (rl.rl.IsKeyPressed(rl.rl.KEY_F5)) script.reload();
 
-        if (rl.isKeyPressed(.M)) audio.toggleSystemCapture();
+        if (rl.isKeyPressed(.M)) audio.toggleCapture();
 
         if (rl.isKeyPressed(.ONE)) {
             event.onTabChange(.none);

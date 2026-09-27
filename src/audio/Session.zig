@@ -12,6 +12,30 @@ resume_file_after_seek: bool = false,
 seeking: bool = false,
 applied_volume: f32 = -1,
 notice: ?[:0]const u8 = null,
+capture_devices: capture.Devices = .{},
+selected_capture_mode: capture.Mode = .system,
+capture_devices_loaded: bool = false,
+
+pub fn refreshCaptureDevices(self: *Session) void {
+    self.capture_devices = capture.enumerate(self.selected_capture_mode);
+    self.capture_devices_loaded = true;
+}
+
+pub fn selectCaptureMode(self: *Session, mode: capture.Mode) void {
+    if (capture.active or self.selected_capture_mode == mode) return;
+    self.selected_capture_mode = mode;
+    _ = capture.selectDevice(mode, -1);
+    self.refreshCaptureDevices();
+}
+
+pub fn selectCaptureDevice(self: *Session, index: i32) void {
+    if (capture.active) return;
+    if (capture.selectDevice(self.selected_capture_mode, index)) self.notice = null;
+}
+
+pub fn selectedCaptureDevice(self: *const Session) i32 {
+    return capture.selectedIndex(self.selected_capture_mode);
+}
 
 pub fn playFile(self: *Session, path: []const u8) void {
     self.notice = null;
@@ -28,17 +52,33 @@ pub fn playFile(self: *Session, path: []const u8) void {
 }
 
 pub fn startCapture(self: *Session, mode: capture.Mode, device_index: i32) !void {
+    if (@import("builtin").os.tag == .emscripten) {
+        self.notice = "Live capture is unavailable here. Drop an audio file.";
+        return error.CaptureUnsupported;
+    }
+    self.selected_capture_mode = mode;
+    self.refreshCaptureDevices();
+    if (!capture.selectDevice(mode, device_index)) {
+        self.notice = "Capture device unavailable. Open Audio devices and refresh.";
+        return error.CaptureFailed;
+    }
+    try self.startSelectedCapture();
+}
+
+fn startSelectedCapture(self: *Session) !void {
     self.notice = null;
     const was_capturing = capture.active;
     if (was_capturing) capture.stop();
     const resume_file = if (was_capturing) self.resume_file_after_capture else if (self.seeking) self.resume_file_after_seek else self.isFilePlaying();
     if (!was_capturing and !self.seeking and resume_file) playback.pause();
     processor.selectSource(.capture);
-    capture.start(mode, device_index) catch |err| {
+    capture.startSelected(self.selected_capture_mode) catch |err| {
         self.notice = if (err == error.CaptureUnsupported)
             "Live capture is unavailable here. Drop an audio file."
+        else if (err == error.CaptureDeviceUnavailable)
+            "Capture device disconnected. Open Audio devices and refresh."
         else
-            "Capture failed. Check your audio device or drop a file.";
+            "Capture failed. Open Audio devices and choose an input.";
         processor.selectSource(if (self.hasFile()) .file else .none);
         if (resume_file) playback.resumePlayback();
         self.resume_file_after_capture = false;
@@ -57,11 +97,11 @@ pub fn stopCapture(self: *Session) void {
     self.resume_file_after_capture = false;
 }
 
-pub fn toggleSystemCapture(self: *Session) void {
+pub fn toggleCapture(self: *Session) void {
     if (capture.active) {
         self.stopCapture();
     } else {
-        self.startCapture(.system, -1) catch {};
+        self.startSelectedCapture() catch {};
     }
 }
 

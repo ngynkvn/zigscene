@@ -12,6 +12,7 @@ const ScriptScene = @import("scripting/Scene.zig");
 const ScriptPanel = @import("gui/ScriptPanel.zig");
 var scene_prefix: f32 = 0;
 var waveform_cache: WaveformCache = .{};
+var audio_content_height: f32 = 210;
 
 pub fn deinit() void {
     waveform_cache.deinit();
@@ -19,10 +20,10 @@ pub fn deinit() void {
 
 const Element = @import("graphics/Highlight.zig").Element;
 
-pub const Tab = enum(c_int) { none, scalar, color, motion, scene, settings };
+pub const Tab = enum(c_int) { none, scalar, color, motion, scene, settings, audio };
 var active_tab: Tab = .scalar;
 var scroll: f32 = 0;
-var saved_scroll: [6]f32 = @splat(0);
+var saved_scroll: [7]f32 = @splat(0);
 var active_slider: ?usize = null;
 var editing: ?usize = null;
 var editing_buffer: [128]u8 = @splat(0);
@@ -76,6 +77,8 @@ pub fn prepareScene(script: *ScriptScene) void {
 }
 
 pub fn frame(audio: *AudioSession, script: *ScriptScene) void {
+    if (active_tab == .audio and !audio.capture_devices_loaded) audio.refreshCaptureDevices();
+    audio_content_height = 210 + @as(f32, @floatFromInt(audio.capture_devices.count)) * 38;
     if (!rl.IsMouseButtonDown(rl.MOUSE_BUTTON_LEFT)) {
         if (dragging_seek) audio.endSeek();
         dragging_seek = false;
@@ -89,7 +92,7 @@ pub fn frame(audio: *AudioSession, script: *ScriptScene) void {
     }
     resizePanel();
     drawHeader();
-    if (active_tab != .none) drawPanel(script);
+    if (active_tab != .none) drawPanel(script, audio);
     drawPlayer(audio);
     if (!audio.hasFile() and !audio.captureActive() and width() >= 840) {
         const left = if (active_tab == .none) 16 else panel().x + panel().width + 24;
@@ -126,6 +129,7 @@ fn contentHeight(tab: Tab) f32 {
         .settings => settings_prefix + scalarHeight(SettingsFields) + 138,
         .color => colorHeight(),
         .scene => scene_prefix + 48 + SceneItems.len * 76,
+        .audio => audio_content_height,
         .none => 0,
     };
 }
@@ -155,7 +159,7 @@ fn elementAt(tab: Tab, view: rl.Rectangle, offset: f32, mouse: rl.Vector2, dragg
             }
             break :blk null;
         },
-        .none, .settings => null,
+        .none, .settings, .audio => null,
     };
 }
 
@@ -179,7 +183,7 @@ fn groupElementAt(comptime groups: anytype, view: rl.Rectangle, offset: f32, mou
     return null;
 }
 
-fn drawPanel(script: *ScriptScene) void {
+fn drawPanel(script: *ScriptScene, audio: *AudioSession) void {
     const p = panel();
     ui.card(p);
     const title: [:0]const u8, const subtitle: [:0]const u8 = switch (active_tab) {
@@ -188,6 +192,7 @@ fn drawPanel(script: *ScriptScene) void {
         .motion => .{ "Motion & response", "Give every beat its own character." },
         .scene => .{ "Scene studio", "Script your visuals or mix built-in layers." },
         .settings => .{ "Settings", "Performance, display and workspace." },
+        .audio => .{ "Audio devices", "Choose where your sound comes from." },
         .none => unreachable,
     };
     ui.label(title, p.x + 20, p.y + 16, 21, ui.text);
@@ -211,6 +216,7 @@ fn drawPanel(script: *ScriptScene) void {
         .scalar => drawScalars(ShapeFields, view, 0),
         .motion => drawScalars(MotionFields, view, 0),
         .settings => drawSettings(view),
+        .audio => drawAudioDevices(view, audio),
         .color => drawColors(view),
         .scene => drawScene(view, script),
         .none => unreachable,
@@ -226,6 +232,41 @@ fn drawPanel(script: *ScriptScene) void {
         const offset = @as(f32, @floatFromInt(i)) * 4;
         rl.DrawLineEx(.{ .x = p.x + p.width - 15 + offset, .y = p.y + p.height - 5 }, .{ .x = p.x + p.width - 5, .y = p.y + p.height - 15 + offset }, 1, if (resize_mode != .none) ui.accent else ui.muted);
     }
+}
+
+fn drawAudioDevices(view: rl.Rectangle, audio: *AudioSession) void {
+    const top = view.y - scroll;
+    const live = audio.captureActive();
+    const supported = builtin.os.tag != .emscripten;
+    const capture = @import("audio/capture.zig");
+    const enabled = supported and !live and active_slider == null;
+    groupHeading("CAPTURE SOURCE", view, top);
+    const half = (view.width - 8) / 2;
+    if (ui.button(ui.rect(view.x, top + 38, half, 30), "System audio", audio.selected_capture_mode == .system, enabled and buttonVisible(top + 38, view))) audio.selectCaptureMode(.system);
+    if (ui.button(ui.rect(view.x + half + 8, top + 38, half, 30), "Input", audio.selected_capture_mode == .input, enabled and buttonVisible(top + 38, view))) audio.selectCaptureMode(.input);
+    const hint: [:0]const u8 = if (!supported) "Live capture requires the native app." else if (live) "Stop capture to change the source." else if (audio.selected_capture_mode == .input) "Choose a microphone or audio input." else if (builtin.os.tag == .macos) "Choose a loopback input (e.g. BlackHole)." else if (builtin.os.tag == .windows) "Choose the output you want to capture." else "Choose a system-audio monitor input.";
+    ui.label(hint, view.x + 4, top + 78, 11, ui.muted);
+    if (ui.button(ui.rect(view.x, top + 102, view.width, 30), "Refresh devices", false, supported and active_slider == null and buttonVisible(top + 102, view))) audio.refreshCaptureDevices();
+    const selected = audio.selectedCaptureDevice();
+    ui.label(if (selected == -2) "Selected device disconnected. Choose another." else if (audio.capture_devices.count == 0) "No devices found. Connect one and refresh." else "Selection is kept until you close the app.", view.x + 4, top + 140, 11, if (selected == -2) ui.accent else ui.muted);
+    const automatic: [:0]const u8 = if (audio.selected_capture_mode == capture.Mode.input) "Default input" else "Automatic system audio";
+    if (ui.button(ui.rect(view.x, top + 166, view.width, 30), automatic, selected == -1, enabled and buttonVisible(top + 166, view))) audio.selectCaptureDevice(-1);
+    for (0..audio.capture_devices.count) |index| {
+        const y = top + 204 + @as(f32, @floatFromInt(index)) * 38;
+        const row = ui.rect(view.x, y, view.width, 30);
+        const chosen = selected == @as(i32, @intCast(index));
+        const over = enabled and buttonVisible(y, view) and ui.hovered(row);
+        ui.rounded(row, 7, if (chosen) ui.accent_soft else if (over) ui.raised else ui.surface);
+        ui.label(audio.capture_devices.name(index), row.x + 8, row.y + 8, 13, if (chosen) ui.accent else if (live) ui.muted else ui.text);
+        if (over) {
+            ui.requestCursor(rl.MOUSE_CURSOR_POINTING_HAND);
+            if (rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT)) audio.selectCaptureDevice(@intCast(index));
+        }
+    }
+}
+
+fn buttonVisible(y: f32, view: rl.Rectangle) bool {
+    return y >= view.y and y + 30 <= view.y + view.height;
 }
 
 const ScalarGroup = struct { [:0]const u8, []const controls.Scalar, ?Element };
@@ -526,7 +567,11 @@ fn drawPlayer(audio: *AudioSession) void {
         if (rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT)) audio.togglePlayback();
     }
     const capture_supported = builtin.os.tag != .emscripten;
-    if (ui.button(ui.rect(146, dock.y + 38, 170, 30), if (live) "Stop capture  /  M" else if (capture_supported) "Capture audio  /  M" else "Live unavailable", live, capture_supported)) audio.toggleSystemCapture();
+    if (ui.button(ui.rect(146, dock.y + 38, 132, 30), if (live) "Stop capture / M" else if (capture_supported) "Capture / M" else "Live unavailable", live, capture_supported)) audio.toggleCapture();
+    if (ui.button(ui.rect(286, dock.y + 38, 70, 30), "Devices", active_tab == .audio, capture_supported)) {
+        onTabChange(if (active_tab == .audio) .none else .audio);
+        if (active_tab == .audio) audio.refreshCaptureDevices();
+    }
     ui.label("Volume", width() - 280, dock.y + 46, 13, ui.muted);
     _ = slider(1001, ui.rect(width() - 222, dock.y + 44, 132, 18), &config.Audio.volume, 0, 1, true, false);
     var volume_buffer: [16]u8 = undefined;

@@ -57,6 +57,11 @@ pub fn main(process_init: std.process.Init.Minimal) !void {
 
 extern fn emscripten_set_main_loop(callback: *const fn () callconv(.c) void, fps: c_int, simulate_infinite_loop: c_int) void;
 
+extern fn zigscene_test_capture_selection() c_int;
+test "capture selection survives device reorder and detects removal" {
+    if (builtin.os.tag != .emscripten) try std.testing.expectEqual(@as(c_int, 0), zigscene_test_capture_selection());
+}
+
 test "root" {
     _ = @import("audio/playback.zig");
     _ = @import("audio/Session.zig");

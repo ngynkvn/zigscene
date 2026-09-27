@@ -152,6 +152,14 @@ it selects the first input device with `Monitor` in its name; use
 `--list-audio-devices` and `--audio-device=N` to choose a different device.
 On macOS, select a virtual loopback input using `--audio-device=N`.
 
+Click **Devices** beside the capture button to choose **System audio** or
+**Input**, then select a device by name. Use **Capture / M** to start or stop;
+both the button and **M** reuse your selection for the rest of the session.
+Stop capture before changing devices, and use **Refresh devices** after
+connecting hardware. Command-line device selections appear in this panel too.
+On macOS, choose **BlackHole** (or another loopback input) and route your sound
+into it to visualize system audio.
+
 ## Programmable scenes
 
 Use **Scene / 5** to try **Palette** (animates built-in layers), **Orbit** (custom
