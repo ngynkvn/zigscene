@@ -41,6 +41,7 @@ pub const entries = [_]Setting{
     scalar("interface.panel_width", &Config.Interface.panel_width, 240, 2000),
     scalar("interface.panel_height", &Config.Interface.panel_height, 0, 2000),
     boolean("interface.show_fps", &Config.Interface.show_fps),
+    boolean("interface.show_player", &Config.Interface.show_player),
     scalar("audio.volume", &Config.Audio.volume, 0, 1),
     scalar("audio.wave_blend", &Config.Audio.wave_blend, 0, 0.98),
     scalar("audio.wave_gain", &Config.Audio.wave_gain, 0.1, 3),

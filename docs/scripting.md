@@ -288,6 +288,7 @@ Jump to [window and interface](#window-and-interface), [audio and motion](#audio
 | `interface.panel_width` | 240…2000 logical pixels; clamped to window |
 | `interface.panel_height` | 0…2000; 0 follows available height |
 | `interface.show_fps` | Boolean |
+| `interface.show_player` | Boolean; bottom playback panel visibility |
 
 ### Audio and motion
 

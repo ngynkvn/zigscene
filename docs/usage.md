@@ -30,6 +30,11 @@ The track name appears above the waveform, with elapsed and total time on the
 waveform. Loading and capture errors appear in the player with a **Dismiss**
 button.
 
+Click **Hide player** at the top-right of the player to give the scene more
+space. Playback and the **P** / **M** shortcuts keep working. The **Expand
+player** button at the bottom-right brings the controls back; it highlights when
+there is an audio notice. Native builds remember whether the player is hidden.
+
 ### Read the seek waveform
 
 The outline preserves sample peaks; the brighter body shows RMS, a measure of
@@ -149,7 +154,7 @@ numeric value. Holding Space does not change the saved smoothing setting.
 ## Saved settings
 
 Native host settings save when the app closes: volume, layer controls, colors,
-panel sizes, UI scale, FPS limit, window opacity, and always-on-top.
+panel sizes, player visibility, UI scale, FPS limit, window opacity, and always-on-top.
 
 | Platform | Settings file |
 | --- | --- |

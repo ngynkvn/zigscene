@@ -68,7 +68,7 @@ fn viewport() rl.Rectangle {
 pub fn pointerOverUi() bool {
     return resize_mode != .none or @import("core/debug.zig").pointerOverUi() or
         ui.hovered(ui.rect(16, 16, width() - 32, 58)) or
-        ui.hovered(dockBounds()) or
+        ui.hovered(if (config.Interface.show_player) dockBounds() else expandPlayerBounds()) or
         (active_tab != .none and ui.hovered(ui.rect(panel().x, panel().y, panel().width + 6, panel().height + 6)));
 }
 
@@ -85,16 +85,17 @@ pub fn frame(audio: *AudioSession, script: *ScriptScene) void {
         active_slider = null;
         resize_mode = .none;
     }
-    if (dragging_seek and (!audio.seeking or active_slider != seek_id or audio.captureActive() or !audio.hasFile())) {
+    if (dragging_seek and (!config.Interface.show_player or !audio.seeking or active_slider != seek_id or audio.captureActive() or !audio.hasFile())) {
         audio.endSeek();
         dragging_seek = false;
         if (active_slider == seek_id) active_slider = null;
     }
+    if (!config.Interface.show_player and active_slider == 1001) active_slider = null;
     resizePanel();
     drawHeader();
     if (active_tab != .none) drawPanel(script, audio);
     drawPlayer(audio);
-    if (!audio.hasFile() and !audio.captureActive() and width() >= 840) {
+    if (config.Interface.show_player and !audio.hasFile() and !audio.captureActive() and width() >= 840) {
         const left = if (active_tab == .none) 16 else panel().x + panel().width + 24;
         ui.centered("Drop an audio file to bring the scene to life", ui.rect(left, height() - 182, width() - left - 16, 24), 15, ui.muted);
     }
@@ -538,24 +539,36 @@ pub fn dockBounds() rl.Rectangle {
     return ui.rect(16, height() - 164, width() - 32, 148);
 }
 
+fn expandPlayerBounds() rl.Rectangle {
+    return ui.rect(width() - 144, height() - 46, 128, 30);
+}
+
 fn drawPlayer(audio: *AudioSession) void {
+    if (!config.Interface.show_player) {
+        if (ui.button(expandPlayerBounds(), "Expand player", audio.notice != null, true)) config.Interface.show_player = true;
+        return;
+    }
     const dock = dockBounds();
     ui.card(dock);
+    if (ui.button(ui.rect(width() - 128, dock.y + 8, 96, 26), "Hide player", false, true)) {
+        config.Interface.show_player = false;
+        return;
+    }
     const live = audio.captureActive();
     const file = audio.hasFile() and !live;
     const text_x: f32 = 32;
     var title_buffer: [512]u8 = undefined;
     const title = if (live) (if (audio.captureMode() == .system) "LIVE INPUT  /  System audio" else "LIVE INPUT  /  Input audio") else if (file) std.fmt.bufPrintZ(&title_buffer, "{s}  /  {s}", .{ if (audio.seeking) "SEEKING" else if (audio.isFilePlaying()) "PLAYING" else "PAUSED", audio.filename() }) catch "Audio file" else "Your sound. Your scene.";
-    ui.beginScissor(ui.rect(text_x, dock.y + 10, dock.width - (if (audio.notice != null) @as(f32, 112) else if (file) @as(f32, 188) else 32), 24));
+    ui.beginScissor(ui.rect(text_x, dock.y + 10, dock.width - 104 - (if (audio.notice != null) @as(f32, 112) else if (file) @as(f32, 188) else 32), 24));
     if (audio.notice) |notice| {
         ui.label(notice, text_x, dock.y + 12, 14, rl.GetColor(0xffd28aff));
     } else ui.label(title, text_x, dock.y + 12, 15, ui.text);
     rl.EndScissorMode();
-    if (audio.notice != null and ui.button(ui.rect(width() - 108, dock.y + 8, 76, 26), "Dismiss", false, true)) audio.notice = null;
+    if (audio.notice != null and ui.button(ui.rect(width() - 212, dock.y + 8, 76, 26), "Dismiss", false, true)) audio.notice = null;
 
     if (file and audio.notice == null) {
         for ([_][:0]const u8{ "Low", "Mid", "High" }, WaveformCache.colors, 0..) |label, color, index| {
-            const x = dock.x + dock.width - 166 + @as(f32, @floatFromInt(index)) * 52;
+            const x = dock.x + dock.width - 270 + @as(f32, @floatFromInt(index)) * 52;
             rl.DrawCircleV(.{ .x = x, .y = dock.y + 20 }, 3, color);
             ui.label(label, x + 8, dock.y + 14, 12, color);
         }

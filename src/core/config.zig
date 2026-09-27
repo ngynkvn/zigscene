@@ -21,6 +21,7 @@ pub const Interface = struct {
     // Zero follows the available window height until manually resized.
     pub var panel_height: f32 = 0;
     pub var show_fps: bool = true;
+    pub var show_player: bool = true;
 };
 
 pub const Audio = struct {

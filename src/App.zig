@@ -206,10 +206,10 @@ fn renderBuiltin(self: *App, viewport: Viewport, center: rl.Vector2, focus: High
     }
 }
 
-/// Bottom-anchored layers stand on the player dock instead of hiding under it.
+/// Bottom-anchored layers use the freed space when the player is hidden.
 fn sceneFloor() f32 {
     const ui = @import("gui/theme.zig");
-    return (gui.dockBounds().y - 6) * ui.scale_factor;
+    return (if (Config.Interface.show_player) gui.dockBounds().y - 6 else ui.height() - 16) * ui.scale_factor;
 }
 
 fn renderWindow(self: *App) f64 {
