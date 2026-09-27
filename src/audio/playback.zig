@@ -50,7 +50,17 @@ pub fn resumePlayback() void {
 pub fn seek(seconds: f32) void {
     lock();
     defer unlock();
-    rl.SeekMusicStream(music, seconds);
+    if (!hasFile() or !std.math.isFinite(seconds)) return;
+    const was_playing = rl.IsMusicStreamPlaying(music);
+    // raylib's SeekMusicStream leaves frameCursorPos at the old position.
+    // Reset the stream first, while its buffers are marked empty, then pause
+    // before decoding the target. This also keeps paused seeks paused.
+    rl.PlayMusicStream(music);
+    rl.PauseMusicStream(music);
+    const last_frame = @max(0, rl.GetMusicTimeLength(music) - 1 / @as(f32, @floatFromInt(music.stream.sampleRate)));
+    rl.SeekMusicStream(music, std.math.clamp(seconds, 0, last_frame));
+    rl.UpdateMusicStream(music);
+    if (was_playing) rl.ResumeMusicStream(music);
 }
 
 var processor_attached = false;
@@ -393,6 +403,58 @@ test "preview shutdown joins the active decoder and discards the pending track" 
 extern fn test_refill_worker() c_int;
 test "native refill worker survives render stalls and serializes controls" {
     if (native) try std.testing.expectEqual(@as(c_int, 0), test_refill_worker());
+}
+
+test "seeking after playback resets the buffer cursor and preserves pause" {
+    if (!native) return;
+    rl.rl.SetTraceLogLevel(rl.rl.LOG_NONE);
+    defer rl.rl.SetTraceLogLevel(rl.rl.LOG_INFO);
+    rl.InitAudioDevice();
+    defer rl.CloseAudioDevice();
+    if (!rl.rl.IsAudioDeviceReady()) return error.SkipZigTest;
+    rl.SetMasterVolume(0);
+    // A silent ten-second WAV exercises the real decoder and audio clock.
+    const wav = try std.testing.allocator.alloc(u8, 44 + 80000 * 2);
+    defer std.testing.allocator.free(wav);
+    @memset(wav, 0);
+    @memcpy(wav[0..4], "RIFF");
+    std.mem.writeInt(u32, wav[4..8], @intCast(wav.len - 8), .little);
+    @memcpy(wav[8..16], "WAVEfmt ");
+    std.mem.writeInt(u32, wav[16..20], 16, .little);
+    std.mem.writeInt(u16, wav[20..22], 1, .little);
+    std.mem.writeInt(u16, wav[22..24], 1, .little);
+    std.mem.writeInt(u32, wav[24..28], 8000, .little);
+    std.mem.writeInt(u32, wav[28..32], 16000, .little);
+    std.mem.writeInt(u16, wav[32..34], 2, .little);
+    std.mem.writeInt(u16, wav[34..36], 16, .little);
+    @memcpy(wav[36..40], "data");
+    std.mem.writeInt(u32, wav[40..44], @intCast(wav.len - 44), .little);
+    music = rl.rl.LoadMusicStreamFromMemory(".wav", wav.ptr, @intCast(wav.len));
+    defer shutdown();
+    try std.testing.expect(hasFile());
+    play();
+    for (0..500) |_| {
+        UpdateMusicStream();
+        if (GetMusicTimePlayed() > 0.075) break;
+        try std.Io.sleep(std.testing.io, .fromMilliseconds(10), .awake);
+    }
+    pause();
+    try std.testing.expect(GetMusicTimePlayed() > 0.075);
+    seek(4);
+    try std.testing.expect(!IsMusicStreamPlaying());
+    try std.testing.expectApproxEqAbs(@as(f32, 4), GetMusicTimePlayed(), 0.001);
+    seek(2);
+    try std.testing.expect(!IsMusicStreamPlaying());
+    try std.testing.expectApproxEqAbs(@as(f32, 2), GetMusicTimePlayed(), 0.001);
+    seek(-1);
+    try std.testing.expectEqual(@as(f32, 0), GetMusicTimePlayed());
+    seek(20);
+    try std.testing.expect(GetMusicTimePlayed() > 9.99 and GetMusicTimePlayed() < 10);
+    seek(4);
+    resumePlayback();
+    try std.testing.expect(IsMusicStreamPlaying());
+    seek(2);
+    try std.testing.expect(IsMusicStreamPlaying());
 }
 
 test "streaming WAV preview matches raylib decoding and handles missing files" {
