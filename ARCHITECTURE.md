@@ -1,10 +1,21 @@
 # Architecture
 
+[Project home](README.md) · [All docs](docs/README.md) ·
+[Development](docs/development.md) · [Lua API](docs/scripting.md)
+
 zigscene is a Zig 0.16 application with raylib rendering/audio, a custom immediate
 mode GUI, and an embedded Lua 5.4 scene runtime. Native and Emscripten builds use
 the same application, scene, and UI code. Lua controls scene composition and
 animation through a bounded API; Zig owns the window, audio devices, GPU state,
 playback controls, and resource lifetime.
+
+**On this page:** [Frame flow](#frame-flow) · [Module map](#module-map) ·
+[Audio](#audio-and-the-seek-waveform) · [Lua boundary](#lua-boundary) ·
+[UI and preferences](#ui-and-window-settings) · [Builds and tests](#builds-dependencies-and-tests) ·
+[Extending the app](#extending-the-interface)
+
+For build commands and environment setup, use the [development guide](docs/development.md).
+For playback and controls, use the [user guide](docs/usage.md).
 
 ## Frame flow
 
@@ -39,7 +50,7 @@ Each `App.frame`:
    script, runs update/draw under protection, and commits valid settings changes.
 4. Advances built-in visualizer history when built-in rendering is enabled.
 5. Renders the built-in layers (unless replaced) and the Lua command buffer into
-   the scene texture, inside the scene viewport (see below).
+   the scene texture, inside the [scene viewport](#scene-viewport).
 6. Clears/composites the window, applies the post-processing shader, draws the UI
    and diagnostics, presents, and applies changed FPS, opacity, and topmost state.
 
@@ -49,6 +60,8 @@ caches, then closes raylib.
 
 ## Module map
 
+### Application and settings
+
 | Area | Responsibility |
 | --- | --- |
 | [`src/core/config.zig`](src/core/config.zig) | Mutable host settings and built-in GUI control metadata |
@@ -57,8 +70,22 @@ caches, then closes raylib.
 | [`src/core/input.zig`](src/core/input.zig) | Keyboard shortcuts, Lua/audio drop routing, resize, camera gestures |
 | [`src/core/event.zig`](src/core/event.zig) | Direct tab/swipe dispatch helpers |
 | [`src/core/init.zig`](src/core/init.zig) | Window/audio startup and alpha-compositing setup |
+
+### Audio
+
+| Area | Responsibility |
+| --- | --- |
 | [`src/audio/Session.zig`](src/audio/Session.zig) | Playback/capture/seek transitions and user notices |
 | [`src/audio/processor.zig`](src/audio/processor.zig) | Mono waveform smoothing, FFT, RMS and beat detection |
+| [`src/audio/SampleQueue.zig`](src/audio/SampleQueue.zig) | Bounded stereo PCM transfer from callbacks to analysis |
+| [`src/audio/playback.zig`](src/audio/playback.zig) | File playback, refill worker control, and preview-job lifetime |
+| [`src/audio/capture.zig`](src/audio/capture.zig) | Native device enumeration, selection, and capture |
+| [`src/audio/WaveformPreview.zig`](src/audio/WaveformPreview.zig) | Incremental peak, RMS, and band analysis for seeking |
+
+### Rendering and UI
+
+| Area | Responsibility |
+| --- | --- |
 | [`src/graphics.zig`](src/graphics.zig) | Built-in visualizer exports |
 | [`src/graphics/Viewport.zig`](src/graphics/Viewport.zig) | Scene area right of the side panel: 2D offset, off-axis 3D projection, slide easing |
 | [`src/graphics/Motion.zig`](src/graphics/Motion.zig) | Frame-rate independent energy/beat envelope |
@@ -66,6 +93,11 @@ caches, then closes raylib.
 | [`src/gui.zig`](src/gui.zig) | Tabs, panel scrolling/resizing, controls, player and seeking |
 | [`src/gui/theme.zig`](src/gui/theme.zig) | Palette, font atlases, logical UI scale and matching hit coordinates |
 | [`src/core/debug.zig`](src/core/debug.zig) | FPS/frame timing and CPU-stage diagnostics |
+
+### Scripting
+
+| Area | Responsibility |
+| --- | --- |
 | [`src/scripting/Scene.zig`](src/scripting/Scene.zig) | Lua VM lifetime, transactional reload, file watching and setting ownership |
 | [`src/scripting/lua_scene.c`](src/scripting/lua_scene.c) | Protected Lua execution, validation and bounded commands/context |
 | [`src/scripting/settings.zig`](src/scripting/settings.zig) | Stable script paths mapped to typed host setting pointers/ranges |
@@ -74,17 +106,23 @@ caches, then closes raylib.
 
 ## Audio and the seek waveform
 
+### Playback and capture
+
 Native file playback refills on a dedicated worker every 5 ms, independently of
 rendering, Lua, and window event stalls. Playback controls and decoder access share
 a mutex; replacing a file or shutting down joins the worker before unloading it.
 Playback is primed on play/resume. Browsers, and native worker-start failures,
 retain frame-driven refills. The worker never calls UI or graphics APIs.
 
+### Live analysis
+
 File analysis uses raylib's mixed-audio callback. Live capture uses a thin C
 miniaudio adapter; `capture.zig` bridges it into Zig. `SampleQueue` transfers
 stereo PCM into fixed 1,024-frame blocks so device callbacks do not execute FFT,
 GUI, Lua, or GPU work. Switching sources resets analysis state. The render
-thread bounds its analysis work to four blocks per frame.
+thread bounds its analysis work to four blocks per frame. Oversized callbacks
+retain only the newest queue-capacity frames; wrapped copies use at most two
+contiguous segments on submission and consumption.
 
 The live waveform, FFT, RMS and beat state describe the latest analyzed block.
 Motion applies attack/release smoothing, gain/compression and an exponential beat
@@ -92,30 +130,41 @@ pulse. Lua gets copies of these values in reused Lua tables, including smoothed
 mono samples and the first half of the linear FFT magnitude array. Lua never
 receives pointers into the audio queue.
 
-The playback/seek waveform is a separate whole-file preview, built by
-[`WaveformPreview.zig`](src/audio/WaveformPreview.zig). It preserves peaks and RMS
-in up to 8,192 bins and analyzes bass/mid/high bands using filters at the source
-file's sample rate. On native threaded builds, `playback.zig` decodes and builds
-the preview on a detached worker. The render thread adopts a completed job through
-`pollPreview()` and increments the waveform revision. Replacing or closing a
-track abandons its job; the worker and render thread coordinate ownership so
-stale results are freed rather than adopted. Browser builds and thread-start
-failures build inline. Native MP3, WAV and OGG previews decode into fixed-size
-chunks through `preview_decoder.c`, reusing raylib's decoder implementations.
-`WaveformPreview.Builder` retains filter state across chunks and maps frames to
-bins using the total source frame count. WAV and OGG retain raylib's 16-bit sample
-conversion. Browser builds and other raylib formats retain whole-file decoding. [`WaveformCache.zig`](src/gui/WaveformCache.zig) aggregates
-those bins at display resolution and caches their geometry in a texture. Playback
-progress and seeking draw over that cache; ordinary frames do not rescan the
-track. Track revision and display dimensions invalidate the cache.
+### Seek preview and worker lifetime
 
-Native preview generation runs at most one background decode, with one pending
-request for the newest track. Switching tracks replaces the pending path and
-discards the active job's result once it finishes; obsolete queued tracks are
-never decoded. The render thread joins completed workers before starting the
-next request. Shutdown drops the pending request and joins the active worker.
-Preview decoding is not cancellable, so a new preview (or shutdown) can
-wait for that one decode to finish. Browser builds generate previews inline.
+The seek waveform summarizes the whole track separately from live analysis.
+[`WaveformPreview.zig`](src/audio/WaveformPreview.zig) preserves peaks, RMS, and
+bass/mid/high bands in up to 8,192 bins, with filters at the source sample rate.
+
+Native MP3, WAV, and OGG previews decode in fixed-size chunks through
+[`preview_decoder.c`](src/audio/preview_decoder.c), which reuses raylib's decoder
+implementations. `WaveformPreview.Builder` keeps filter state across chunks and
+maps frames into bins using the total source frame count. WAV and OGG retain
+raylib's 16-bit conversion. Browser builds and other formats retain whole-file
+decoding.
+
+On native threaded builds, [`playback.zig`](src/audio/playback.zig) owns one
+background preview job and at most one pending request:
+
+1. The worker decodes and builds its private preview, then marks it complete.
+2. The render thread calls `pollPreview()`, joins the completed worker, and
+   adopts its result unless the track was replaced. Adoption increments the
+   waveform revision.
+3. Switching tracks replaces the pending path and marks the active result for
+   discard. Obsolete pending tracks are never decoded.
+4. After joining the active worker, the render thread starts the newest pending
+   request. Shutdown drops that request and joins any active worker.
+
+Decoding is not cancellable: the next preview, or shutdown, can wait for the
+active decode to finish. Thread-start failures build inline only when no worker
+is active. Browser and single-threaded builds generate previews inline.
+
+### Display cache
+
+[`WaveformCache.zig`](src/gui/WaveformCache.zig) combines preview bins at display
+resolution and caches their geometry in a texture. Playback progress and seeking
+draw over it; ordinary frames do not rescan the track. A changed track revision
+or display size invalidates the cache.
 
 ## Lua boundary
 
@@ -127,6 +176,8 @@ This separation is deliberate: Lua raises errors using `longjmp`. Lua API calls
 that can raise, including script compilation and setup, occur inside a C
 `lua_pcall` boundary. A jump never unwinds a Zig stack frame or crosses a Zig
 `defer`. Errors are copied to a bounded string before returning to Zig.
+
+### Runtime containment
 
 The VM opens only base/math/string/table/utf8. Host I/O, dynamic loading,
 metatable access and coroutine/debug APIs are excluded. A custom allocator caps
@@ -177,6 +228,8 @@ that frame; otherwise they use the host camera. There is no persistent camera
 state hidden in the command buffer. Textures, meshes and shader handles are not
 exposed to Lua in the current interface.
 
+### Scene viewport
+
 All scene drawing, built-in and Lua, happens in a viewport right of the open
 side panel ([`Viewport.zig`](src/graphics/Viewport.zig)), eased toward
 `gui.sceneLeft()` so opening or hiding the panel slides the scene. 2D layers
@@ -192,6 +245,8 @@ alpha uses separate RGB/alpha blend factors, preserving an opaque destination
 when background opacity is 1. Window opacity remains a separate OS-level control.
 
 ## UI and window settings
+
+### Drawing and interaction
 
 Widgets request cursor shapes during drawing. The theme applies the final shape
 once, only when it changes; resetting the native cursor between widgets caused
@@ -209,21 +264,27 @@ hover/highlight mapping. Errors wrap and contribute to scroll height. Script
 reloads replace parameter storage only between frames or after that frame's
 parameter loop is skipped.
 
+### Saved preferences
+
 Native host settings, including window preferences, volume, colors, panel sizes
 and UI scale, persist in a `name=value` file driven by the scripting registry.
-The file is `zigscene/settings.conf` under `$XDG_CONFIG_HOME` (or `~/.config`) on
-Linux, `%APPDATA%` on Windows, and `~/Library/Application Support` on macOS.
+See the [settings file locations](docs/usage.md#saved-settings) for each platform.
 Loading happens before window creation; unknown or malformed values are ignored
 and finite numeric values are clamped to their registered ranges. Missing or
 unreadable files do not prevent startup. Saving replaces the file through a
 temporary file after Lua teardown restores its owned settings, so script
 overrides do not become user preferences. Browser settings remain session-local.
-Changing a slider does not rewrite a Lua script. FPS 0 means
-uncapped. **Always on top** defaults to the app's previous behavior (on); changing
-it applies/clears raylib's native topmost flag without recreating the window.
+Changing a slider does not rewrite a Lua script. FPS 0 means uncapped.
+**Always on top** defaults to on; changing it applies/clears raylib's native
+topmost flag without recreating the window.
 Browser builds disable that control.
 
 ## Builds, dependencies and tests
+
+See [Development](docs/development.md) for setup, commands, and the verification
+checklist. This section describes how the build is organized.
+
+### Dependencies
 
 [`build.zig`](build.zig) attaches raylib, optional Tracy, and Lua to the native
 app/tests and to the web library. Lua source is pinned by URL and Zig package hash
@@ -237,42 +298,48 @@ ReleaseSafe optimization. This avoids per-vertex/backend work and interpreter
 work dominating development FPS. `-Draylib-optimize=Debug` opts into raylib's
 unoptimized backend.
 
+### Browser build
+
 Emscripten links the Zig application, raylib, and Lua archives through
 [`deps/build/emcc.zig`](deps/build/emcc.zig). Lua C compilation enables Emscripten
 setjmp/longjmp lowering; this is required for its protected error boundary in
 WebAssembly. See [Emscripten's setjmp support](https://emscripten.org/docs/porting/setjmp-longjmp.html).
-The web target remains experimental and is outside this overhaul’s validation
-scope. Script loading is guarded on Emscripten: Lua scenes currently run only in
-the native app. Live native capture and native window management are also
-unavailable in the browser.
+The web target is experimental and has a dedicated CI build and bundle check.
+Lua scene loading, native capture, and native window management are disabled in
+browser builds.
 
-```sh
-zig build                 # native build
-zig build run             # native development app
-zig build check           # native build plus both test roots
-zig build test            # headless unit tests
-zig build web -Dtarget=wasm32-emscripten -Doptimize=ReleaseSafe \
-  --sysroot "$EMSDK/upstream/emscripten"
-```
+### Test coverage
 
 The main test root includes audio, GUI geometry/highlighting, diagnostics and Lua
 integration tests. `audio_test.zig` is an independent test root for the queue,
 CLI, motion, geometry, FFT, beat detection and frame analysis. Native preference
 tests cover file round trips, value validation, platform paths and restoration
-of script-owned settings before serialization. Lua integration tests execute the real C bridge without
-opening a window: lifecycle/context updates, settings/parameter rollback, failed
-reloads, file watching, invalid drawing, instruction/memory limits, library
+of script-owned settings before serialization.
+
+Lua integration tests execute the real C bridge without opening a window:
+lifecycle/context updates, settings/parameter rollback, failed reloads, file
+watching, invalid drawing, instruction/memory limits, library
 restrictions, and all bundled examples. GPU/window behavior still needs a native
 or browser smoke test.
 
 ## Extending the interface
 
-For a new host setting, add its Config storage/UI control as needed and register
-its stable name, pointer, type and range in `scripting/settings.zig`; update the
-[script reference](docs/scripting.md). Prefer keeping names stable for saved
-scripts.
+### Add a host setting
 
-For a new drawing primitive, add a command kind to `lua_scene.h`, validate and
-encode its arguments in `lua_scene.c`, and implement its raylib dispatch in
-`scripting/render.zig`. Keep Lua errors inside C and all graphics lifetime/state
-management inside Zig. Add headless validation tests and a visual example.
+1. Add storage and any built-in control metadata to
+   [`core/config.zig`](src/core/config.zig).
+2. Register its stable name, pointer, type, and range in
+   [`scripting/settings.zig`](src/scripting/settings.zig). Native preferences use
+   the same registry.
+3. Update the [settings reference](docs/scripting.md#settings-reference) and
+   relevant tests. Keep names stable for saved scripts and preference files.
+
+### Add a drawing primitive
+
+1. Add a command kind to [`lua_scene.h`](src/scripting/lua_scene.h).
+2. Validate and encode arguments in [`lua_scene.c`](src/scripting/lua_scene.c).
+3. Implement raylib dispatch in [`scripting/render.zig`](src/scripting/render.zig).
+4. Add headless validation tests, a visual example, and a
+   [drawing API](docs/scripting.md#drawing-api) entry.
+
+Keep Lua errors inside C and graphics lifetime/state management inside Zig.

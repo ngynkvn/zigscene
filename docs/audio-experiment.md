@@ -1,6 +1,14 @@
 # Audio refill and SIMD experiment
 
-Bookmark: `experimental/audio-refill-simd`.
+[Project home](../README.md) · [All docs](README.md) ·
+[Development](development.md) · [Audio architecture](../ARCHITECTURE.md#audio-and-the-seek-waveform)
+
+This is a historical experiment report from `experimental/audio-refill-simd`,
+now integrated into `main`. The measurements below describe the original probes,
+not the current app's overall performance.
+
+**On this page:** [Playback reliability](#playback-reliability) ·
+[SIMD analysis](#simd-analysis) · [Reproduce the checks](#reproduce-the-checks)
 
 ## Playback reliability
 
@@ -38,7 +46,9 @@ Tests compare all output samples and RMS against the scalar reference for empty,
 short, full, and odd-length blocks, smoothing endpoints, clamping, and silence.
 Floating-point reduction order changes slightly; RMS comparisons allow 1e-5.
 
-Run the offline benchmark (no app/window/audio device):
+### Offline benchmark
+
+Run without opening the app, a window, or an audio device:
 
 ```sh
 zig run -O ReleaseSafe -mcpu=baseline --dep frame \
@@ -48,11 +58,14 @@ zig run -O ReleaseSafe -mcpu=baseline --dep frame \
 Four alternating-order measurements on the development host reported
 1,321–1,423 ns/block scalar versus 707–734 ns/block SIMD, about 1.8–2.0x for
 this analysis pass. This is not an overall application speedup or a Windows
-benchmark. These measurements cover the frame analysis pass only. The FFT has
-since been replaced by an iterative radix-2 implementation; the measurements
-above do not establish its cost or the current overall application speedup.
+benchmark. The FFT has since been replaced by an iterative radix-2 implementation;
+the measurements above do not establish its cost or the current overall
+application speedup.
 
-Validation commands:
+## Reproduce the checks
+
+These are the experiment's validation commands. For the current development
+checklist, see [Tests](development.md#tests).
 
 ```sh
 zig build check
