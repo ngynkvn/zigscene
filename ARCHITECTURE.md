@@ -113,7 +113,7 @@ request for the newest track. Switching tracks replaces the pending path and
 discards the active job's result once it finishes; obsolete queued tracks are
 never decoded. The render thread joins completed workers before starting the
 next request. Shutdown drops the pending request and joins the active worker.
-The whole-file decoder is not cancellable, so a new preview (or shutdown) can
+Preview decoding is not cancellable, so a new preview (or shutdown) can
 wait for that one decode to finish. Browser builds generate previews inline.
 
 ## Lua boundary
