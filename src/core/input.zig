@@ -4,6 +4,7 @@ const gui = @import("../gui.zig");
 const ScriptScene = @import("../scripting/Scene.zig");
 const AudioSession = @import("../audio/Session.zig");
 const processor = @import("../audio/processor.zig");
+const pet = @import("desktop_pet.zig");
 pub const rl = @import("../raylib.zig");
 pub const Config = @import("config.zig");
 pub const debug = @import("debug.zig");
@@ -44,7 +45,7 @@ pub fn process(state: *State, audio: *AudioSession, script: *ScriptScene) ?Resiz
         if (last_audio_path) |path| audio.playFile(path);
     }
 
-    if (!gui.editingValue()) {
+    if (!gui.editingValue() and !pet.compact()) {
         if (rl.isKeyPressed(.C)) state.camera.projection = switch (state.camera.projection) {
             rl.CAMERA_PERSPECTIVE => rl.CAMERA_ORTHOGRAPHIC,
             rl.CAMERA_ORTHOGRAPHIC => rl.CAMERA_PERSPECTIVE,
@@ -78,12 +79,13 @@ pub fn process(state: *State, audio: *AudioSession, script: *ScriptScene) ?Resiz
         if (rl.isKeyDown(.RIGHT)) state.rotation_offset += 100 * rl.GetFrameTime();
     }
 
-    smoothingHold(&processor.smoothing_held, rl.isKeyPressed(.SPACE), rl.isKeyReleased(.SPACE), gui.editingValue());
+    smoothingHold(&processor.smoothing_held, rl.isKeyPressed(.SPACE), rl.isKeyReleased(.SPACE), gui.editingValue() or pet.compact());
 
     var resize: ?Resize = null;
     if (rl.IsWindowResized()) {
         resize = .{ .width = rl.GetScreenWidth(), .height = rl.GetScreenHeight() };
     }
+    if (pet.compact()) return resize;
     const wheelMove = rl.GetMouseWheelMoveV();
     if (@abs(wheelMove.x) > @abs(wheelMove.y)) {
         event.onSwipe(.horizontal, wheelMove.x);

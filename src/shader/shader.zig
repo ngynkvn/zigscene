@@ -1,6 +1,5 @@
 const std = @import("std");
 const rl = @import("../raylib.zig");
-const Config = @import("../core/config.zig");
 
 const fragment_source = @embedFile("chromatic.fs.glsl");
 const vertex_source = @embedFile("chromatic.vs.glsl");
@@ -18,7 +17,7 @@ pub const Renderer = struct {
         std.debug.assert(chroma != -1);
         std.debug.assert(noise != -1);
         return .{
-            .scene_texture = rl.LoadRenderTexture(Config.Window.width, Config.Window.height),
+            .scene_texture = rl.LoadRenderTexture(rl.GetScreenWidth(), rl.GetScreenHeight()),
             .program = program,
             .chroma_factor_location = chroma,
             .noise_factor_location = noise,

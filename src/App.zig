@@ -9,6 +9,7 @@ const cli = @import("core/cli.zig");
 const debug = @import("core/debug.zig");
 const init = @import("core/init.zig");
 const input_mod = @import("core/input.zig");
+const pet = @import("core/desktop_pet.zig");
 const graphics = @import("graphics.zig");
 const gui = @import("gui.zig");
 const rl = @import("raylib.zig");
@@ -39,11 +40,15 @@ applied_fps_limit: i32 = -1,
 applied_always_on_top: ?bool = null,
 
 pub fn create(options: cli.Options) App {
-    init.startup();
+    init.startup(options.desktop_pet);
     var app: App = .{ .renderer = .init() };
     app.applyWindowOpacity();
     app.applyFpsLimit();
     app.applyOptions(options);
+    if (pet.enabled and app.audio.notice != null) {
+        pet.openControls();
+        gui.onTabChange(.audio);
+    }
     return app;
 }
 
@@ -78,6 +83,12 @@ pub fn frame(self: *App) void {
     const frame_start = rl.rl.GetTime();
     const dt = rl.GetFrameTime();
     self.audio.update();
+    if (pet.process()) {
+        gui.cancelInteraction(&self.audio);
+        processor.smoothing_held = false;
+        if (pet.compact()) @import("gui/theme.zig").resetCursor();
+        if (!pet.compact()) gui.onTabChange(.audio);
+    }
     @import("gui/theme.zig").updateScale();
     if (input_mod.process(&self.input, &self.audio, &self.script)) |size| self.renderer.resize(size.width, size.height);
     if (processor.update()) self.seconds_since_audio = 0 else self.seconds_since_audio += dt;
@@ -85,7 +96,7 @@ pub fn frame(self: *App) void {
     for (&self.spectrum, processor.curr_fft[0..self.spectrum.len]) |*value, frequency| value.* = frequency.magnitude() / @as(f32, @floatFromInt(Config.Audio.buffer_size));
     const viewport = self.updateViewport(dt);
     const mouse = rl.GetMousePosition();
-    const over_ui = gui.pointerOverUi();
+    const over_ui = pet.compact() or gui.pointerOverUi();
     self.script.update(.{
         .width = viewport.width(),
         .height = viewport.target_height,
@@ -117,7 +128,7 @@ pub fn frame(self: *App) void {
     const render_context = tracy.traceNamed(@src(), "Render");
     defer render_context.end();
     const audio_end = rl.rl.GetTime();
-    const focus = Highlight.init(gui.hoveredElement());
+    const focus = Highlight.init(if (pet.compact()) null else gui.hoveredElement());
     self.renderScene(viewport, center, focus);
     const scene_end = rl.rl.GetTime();
     const ui_end = self.renderWindow();
@@ -130,21 +141,23 @@ pub fn frame(self: *App) void {
 
 fn applyAlwaysOnTop(self: *App) void {
     if (@import("builtin").os.tag == .emscripten) return;
-    if (self.applied_always_on_top == Config.Window.always_on_top) return;
-    if (Config.Window.always_on_top) rl.rl.SetWindowState(rl.FLAG_WINDOW_TOPMOST) else rl.rl.ClearWindowState(rl.FLAG_WINDOW_TOPMOST);
-    self.applied_always_on_top = Config.Window.always_on_top;
+    const topmost = pet.compact() or Config.Window.always_on_top;
+    if (self.applied_always_on_top == topmost) return;
+    if (topmost) rl.rl.SetWindowState(rl.FLAG_WINDOW_TOPMOST) else rl.rl.ClearWindowState(rl.FLAG_WINDOW_TOPMOST);
+    self.applied_always_on_top = topmost;
 }
 
 fn applyFpsLimit(self: *App) void {
-    const limit: i32 = @intFromFloat(@round(std.math.clamp(Config.Window.fps_limit, 0, 360)));
+    const requested = if (pet.compact() and Config.Window.fps_limit == 0) @as(f32, 60) else Config.Window.fps_limit;
+    const limit: i32 = @intFromFloat(@round(std.math.clamp(requested, 0, 360)));
     if (limit == self.applied_fps_limit) return;
     rl.SetTargetFPS(limit);
     self.applied_fps_limit = limit;
 }
 
 fn applyWindowOpacity(self: *App) void {
-    const opacity = std.math.clamp(Config.Window.opacity, 0.15, 1.0);
-    Config.Window.opacity = opacity;
+    const opacity = if (pet.compact()) 1 else std.math.clamp(Config.Window.opacity, 0.15, 1.0);
+    if (!pet.compact()) Config.Window.opacity = opacity;
     if (opacity == self.applied_window_opacity) return;
     rl.SetWindowOpacity(opacity);
     self.applied_window_opacity = opacity;
@@ -153,7 +166,7 @@ fn applyWindowOpacity(self: *App) void {
 /// Slides the scene clear of the side panel; frame-rate independent.
 fn updateViewport(self: *App, dt: f32) Viewport {
     const target = gui.sceneLeft() * @import("gui/theme.zig").scale_factor;
-    self.scene_left = Viewport.slide(self.scene_left, target, dt, viewport_slide_seconds);
+    self.scene_left = if (pet.compact()) 0 else Viewport.slide(self.scene_left, target, dt, viewport_slide_seconds);
     return .{
         .left = self.scene_left,
         .target_width = @floatFromInt(self.renderer.scene_texture.texture.width),
@@ -208,6 +221,7 @@ fn renderBuiltin(self: *App, viewport: Viewport, center: rl.Vector2, focus: High
 
 /// Bottom-anchored layers use the freed space when the player is hidden.
 fn sceneFloor() f32 {
+    if (pet.compact()) return @as(f32, @floatFromInt(rl.GetScreenHeight())) - 12;
     const ui = @import("gui/theme.zig");
     return (if (Config.Interface.show_player) gui.dockBounds().y - 6 else ui.height() - 16) * ui.scale_factor;
 }
@@ -215,12 +229,13 @@ fn sceneFloor() f32 {
 fn renderWindow(self: *App) f64 {
     rl.BeginDrawing();
     var background = @import("gui/theme.zig").background;
-    background.a = @intFromFloat(@round(Config.Shader.alpha_factor * 255));
+    background.a = if (pet.compact()) 0 else @intFromFloat(@round(Config.Shader.alpha_factor * 255));
     rl.ClearBackground(background);
 
     rl.BeginShaderMode(self.renderer.program);
     rl.SetShaderValue(self.renderer.program, self.renderer.chroma_factor_location, &Config.Shader.chroma_factor, rl.RL_SHADER_UNIFORM_FLOAT);
-    rl.SetShaderValue(self.renderer.program, self.renderer.noise_factor_location, &Config.Shader.noise_factor, rl.RL_SHADER_UNIFORM_FLOAT);
+    const noise: f32 = if (pet.compact()) 0 else Config.Shader.noise_factor;
+    rl.SetShaderValue(self.renderer.program, self.renderer.noise_factor_location, &noise, rl.RL_SHADER_UNIFORM_FLOAT);
     rl.DrawTextureRec(
         self.renderer.scene_texture.texture,
         .{
@@ -232,10 +247,14 @@ fn renderWindow(self: *App) f64 {
     );
     rl.EndShaderMode();
 
-    @import("gui/theme.zig").beginDrawing();
-    gui.frame(&self.audio, &self.script);
-    debug.render();
-    @import("gui/theme.zig").endDrawing();
+    if (pet.compact()) {
+        pet.drawHint();
+    } else {
+        @import("gui/theme.zig").beginDrawing();
+        gui.frame(&self.audio, &self.script);
+        debug.render();
+        @import("gui/theme.zig").endDrawing();
+    }
     const present_start = rl.rl.GetTime();
     rl.EndDrawing();
     return present_start;

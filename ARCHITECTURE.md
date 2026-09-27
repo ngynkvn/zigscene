@@ -67,6 +67,7 @@ caches, then closes raylib.
 | [`src/core/config.zig`](src/core/config.zig) | Mutable host settings and built-in GUI control metadata |
 | [`src/core/preferences.zig`](src/core/preferences.zig) | Native settings file loading, validation and saving |
 | [`src/core/cli.zig`](src/core/cli.zig) | Audio/capture flags and `--scene=path` parsing |
+| [`src/core/desktop_pet.zig`](src/core/desktop_pet.zig) | Compact overlay, dragging and transitions to full controls |
 | [`src/core/input.zig`](src/core/input.zig) | Keyboard shortcuts, Lua/audio drop routing, resize, camera gestures |
 | [`src/core/event.zig`](src/core/event.zig) | Direct tab/swipe dispatch helpers |
 | [`src/core/init.zig`](src/core/init.zig) | Window/audio startup and alpha-compositing setup |
@@ -245,6 +246,14 @@ alpha uses separate RGB/alpha blend factors, preserving an opaque destination
 when background opacity is 1. Window opacity remains a separate OS-level control.
 
 ## UI and window settings
+
+Native `--desktop-pet` mode starts system-audio capture in a 400 × 400 transparent,
+undecorated window. Right-click switches between the pet and full controls.
+Compact presentation overrides stay outside the persisted settings: UI and
+background noise are hidden, the window is topmost, and an uncapped FPS setting
+uses 60 FPS. Entering the compact view ends active UI gestures. Windows dragging
+queries the screen cursor directly to avoid repeating a stale mouse event as
+the window moves. See the [desktop-pet guide](docs/desktop-pet.md).
 
 ### Drawing and interaction
 

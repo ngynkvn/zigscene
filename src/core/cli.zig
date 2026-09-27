@@ -2,6 +2,7 @@ const std = @import("std");
 const capture = @import("../audio/capture.zig");
 
 pub const Options = struct {
+    desktop_pet: bool = false,
     capture_mode: ?capture.Mode = null,
     capture_device: i32 = -1,
     list_audio_devices: bool = false,
@@ -14,7 +15,9 @@ pub const ParseError = error{ InvalidAudioDevice, TooManyFiles, UnknownOption, I
 pub fn parse(args: []const []const u8) ParseError!Options {
     var options: Options = .{};
     for (args) |arg| {
-        if (std.mem.eql(u8, arg, "--system-audio")) {
+        if (std.mem.eql(u8, arg, "--desktop-pet")) {
+            options.desktop_pet = true;
+        } else if (std.mem.eql(u8, arg, "--system-audio")) {
             options.capture_mode = .system;
         } else if (std.mem.eql(u8, arg, "--input-audio")) {
             options.capture_mode = .input;
@@ -35,7 +38,17 @@ pub fn parse(args: []const []const u8) ParseError!Options {
             return error.TooManyFiles;
         }
     }
+    if (options.desktop_pet and options.capture_mode == null) options.capture_mode = .system;
     return options;
+}
+
+test "desktop pet defaults to system audio and keeps explicit device selection" {
+    const options = try parse(&.{ "--desktop-pet", "--audio-device=2" });
+    try std.testing.expect(options.desktop_pet);
+    try std.testing.expectEqual(capture.Mode.system, options.capture_mode.?);
+    try std.testing.expectEqual(@as(i32, 2), options.capture_device);
+    const input = try parse(&.{ "--input-audio", "--desktop-pet" });
+    try std.testing.expectEqual(capture.Mode.input, input.capture_mode.?);
 }
 
 test "parse capture and file options" {
