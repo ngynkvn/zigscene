@@ -1,5 +1,6 @@
 const rl = @import("raylib");
 const c = @import("settings.zig").c;
+const Viewport = @import("../graphics/Viewport.zig");
 fn vec2(v: []const f32) rl.Vector2 {
     return .{ .x = v[0], .y = v[1] };
 }
@@ -11,7 +12,7 @@ fn rect(v: []const f32) rl.Rectangle {
 }
 
 /// Only validated commands reach raylib; scripts cannot unbalance render state.
-pub fn draw(commands: []const c.ZsCommand, default_camera: rl.Camera3D) void {
+pub fn draw(commands: []const c.ZsCommand, default_camera: rl.Camera3D, viewport: Viewport) void {
     var camera = default_camera;
     for (commands) |*command| {
         const v = &command.values;
@@ -27,14 +28,14 @@ pub fn draw(commands: []const c.ZsCommand, default_camera: rl.Camera3D) void {
             c.ZS_TEXT => rl.DrawText(@ptrCast(&command.text), @intFromFloat(v[0]), @intFromFloat(v[1]), @intFromFloat(v[2]), color),
             c.ZS_CAMERA => camera = .{ .position = vec3(v), .target = vec3(v[3..]), .up = vec3(v[6..]), .fovy = v[9], .projection = rl.CAMERA_PERSPECTIVE },
             c.ZS_LINE3D, c.ZS_SPHERE, c.ZS_CUBE => {
-                rl.BeginMode3D(camera);
+                viewport.begin3D(camera);
                 switch (command.kind) {
                     c.ZS_LINE3D => rl.DrawLine3D(vec3(v), vec3(v[3..]), color),
                     c.ZS_SPHERE => if (v[10] != 0) rl.DrawSphereWires(vec3(v), v[3], 12, 16, color) else rl.DrawSphereEx(vec3(v), v[3], 12, 16, color),
                     c.ZS_CUBE => if (v[10] != 0) rl.DrawCubeWires(vec3(v), v[3], v[4], v[5], color) else rl.DrawCube(vec3(v), v[3], v[4], v[5], color),
                     else => unreachable,
                 }
-                rl.EndMode3D();
+                viewport.end3D();
             },
             else => unreachable,
         }

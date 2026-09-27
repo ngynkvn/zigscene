@@ -1,4 +1,5 @@
 const Highlight = @import("../Highlight.zig");
+const Viewport = @import("../Viewport.zig");
 const std = @import("std");
 
 const processor = @import("../../audio/processor.zig");
@@ -14,7 +15,7 @@ comptime {
 pub const Bubble = struct {
     const Config = @import("../../core/config.zig").Visualizer.Bubble;
     // Radii
-    pub fn render(camera3d: rl.Camera3D, rot_offset: f32, t: f32, energy: f32, pulse: f32, focus: Highlight) void {
+    pub fn render(viewport: Viewport, camera3d: rl.Camera3D, rot_offset: f32, t: f32, energy: f32, pulse: f32, focus: Highlight) void {
         var color1 = Config.color1;
         const color2 = Config.color2;
         const r_ring: f32 = Config.ring_radius;
@@ -23,8 +24,8 @@ pub const Bubble = struct {
         const effect: f32 = Config.effect;
         const color_scale: f32 = Config.color_scale;
         const bubble_color_scale: f32 = Config.bubble_color_scale;
-        rl.BeginMode3D(camera3d);
-        defer rl.EndMode3D();
+        viewport.begin3D(camera3d);
+        defer viewport.end3D();
         rl.rlRotatef(rot_offset, 0, 1, 0);
         {
             rl.rlPushMatrix();

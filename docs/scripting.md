@@ -91,7 +91,7 @@ app elapsed time and does not reset on reload or stop when audio is paused. Use
 
 | Field | Meaning |
 | --- | --- |
-| `ctx.width`, `ctx.height` | Current window drawing dimensions, independent of UI size |
+| `ctx.width`, `ctx.height` | Scene viewport size in drawing pixels, independent of UI size. The viewport is the window area right of the open side panel (the whole window when the panel is hidden); `x = 0` is its left edge and 3D cameras center on it. It eases between the two widths when the panel opens or closes |
 | `ctx.time`, `ctx.dt` | Elapsed app time and the previous frame duration, in seconds |
 | `ctx.audio.samples` | 1-based array of 1,024 smoothed mono waveform samples, clamped to −2…2; affected by wave strength/smoothing |
 | `ctx.audio.spectrum` | 1-based array of 512 linear FFT magnitudes, `abs(FFT) / 1024`; first bin is DC; not decibels or log-spaced |
@@ -101,7 +101,7 @@ app elapsed time and does not reset on reload or stop when audio is paused. Use
 | `ctx.audio.pulse` | Beat envelope, 0…1, decaying with the configured beat decay |
 | `ctx.audio.progress` | File playback fraction 0…1; zero without a file or during capture |
 | `ctx.audio.playing`, `ctx.audio.capturing` | Boolean file-playing and live-capture states |
-| `ctx.mouse.x`, `ctx.mouse.y` | Pointer position in window drawing coordinates |
+| `ctx.mouse.x`, `ctx.mouse.y` | Pointer position in the same viewport drawing coordinates |
 | `ctx.mouse.down`, `ctx.mouse.wheel` | Left-button state and vertical wheel delta; suppressed over the app UI |
 
 Audio arrays reflect the latest analyzed block, not the full track or the seek

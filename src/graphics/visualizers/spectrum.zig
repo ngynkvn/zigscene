@@ -1,6 +1,5 @@
 const Highlight = @import("../Highlight.zig");
 const std = @import("std");
-var screenWidth: c_int = @import("../../core/config.zig").Window.width;
 const Complex = @import("../../audio/analysis/fft.zig").ComplexF32;
 const rl = @import("../../raylib.zig");
 const Config = @import("../../core/config.zig").Visualizer.Spectrum;
@@ -9,21 +8,16 @@ comptime {
     @setFloatMode(.optimized);
 }
 
-pub fn onWindowResize(width: i32, _: i32) void {
-    screenWidth = width;
-}
-
 pub const FFTSpectrum = struct {
     const column_spacing: f32 = 4;
     /// Lowest plotted bin; bin 0 is the DC offset, not a frequency.
     const first_bin: f32 = 1;
 
-    /// Log-frequency analyzer across the window, standing on `floor`.
-    pub fn render(floor: f32, spectrum: []const Complex, focus: Highlight) void {
+    /// Log-frequency analyzer across `width`, standing on `floor`.
+    pub fn render(floor: f32, width: f32, spectrum: []const Complex, focus: Highlight) void {
         // A real signal's upper half mirrors the lower half.
         const bins = spectrum.len / 2;
         if (bins < 2) return;
-        const width: f32 = @floatFromInt(screenWidth);
         const columns: usize = @intFromFloat(@max(1, width / column_spacing));
         const bar_width = @max(1, width / @as(f32, @floatFromInt(columns)) - 1);
         for (0..columns) |column| {

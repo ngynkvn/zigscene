@@ -192,6 +192,6 @@ pub fn update(self: *Scene, frame: c.ZsFrame) void {
     }
     self.applyChanges();
 }
-pub fn render(self: *const Scene, camera: rl.Camera3D) void {
-    renderer.draw(self.commands(), camera);
+pub fn render(self: *const Scene, camera: rl.Camera3D, viewport: @import("../graphics/Viewport.zig")) void {
+    renderer.draw(self.commands(), camera, viewport);
 }

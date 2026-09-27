@@ -83,7 +83,6 @@ pub fn process(state: *State, audio: *AudioSession, script: *ScriptScene) ?Resiz
     var resize: ?Resize = null;
     if (rl.IsWindowResized()) {
         resize = .{ .width = rl.GetScreenWidth(), .height = rl.GetScreenHeight() };
-        event.onWindowResize(resize.?.width, resize.?.height);
     }
     const wheelMove = rl.GetMouseWheelMoveV();
     if (@abs(wheelMove.x) > @abs(wheelMove.y)) {
