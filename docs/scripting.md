@@ -17,6 +17,15 @@ dropped together. Open **Scene / 5** to choose the embedded **Palette**, **Orbit
 or **Sculpture** example, adjust its parameters, reload it, or **Use built-in**.
 The examples' editable sources are in [`src/scripting/examples`](../src/scripting/examples).
 
+All three examples have an **Audio response** slider. Raise it for quiet tracks
+or lower it for a gentler response. Palette pulses the halo and bar colors;
+Orbit adds expanding beat rings, dancing spectrum spokes, and orbiting lights;
+Sculpture expands and twists its geometry with the music. Fast attacks and
+smooth decays keep transients distinct, and the extra motion settles when
+playback or capture stops. Set Audio response to zero to disable these extra
+pulses while keeping the base animation (Palette's built-in audio layers still
+react normally).
+
 External files auto-reload on content changes, checked every 0.75 seconds. Toggle
 **Auto reload** off to edit without applying changes; press **F5** or **Reload**
 to apply manually. Embedded examples have no watched file: drop their source or

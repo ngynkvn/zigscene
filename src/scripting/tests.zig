@@ -213,16 +213,138 @@ test "all bundled scenes run with realistic audio frames" {
     context.spectrum = &spectrum;
     context.sample_count = samples.len;
     context.spectrum_count = spectrum.len;
+    context.playing = 1;
     for (Scene.examples, 0..) |_, i| {
         scene.loadExample(@enumFromInt(i));
         for (0..60) |step| {
             context.time = @as(f32, @floatFromInt(step)) * context.dt;
+            context.rms = 0.02 + 0.2 * @abs(@sin(context.time * 6));
+            context.beat = @intFromBool(step % 20 == 0);
             scene.update(context);
             if (scene.runtime == null) std.debug.print("Example failed: {s}\n", .{scene.errorMessage()});
             try expect(scene.runtime != null);
         }
         try expect(scene.errorMessage().len == 0);
         try expect(scene.params().len > 0);
+    }
+}
+
+// A scene's central radius exposes its envelope without depending on rotation/color.
+fn exampleRadius(scene: *Scene, example: Scene.Example) f32 {
+    return switch (example) {
+        .palette => Config.Visualizer.Halo.radius,
+        .orbit => scene.commands()[0].values[2],
+        .sculpture => scene.commands()[1].values[3],
+    };
+}
+
+test "bundled scenes respond to quiet audio and beats then settle when paused" {
+    var scene: Scene = .{};
+    defer scene.deinit();
+    for (Scene.examples, 0..) |_, i| {
+        const example: Scene.Example = @enumFromInt(i);
+        scene.loadExample(example);
+        var context = frame;
+        scene.update(context);
+        const idle = exampleRadius(&scene, example);
+        context.capturing = 1;
+        context.rms = 0.02;
+        for (0..12) |_| scene.update(context);
+        const quiet = exampleRadius(&scene, example);
+        try expect(quiet > idle * 1.015);
+        context.beat = 1;
+        scene.update(context);
+        const hit = exampleRadius(&scene, example);
+        try expect(hit > quiet * 1.05);
+        context.beat = 0;
+        context.rms = 0.3;
+        for (0..60) |_| scene.update(context);
+        try expect(exampleRadius(&scene, example) > quiet);
+        // The host retains the last RMS/FFT when paused. Ignore these stale values.
+        context.capturing = 0;
+        for (0..180) |_| scene.update(context);
+        try expect(scene.runtime != null);
+        try expect(scene.errorMessage().len == 0);
+        try std.testing.expectApproxEqAbs(idle, exampleRadius(&scene, example), 0.01);
+
+        scene.loadExample(example);
+        for (scene.params()) |*param| {
+            if (std.mem.eql(u8, std.mem.span(@as([*:0]const u8, @ptrCast(&param.id))), "response")) param.value = 0;
+        }
+        context.playing = 1;
+        context.beat = 1;
+        for (0..60) |_| scene.update(context);
+        try std.testing.expectApproxEqAbs(idle, exampleRadius(&scene, example), 0.01);
+    }
+}
+
+fn firstSpectralSize(scene: *Scene, example: Scene.Example) f32 {
+    for (scene.commands()) |command| {
+        if (example == .orbit and command.kind == c.ZS_LINE) {
+            const dx = command.values[2] - command.values[0];
+            const dy = command.values[3] - command.values[1];
+            return @sqrt(dx * dx + dy * dy);
+        }
+        if (example == .sculpture and command.kind == c.ZS_CUBE) return command.values[4];
+    }
+    unreachable;
+}
+
+test "custom scenes react to spectrum changes independently of overall loudness" {
+    var scene: Scene = .{};
+    defer scene.deinit();
+    var spectrum: [512]f32 = @splat(0);
+    for ([_]Scene.Example{ .orbit, .sculpture }) |example| {
+        scene.loadExample(example);
+        @memset(&spectrum, 0);
+        var context = frame;
+        context.playing = 1;
+        context.spectrum = &spectrum;
+        context.spectrum_count = spectrum.len;
+        scene.update(context);
+        const quiet = firstSpectralSize(&scene, example);
+        // A bass-bin transient changes geometry even when RMS and beat stay fixed.
+        spectrum[1] = 0.04;
+        for (0..6) |_| scene.update(context);
+        try expect(firstSpectralSize(&scene, example) > quiet * 2);
+        @memset(&spectrum, 0);
+        for (0..120) |_| scene.update(context);
+        try std.testing.expectApproxEqAbs(quiet, firstSpectralSize(&scene, example), 0.01);
+    }
+}
+
+test "bundled scene envelopes are consistent across frame rates and bounded at maximum response" {
+    var scene: Scene = .{};
+    defer scene.deinit();
+    const spectrum: [512]f32 = @splat(10);
+    for (Scene.examples, 0..) |_, i| {
+        const example: Scene.Example = @enumFromInt(i);
+        var reference: f32 = 0;
+        for ([_]usize{ 30, 60, 144 }, 0..) |fps, run| {
+            scene.loadExample(example);
+            var context = frame;
+            context.dt = 1 / @as(f32, @floatFromInt(fps));
+            context.rms = 0.1;
+            context.playing = 1;
+            for (0..fps) |_| scene.update(context);
+            if (run == 0) reference = exampleRadius(&scene, example) else try std.testing.expectApproxEqAbs(reference, exampleRadius(&scene, example), 0.001);
+        }
+        for (scene.params()) |*param| param.value = param.max;
+        var context = frame;
+        context.playing = 1;
+        context.rms = 10;
+        context.spectrum = &spectrum;
+        context.spectrum_count = spectrum.len;
+        for (0..120) |step| {
+            context.beat = @intFromBool(step % 10 == 0);
+            scene.update(context);
+            try expect(scene.runtime != null);
+            try expect(scene.errorMessage().len == 0);
+            try expect(scene.commands().len < 512);
+            for (scene.commands()) |command| {
+                for (command.values) |value| try expect(std.math.isFinite(value));
+            }
+        }
     }
 }
 
