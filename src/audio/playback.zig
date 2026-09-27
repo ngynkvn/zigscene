@@ -134,71 +134,122 @@ fn buildWaveformFallback(path: [*:0]const u8, out: *WaveformPreview) void {
     out.build(samples[0..sample_count], wave.channels, wave.sampleRate);
 }
 
-/// A background preview build. Loading another track abandons it; whichever of
-/// the worker and the render thread sees the other's transition frees it.
-const PreviewJob = struct {
-    const State = enum(u8) { running, done, abandoned };
-    state: std.atomic.Value(State) = .init(.running),
+const PreviewRequest = struct {
     path: [:0]u8,
+    build: *const fn ([*:0]const u8, *WaveformPreview) void,
+
+    fn deinit(request: PreviewRequest) void {
+        std.heap.page_allocator.free(request.path);
+    }
+};
+
+/// Only one decode runs at a time. The render thread owns the job's lifetime;
+/// the worker publishes its result before the render thread joins and frees it.
+const PreviewJob = struct {
+    done: std.atomic.Value(bool) = .init(false),
+    request: PreviewRequest,
+    thread: std.Thread = undefined,
+    abandoned: bool = false,
     preview: WaveformPreview = .{},
-    build: *const fn ([*:0]const u8, *WaveformPreview) void = buildWaveform,
 
     fn run(job: *PreviewJob) void {
-        job.build(job.path.ptr, &job.preview);
-        if (job.state.swap(.done, .acq_rel) == .abandoned) job.destroy();
+        job.request.build(job.request.path.ptr, &job.preview);
+        job.done.store(true, .release);
     }
 
     fn destroy(job: *PreviewJob) void {
-        std.heap.page_allocator.free(job.path);
+        job.request.deinit();
         std.heap.page_allocator.destroy(job);
     }
 };
 const can_spawn = native and !builtin.single_threaded;
 var preview_job: ?*PreviewJob = null;
+// Replaced on each track change; queued tracks hold only a path, never decoded PCM.
+var pending_preview: ?PreviewRequest = null;
 
 fn startPreview(path: [:0]const u8) void {
     if (can_spawn) {
         if (spawnPreview(path, buildWaveform)) return;
+        // Never start a synchronous decode alongside an abandoned worker.
+        if (preview_job != null) {
+            std.debug.print("Waveform preview unavailable for this track.\n", .{});
+            return;
+        }
         std.debug.print("Waveform preview thread unavailable; building it inline.\n", .{});
     }
     buildWaveform(path.ptr, &waveform);
 }
 
 fn spawnPreview(path: [:0]const u8, build: *const fn ([*:0]const u8, *WaveformPreview) void) bool {
+    abandonPreview();
+    const request: PreviewRequest = .{
+        .path = std.heap.page_allocator.dupeZ(u8, path) catch return false,
+        .build = build,
+    };
+    if (preview_job != null) {
+        pending_preview = request;
+        return true;
+    }
+    if (launchPreview(request)) return true;
+    request.deinit();
+    return false;
+}
+
+/// Takes ownership of the request only if the worker starts successfully.
+fn launchPreview(request: PreviewRequest) bool {
+    std.debug.assert(preview_job == null);
     const allocator = std.heap.page_allocator;
     const job = allocator.create(PreviewJob) catch return false;
-    job.* = .{ .path = allocator.dupeZ(u8, path) catch {
+    job.* = .{ .request = request };
+    job.thread = std.Thread.spawn(.{}, PreviewJob.run, .{job}) catch {
         allocator.destroy(job);
         return false;
-    }, .build = build };
-    const thread = std.Thread.spawn(.{}, PreviewJob.run, .{job}) catch {
-        job.destroy();
-        return false;
     };
-    thread.detach();
     preview_job = job;
     return true;
 }
 
 fn abandonPreview() void {
-    const job = preview_job orelse return;
-    preview_job = null;
-    if (job.state.swap(.abandoned, .acq_rel) == .done) job.destroy();
+    if (pending_preview) |request| request.deinit();
+    pending_preview = null;
+    if (preview_job) |job| job.abandoned = true;
+}
+
+fn stopPreview() void {
+    if (!can_spawn) return;
+    abandonPreview();
+    if (preview_job) |job| {
+        job.thread.join();
+        job.destroy();
+        preview_job = null;
+    }
 }
 
 /// Adopts a finished background preview. Call once per frame.
 pub fn pollPreview() void {
+    if (!can_spawn) return;
     const job = preview_job orelse return;
-    if (job.state.load(.acquire) != .done) return;
+    if (!job.done.load(.acquire)) return;
+    job.thread.join();
     preview_job = null;
-    const revision = waveform.revision;
-    waveform = job.preview;
-    waveform.revision = revision +% 1;
+    if (!job.abandoned) {
+        const revision = waveform.revision;
+        waveform = job.preview;
+        waveform.revision = revision +% 1;
+    }
     job.destroy();
+    if (pending_preview) |request| {
+        pending_preview = null;
+        if (!launchPreview(request)) {
+            // The previous worker has been joined, so the fallback is also bounded.
+            request.build(request.path.ptr, &waveform);
+            request.deinit();
+        }
+    }
 }
 
 pub fn previewPending() bool {
-    return preview_job != null;
+    return pending_preview != null or (if (preview_job) |job| !job.abandoned else false);
 }
 
 pub fn shutdown() void {
@@ -209,7 +260,7 @@ pub fn shutdown() void {
     }
     if (rl.IsMusicValid(music)) rl.UnloadMusicStream(music);
     music = .{};
-    abandonPreview();
+    stopPreview();
     waveform.clear();
 }
 pub fn GetMusicTimePlayed() f32 {
@@ -234,23 +285,37 @@ pub fn UpdateMusicStream() void {
 
 const preview_test = struct {
     var release = std.atomic.Value(bool).init(false);
-    var finished = std.atomic.Value(bool).init(false);
+    var started = std.atomic.Value(usize).init(0);
+    var skipped_started = std.atomic.Value(bool).init(false);
 
-    fn build(_: [*:0]const u8, out: *WaveformPreview) void {
+    fn build(path: [*:0]const u8, out: *WaveformPreview) void {
+        _ = started.fetchAdd(1, .monotonic);
+        if (std.mem.eql(u8, std.mem.span(path), "skipped.wav")) skipped_started.store(true, .release);
         while (!release.load(.acquire)) std.atomic.spinLoopHint();
-        out.build(&.{ 0.5, -1, 0.25 }, 1, 44100);
-        finished.store(true, .release);
+        if (std.mem.eql(u8, std.mem.span(path), "latest.wav")) {
+            out.build(&.{0.75}, 1, 44100);
+        } else {
+            out.build(&.{ 0.5, -1, 0.25 }, 1, 44100);
+        }
     }
 
     fn reset() void {
         release.store(false, .release);
-        finished.store(false, .release);
+        started.store(0, .monotonic);
+        skipped_started.store(false, .release);
+    }
+
+    fn cleanup() void {
+        release.store(true, .release);
+        stopPreview();
+        waveform.clear();
     }
 };
 
 test "background preview is adopted once it finishes" {
     if (!can_spawn) return;
     preview_test.reset();
+    defer preview_test.cleanup();
     waveform.clear();
     const revision = waveform.revision;
     try std.testing.expect(spawnPreview("song.wav", preview_test.build));
@@ -268,14 +333,61 @@ test "background preview is adopted once it finishes" {
 test "an abandoned preview never replaces the next track's waveform" {
     if (!can_spawn) return;
     preview_test.reset();
+    defer preview_test.cleanup();
     waveform.clear();
     try std.testing.expect(spawnPreview("old.wav", preview_test.build));
     abandonPreview();
     try std.testing.expect(!previewPending());
     preview_test.release.store(true, .release);
-    while (!preview_test.finished.load(.acquire)) std.atomic.spinLoopHint();
-    pollPreview();
+    while (preview_job != null) pollPreview();
     try std.testing.expectEqual(@as(usize, 0), waveform.len);
+}
+
+test "rapid track replacement keeps one decoder and only the latest pending preview" {
+    if (!can_spawn) return;
+    preview_test.reset();
+    defer preview_test.cleanup();
+    waveform.clear();
+    const revision = waveform.revision;
+    try std.testing.expect(spawnPreview("old.wav", preview_test.build));
+    while (preview_test.started.load(.monotonic) == 0) std.atomic.spinLoopHint();
+    const original_job = preview_job.?;
+    for (0..100) |_| {
+        try std.testing.expect(spawnPreview("skipped.wav", preview_test.build));
+        pollPreview();
+        try std.testing.expect(preview_job.? == original_job);
+    }
+    try std.testing.expect(spawnPreview("latest.wav", preview_test.build));
+    try std.testing.expectEqual(@as(usize, 1), preview_test.started.load(.monotonic));
+    try std.testing.expect(previewPending());
+    preview_test.release.store(true, .release);
+    while (previewPending()) pollPreview();
+    try std.testing.expectEqual(@as(usize, 2), preview_test.started.load(.monotonic));
+    try std.testing.expect(!preview_test.skipped_started.load(.acquire));
+    try std.testing.expectEqual(@as(usize, 1), waveform.len);
+    try std.testing.expectEqual(@as(f32, 0.75), waveform.bins[0].peak);
+    try std.testing.expectEqual(revision +% 1, waveform.revision);
+    try std.testing.expect(preview_job == null and pending_preview == null);
+}
+
+test "preview shutdown joins the active decoder and discards the pending track" {
+    if (!can_spawn) return;
+    preview_test.reset();
+    defer preview_test.cleanup();
+    waveform.clear();
+    try std.testing.expect(spawnPreview("old.wav", preview_test.build));
+    try std.testing.expect(spawnPreview("skipped.wav", preview_test.build));
+    preview_test.release.store(true, .release);
+    stopPreview();
+    try std.testing.expect(preview_job == null and pending_preview == null);
+    try std.testing.expect(!previewPending());
+    try std.testing.expectEqual(@as(usize, 1), preview_test.started.load(.monotonic));
+    try std.testing.expectEqual(@as(usize, 0), waveform.len);
+    // Starting again must not retain stale requests or a joined thread handle.
+    try std.testing.expect(spawnPreview("latest.wav", preview_test.build));
+    while (previewPending()) pollPreview();
+    try std.testing.expectEqual(@as(f32, 0.75), waveform.bins[0].peak);
+    try std.testing.expect(!preview_test.skipped_started.load(.acquire));
 }
 
 extern fn test_refill_worker() c_int;

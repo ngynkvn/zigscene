@@ -108,6 +108,14 @@ those bins at display resolution and caches their geometry in a texture. Playbac
 progress and seeking draw over that cache; ordinary frames do not rescan the
 track. Track revision and display dimensions invalidate the cache.
 
+Native preview generation runs at most one background decode, with one pending
+request for the newest track. Switching tracks replaces the pending path and
+discards the active job's result once it finishes; obsolete queued tracks are
+never decoded. The render thread joins completed workers before starting the
+next request. Shutdown drops the pending request and joins the active worker.
+The whole-file decoder is not cancellable, so a new preview (or shutdown) can
+wait for that one decode to finish. Browser builds generate previews inline.
+
 ## Lua boundary
 
 The public C ABI is in [`lua_scene.h`](src/scripting/lua_scene.h). Zig sees an
