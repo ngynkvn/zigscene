@@ -45,7 +45,7 @@ Each `App.frame`:
 
 1. Applies volume (and refills browser playback), then processes input and resizes the
    render texture if necessary.
-2. Drains up to four fixed audio blocks and advances the motion envelope.
+2. Takes up to four recent fixed audio blocks and advances the motion envelope.
 3. Builds a Lua context from the latest analysis and input, polls any watched
    script, runs update/draw under protection, and commits valid settings changes.
 4. Advances built-in visualizer history when built-in rendering is enabled.
@@ -120,11 +120,17 @@ File analysis uses raylib's mixed-audio callback. Live capture uses a thin C
 miniaudio adapter; `capture.zig` bridges it into Zig. `SampleQueue` transfers
 stereo PCM into fixed 1,024-frame blocks so device callbacks do not execute FFT,
 GUI, Lua, or GPU work. Switching sources resets analysis state. The render
-thread bounds its analysis work to four blocks per frame. Oversized callbacks
+thread bounds its analysis work to four blocks per frame, dropping older whole
+blocks when it falls behind and preserving partial blocks for the next frame. Oversized callbacks
 retain only the newest queue-capacity frames; wrapped copies use at most two
 contiguous segments on submission and consumption.
 
-The live waveform, FFT, RMS and beat state describe the latest analyzed block.
+The live waveform and FFT describe the latest analyzed block. RMS is the peak
+block RMS in the current render frame's batch so brief hits are not overwritten
+by a quieter block. Beat events accumulate across that batch and trigger on
+threshold crossings, with a cooldown, rather than repeatedly during sustained
+loud passages. Seeking clears queued PCM and analysis history. If callbacks stop,
+waveform, FFT, RMS and beat history expire together after 120 ms.
 Motion applies attack/release smoothing, gain/compression and an exponential beat
 pulse. Lua gets copies of these values in reused Lua tables, including smoothed
 mono samples and the first half of the linear FFT magnitude array. Lua never

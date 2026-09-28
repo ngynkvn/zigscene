@@ -16,7 +16,6 @@ const Renderer = @import("shader/shader.zig").Renderer;
 const Highlight = @import("graphics/Highlight.zig");
 const Motion = @import("graphics/Motion.zig");
 const ScriptScene = @import("scripting/Scene.zig");
-const audio_hold_seconds: f32 = 0.12;
 const Viewport = graphics.Viewport;
 /// Time constant for the scene sliding clear of the side panel.
 const viewport_slide_seconds: f32 = 0.12;
@@ -30,7 +29,6 @@ renderer: Renderer,
 elapsed: f32 = 0,
 /// Animated left inset of the scene viewport, in window pixels.
 scene_left: f32 = 0,
-seconds_since_audio: f32 = 0,
 motion: Motion = .{},
 halo: graphics.Halo = .{},
 wave_bars: graphics.WaveFormBar = .{},
@@ -80,8 +78,8 @@ pub fn frame(self: *App) void {
     self.audio.update();
     @import("gui/theme.zig").updateScale();
     if (input_mod.process(&self.input, &self.audio, &self.script)) |size| self.renderer.resize(size.width, size.height);
-    if (processor.update()) self.seconds_since_audio = 0 else self.seconds_since_audio += dt;
-    self.motion.update(dt, if (self.seconds_since_audio < audio_hold_seconds) processor.rms_energy else 0, processor.on_beat);
+    _ = processor.update(dt);
+    self.motion.update(dt, processor.rms_energy, processor.on_beat);
     for (&self.spectrum, processor.curr_fft[0..self.spectrum.len]) |*value, frequency| value.* = frequency.magnitude() / @as(f32, @floatFromInt(Config.Audio.buffer_size));
     const viewport = self.updateViewport(dt);
     const mouse = rl.GetMousePosition();

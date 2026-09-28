@@ -52,6 +52,8 @@ pub fn seek(seconds: f32) void {
     defer unlock();
     if (!hasFile() or !std.math.isFinite(seconds)) return;
     const was_playing = rl.IsMusicStreamPlaying(music);
+    // Ignore callbacks from the old position while the decoder is repositioned.
+    processor.selectSource(.none);
     // raylib's SeekMusicStream leaves frameCursorPos at the old position.
     // Reset the stream first, while its buffers are marked empty, then pause
     // before decoding the target. This also keeps paused seeks paused.
@@ -60,6 +62,7 @@ pub fn seek(seconds: f32) void {
     const last_frame = @max(0, rl.GetMusicTimeLength(music) - 1 / @as(f32, @floatFromInt(music.stream.sampleRate)));
     rl.SeekMusicStream(music, std.math.clamp(seconds, 0, last_frame));
     rl.UpdateMusicStream(music);
+    processor.selectSource(.file);
     if (was_playing) rl.ResumeMusicStream(music);
 }
 
@@ -440,7 +443,18 @@ test "seeking after playback resets the buffer cursor and preserves pause" {
     }
     pause();
     try std.testing.expect(GetMusicTimePlayed() > 0.075);
+    processor.selectSource(.file);
+    // Seed both displayed analysis and pending PCM from the old position.
+    var old_audio: [@import("../core/config.zig").Audio.buffer_size * 2]f32 = @splat(0.5);
+    processor.audioStreamCallback(&old_audio, @intCast(old_audio.len / 2));
+    try std.testing.expect(processor.update(0));
+    try std.testing.expect(processor.rms_energy > 0);
+    processor.audioStreamCallback(&old_audio, @intCast(old_audio.len / 2));
     seek(4);
+    try std.testing.expectEqual(@as(f32, 0), processor.rms_energy);
+    try std.testing.expect(!processor.update(0));
+    for (processor.curr_buffer) |value| try std.testing.expectEqual(@as(f32, 0), value);
+    for (processor.curr_fft) |value| try std.testing.expectEqual(@as(f32, 0), value.magnitude());
     try std.testing.expect(!IsMusicStreamPlaying());
     try std.testing.expectApproxEqAbs(@as(f32, 4), GetMusicTimePlayed(), 0.001);
     seek(2);

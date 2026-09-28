@@ -148,7 +148,7 @@ Drawing pixels are independent of UI scale.
 | --- | --- |
 | `ctx.audio.samples` | 1-based array of 1,024 smoothed mono waveform samples, clamped to −2…2; affected by wave strength/smoothing |
 | `ctx.audio.spectrum` | 1-based array of 512 linear FFT magnitudes, `abs(FFT) / 1024`; first bin is DC; not decibels or log-spaced |
-| `ctx.audio.rms` | RMS of the most recently analyzed stereo block |
+| `ctx.audio.rms` | Peak stereo block RMS in this render frame's analysis batch; preserves brief hits |
 | `ctx.audio.energy` | Smoothed/compressed motion energy, 0…1.5 |
 | `ctx.audio.beat` | Boolean: a beat was detected in this analysis frame |
 | `ctx.audio.pulse` | Beat envelope, 0…1, decaying with the configured beat decay |
@@ -165,8 +165,10 @@ Drawing pixels are independent of UI scale.
 ### Reading context safely
 
 Audio arrays reflect the latest analyzed block, not the full track or the seek
-waveform. They retain that block when playback pauses; energy and pulse still
-decay. Do not assume that one analysis block corresponds to one rendering frame.
+waveform. Silent playback callbacks drive them toward zero when paused; if
+callbacks stop entirely, arrays and RMS clear after 120 ms. Seeking resets
+analysis immediately. Energy and pulse decay with their configured smoothing.
+Do not assume that one analysis block corresponds to one rendering frame.
 The FFT uses the mixed/captured stream; bin spacing depends on the device sample
 rate, which is not currently exposed by this API.
 
