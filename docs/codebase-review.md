@@ -1,7 +1,9 @@
 # Codebase review and feature opportunities
 
 Reviewed 2026-09-29 against the current working tree, including the existing audio changes.
-The implementation change in this pass is the compact UI; the items below are follow-up recommendations.
+The compact UI, recommendations 1–4, and all three fixes below are implemented
+for v0.2.0. Recommendations 5–8 remain follow-ups. The tables retain the original
+review rationale; see the [user guide](usage.md#explore-and-save-a-look) for shipped behavior.
 
 The review covers the active application in `src`, Zig/C audio and Lua boundaries,
 shader and scene sources, tests, build/dependency adapters, CI/release workflows,
@@ -24,7 +26,10 @@ These support substantial improvements without replacing the renderer or audio a
 Source locations: [session transitions](../src/audio/Session.zig),
 [stream loading and preview jobs](../src/audio/playback.zig),
 [vector helpers](../src/ext/vector.zig).
-These findings are based on control-flow inspection; this pass did not change those modules.
+These findings were addressed with candidate-first audio loading, cooperative
+preview cancellation between decoder chunks, and corrected vector comparisons.
+Regression tests cover failed replacement loads, worker cancellation, and equality.
+Decoder open/fallback library calls themselves cannot be interrupted mid-call.
 
 ## Recommended feature sequence
 
@@ -76,10 +81,9 @@ Dimensions are logical UI units. Control typography, the 18-unit slider hit area
 resize grips, and the waveform seek surface remain available. The Show shortcut
 hint now matches the existing `2` key; Hide remains `1`.
 
-Validation: `zig fmt --check src`, `zig build`, `zig build check` (99 tests), and
-`zig build release-build` (native macOS and Windows cross-build). The native app's
-Shape and Lua Scene layouts were visually inspected at the default window size,
-and scrolling to the final layer card was verified. Automated clicks/keypresses did
-not activate the GLFW controls reliably, so interactive click/drag and small-window
-visual checks remain a manual validation limitation. Geometry and interaction unit
-tests passed. No live capture hardware or browser runtime testing was performed.
+Validation for v0.2.0: formatting, native build, 106 passing tests (one device-clock
+integration test skipped locally), native/macOS and Windows release builds, and a
+web build passed. Rendered all editor tabs at 1024 × 768 and 640 × 480, plus 150%
+UI scale, using the smoke harness. Automated native clicks/keypresses did not
+reliably activate GLFW controls, so end-to-end input verification remains a manual
+validation limitation. No live capture hardware or browser runtime testing was performed.

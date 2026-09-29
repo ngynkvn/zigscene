@@ -1,7 +1,7 @@
 .{
     .name = .zigscene,
 
-    .version = "0.0.0",
+    .version = "0.2.0",
     .fingerprint = 0x4c367c2295c0e4f5,
 
     .minimum_zig_version = "0.16.0",
