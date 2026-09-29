@@ -72,21 +72,16 @@ pub var filename: []u8 = fnbuff[0..0];
 pub var waveform: WaveformPreview = .{};
 
 pub fn loadFile(path: []const u8) bool {
+    // Validate first: a bad drop must not destroy the active stream or preview.
+    const path_z = std.heap.page_allocator.dupeZ(u8, path) catch return false;
+    defer std.heap.page_allocator.free(path_z);
+    const candidate = rl.LoadMusicStream(path_z.ptr);
+    if (!rl.IsMusicValid(candidate)) return false;
     stopWorker();
     if (rl.IsMusicValid(music)) rl.UnloadMusicStream(music);
+    music = candidate;
     abandonPreview();
     waveform.clear();
-    const path_z = std.heap.page_allocator.dupeZ(u8, path) catch {
-        music = .{};
-        filename = fnbuff[0..0];
-        return false;
-    };
-    defer std.heap.page_allocator.free(path_z);
-    music = rl.LoadMusicStream(path_z.ptr);
-    if (!rl.IsMusicValid(music)) {
-        filename = fnbuff[0..0];
-        return false;
-    }
     const cfilename = rl.GetFileName(path_z.ptr);
     const clen = @min(std.mem.len(cfilename), 160);
     @memcpy(fnbuff[0..clen], cfilename[0..clen]);
@@ -109,7 +104,15 @@ extern fn zigscene_preview_read(decoder: *PreviewDecoder, out: [*]f32, capacity:
 extern fn zigscene_preview_close(decoder: *PreviewDecoder) void;
 
 /// Common formats decode in fixed chunks; other raylib formats retain their fallback.
+const Cancellation = std.atomic.Value(bool);
 fn buildWaveform(path: [*:0]const u8, out: *WaveformPreview) void {
+    buildCancelable(path, out, null);
+}
+fn cancelled(cancel: ?*const Cancellation) bool {
+    return if (cancel) |flag| flag.load(.acquire) else false;
+}
+fn buildCancelable(path: [*:0]const u8, out: *WaveformPreview, cancel: ?*const Cancellation) void {
+    if (cancelled(cancel)) return;
     const extension = std.fs.path.extension(std.mem.span(path));
     const kind: ?c_int = if (std.ascii.eqlIgnoreCase(extension, ".mp3")) 0 else if (std.ascii.eqlIgnoreCase(extension, ".wav")) 1 else if (std.ascii.eqlIgnoreCase(extension, ".ogg")) 2 else null;
     if (if (native) kind else null) |format| {
@@ -121,14 +124,14 @@ fn buildWaveform(path: [*:0]const u8, out: *WaveformPreview) void {
         var builder = WaveformPreview.Builder.init(out, std.heap.page_allocator, frames, channels, rate) catch return;
         defer builder.deinit();
         var samples: [8192]f32 = undefined;
-        while (builder.frames < frames) {
+        while (builder.frames < frames and !cancelled(cancel)) {
             const count = zigscene_preview_read(decoder, &samples, samples.len);
             if (count == 0) break;
             builder.append(samples[0 .. @as(usize, count) * channels]);
         }
         return;
     }
-    buildWaveformFallback(path, out);
+    if (!cancelled(cancel)) buildWaveformFallback(path, out);
 }
 
 fn buildWaveformFallback(path: [*:0]const u8, out: *WaveformPreview) void {
@@ -149,7 +152,7 @@ fn buildWaveformFallback(path: [*:0]const u8, out: *WaveformPreview) void {
 
 const PreviewRequest = struct {
     path: [:0]u8,
-    build: *const fn ([*:0]const u8, *WaveformPreview) void,
+    build: *const fn ([*:0]const u8, *WaveformPreview, ?*const Cancellation) void,
 
     fn deinit(request: PreviewRequest) void {
         std.heap.page_allocator.free(request.path);
@@ -163,10 +166,11 @@ const PreviewJob = struct {
     request: PreviewRequest,
     thread: std.Thread = undefined,
     abandoned: bool = false,
+    cancel: Cancellation = .init(false),
     preview: WaveformPreview = .{},
 
     fn run(job: *PreviewJob) void {
-        job.request.build(job.request.path.ptr, &job.preview);
+        job.request.build(job.request.path.ptr, &job.preview, &job.cancel);
         job.done.store(true, .release);
     }
 
@@ -182,7 +186,7 @@ var pending_preview: ?PreviewRequest = null;
 
 fn startPreview(path: [:0]const u8) void {
     if (can_spawn) {
-        if (spawnPreview(path, buildWaveform)) return;
+        if (spawnPreview(path, buildCancelable)) return;
         // Never start a synchronous decode alongside an abandoned worker.
         if (preview_job != null) {
             std.debug.print("Waveform preview unavailable for this track.\n", .{});
@@ -193,7 +197,7 @@ fn startPreview(path: [:0]const u8) void {
     buildWaveform(path.ptr, &waveform);
 }
 
-fn spawnPreview(path: [:0]const u8, build: *const fn ([*:0]const u8, *WaveformPreview) void) bool {
+fn spawnPreview(path: [:0]const u8, build: *const fn ([*:0]const u8, *WaveformPreview, ?*const Cancellation) void) bool {
     abandonPreview();
     const request: PreviewRequest = .{
         .path = std.heap.page_allocator.dupeZ(u8, path) catch return false,
@@ -225,7 +229,10 @@ fn launchPreview(request: PreviewRequest) bool {
 fn abandonPreview() void {
     if (pending_preview) |request| request.deinit();
     pending_preview = null;
-    if (preview_job) |job| job.abandoned = true;
+    if (preview_job) |job| {
+        job.abandoned = true;
+        job.cancel.store(true, .release);
+    }
 }
 
 fn stopPreview() void {
@@ -255,7 +262,7 @@ pub fn pollPreview() void {
         pending_preview = null;
         if (!launchPreview(request)) {
             // The previous worker has been joined, so the fallback is also bounded.
-            request.build(request.path.ptr, &waveform);
+            request.build(request.path.ptr, &waveform, null);
             request.deinit();
         }
     }
@@ -301,7 +308,7 @@ const preview_test = struct {
     var started = std.atomic.Value(usize).init(0);
     var skipped_started = std.atomic.Value(bool).init(false);
 
-    fn build(path: [*:0]const u8, out: *WaveformPreview) void {
+    fn build(path: [*:0]const u8, out: *WaveformPreview, _: ?*const Cancellation) void {
         _ = started.fetchAdd(1, .monotonic);
         if (std.mem.eql(u8, std.mem.span(path), "skipped.wav")) skipped_started.store(true, .release);
         while (!release.load(.acquire)) std.atomic.spinLoopHint();
@@ -441,6 +448,10 @@ test "seeking after playback resets the buffer cursor and preserves pause" {
         if (GetMusicTimePlayed() > 0.075) break;
         try std.Io.sleep(std.testing.io, .fromMilliseconds(10), .awake);
     }
+    const previous_music = music;
+    try std.testing.expect(!loadFile(".zig-cache/missing-track-for-test.wav"));
+    try std.testing.expectEqual(previous_music.stream.buffer, music.stream.buffer);
+    try std.testing.expect(IsMusicStreamPlaying());
     pause();
     try std.testing.expect(GetMusicTimePlayed() > 0.075);
     processor.selectSource(.file);
@@ -514,4 +525,16 @@ test "streaming WAV preview matches raylib decoding and handles missing files" {
     try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "preview.wav", .data = "invalid wave" });
     buildWaveform(path, &actual);
     try std.testing.expectEqual(@as(usize, 0), actual.len);
+}
+
+test "preview cancellation reaches the worker before shutdown joins" {
+    if (!can_spawn) return;
+    const Probe = struct {
+        fn build(_: [*:0]const u8, _: *WaveformPreview, cancel: ?*const Cancellation) void {
+            while (!cancelled(cancel)) std.atomic.spinLoopHint();
+        }
+    };
+    try std.testing.expect(spawnPreview("cancel.wav", Probe.build));
+    stopPreview();
+    try std.testing.expect(preview_job == null);
 }

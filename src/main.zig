@@ -63,6 +63,7 @@ test "capture selection survives device reorder and detects removal" {
 }
 
 test "root" {
+    _ = @import("ext/vector.zig");
     _ = @import("audio/playback.zig");
     _ = @import("audio/Session.zig");
     _ = @import("audio/WaveformPreview.zig");
