@@ -58,6 +58,14 @@ No Lua runs on audio/device threads. `destroy` closes Lua and restores its
 settings, saves native preferences, stops audio, releases the renderer and UI
 caches, then closes raylib.
 
+The native raylib backend rotates twelve geometry upload buffers. Scene/UI
+boundaries flush the batch several times per frame; rotating avoids immediately
+rewriting a buffer still in use by the GPU. The web backend retains raylib's
+default buffer count. Waveform and spectrum colors are converted once per frame
+and reused across their samples/columns, including hover tinting. The
+[scene benchmark](docs/development.md#profiling-and-diagnostics) compares the
+native buffer configuration with a single buffer while preserving scene detail.
+
 ## Module map
 
 ### Application and settings

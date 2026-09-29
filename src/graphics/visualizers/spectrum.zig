@@ -20,14 +20,17 @@ pub const FFTSpectrum = struct {
         if (bins < 2) return;
         const columns: usize = @intFromFloat(@max(1, width / column_spacing));
         const bar_width = @max(1, width / @as(f32, @floatFromInt(columns)) - 1);
+        const hsv = @import("../../ext/color.zig").Color.hsv.vec3;
+        const tips = focus.tint(.spectrum, hsv(Config.color1).into());
+        const body = focus.tint(.spectrum, hsv(Config.color2).into());
         for (0..columns) |column| {
             const x = @as(f32, @floatFromInt(column)) * width / @as(f32, @floatFromInt(columns));
             const magnitude = columnMagnitude(spectrum[0..bins], column, columns);
             const raw = @sqrt(@max(0, magnitude) / @as(f32, @floatFromInt(spectrum.len))) * Config.gain;
             const y = Config.height * (raw / (1 + raw));
             const py = floor - y - 5;
-            rl.DrawRectangleRec(.{ .x = x, .y = py, .width = bar_width, .height = 2 }, focus.tint(.spectrum, @import("../../ext/color.zig").Color.hsv.vec3(Config.color1).into()));
-            rl.DrawRectangleRec(.{ .x = x, .y = py + 12, .width = bar_width, .height = @max(0, y - 7) }, focus.tint(.spectrum, @import("../../ext/color.zig").Color.hsv.vec3(Config.color2).into()));
+            rl.DrawRectangleRec(.{ .x = x, .y = py, .width = bar_width, .height = 2 }, tips);
+            rl.DrawRectangleRec(.{ .x = x, .y = py + 12, .width = bar_width, .height = @max(0, y - 7) }, body);
         }
     }
 

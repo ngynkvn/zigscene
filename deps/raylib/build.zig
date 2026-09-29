@@ -11,6 +11,10 @@ pub fn build(b: *std.Build) !void {
     const libraylib = raylib.artifact("raylib");
     libraylib.step.name = "Compile Raylib";
 
+    // The scene, shader and UI scissors flush several times per frame. Rotating
+    // upload buffers avoids rewriting a VBO that the GPU is still consuming.
+    if (target.result.os.tag != .emscripten) libraylib.root_module.addCMacro("RL_DEFAULT_BATCH_BUFFERS", "12");
+
     b.installArtifact(libraylib);
     libraylib.root_module.addCMacro("SUPPORT_FILEFORMAT_FLAC", "1");
     // SOURCE: https://github.com/Not-Nik/raylib-zig/blob/c191e12e7c50e5dc2b1addd1e5dbd16bd405d2b5/build.zig#L119

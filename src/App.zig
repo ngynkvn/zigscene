@@ -189,21 +189,23 @@ fn renderBuiltin(self: *App, viewport: Viewport, center: rl.Vector2, focus: High
         defer context.end();
         const lines = Highlight.Element.wave_lines.visible();
         const bars = Highlight.Element.wave_bars.visible();
+        const line_style = graphics.WaveFormLine.Style.init(focus);
+        const bar_style = graphics.WaveFormBar.Style.init(focus);
         // The shorter bars stand in front of the spectrum unless it is hovered.
         const spectrum_on_top = focus.selected(.spectrum);
         if (Highlight.Element.spectrum.visible() and !spectrum_on_top) graphics.FFTSpectrum.render(floor, width, processor.curr_fft, focus);
         if (lines or bars) for (processor.curr_buffer, processor.curr_fft, 0..) |value, frequency, i| {
             if (lines) {
-                graphics.WaveFormLine.render(.{ .y = center.y - 80 }, width, i, value, focus);
+                graphics.WaveFormLine.render(.{ .y = center.y - 80 }, width, i, value, line_style);
                 graphics.WaveFormLine.render(
                     .{ .y = center.y * 2 },
                     width,
                     i,
                     frequency.magnitude() / @as(f32, @floatFromInt(processor.curr_fft.len)) * 1.2,
-                    focus,
+                    line_style,
                 );
             }
-            if (bars) self.wave_bars.render(floor, width, i, value, focus);
+            if (bars) self.wave_bars.render(floor, width, i, value, bar_style);
         };
         if (Highlight.Element.spectrum.visible() and spectrum_on_top) graphics.FFTSpectrum.render(floor, width, processor.curr_fft, focus);
     }
