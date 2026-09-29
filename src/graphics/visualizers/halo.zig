@@ -9,7 +9,8 @@ pub const Halo = struct {
     const bands = 96;
     const first_fft_bin = 2;
     const fft_bins_per_band = 3;
-    const level_smoothing_seconds: f32 = 0.09;
+    const level_attack_seconds: f32 = 0.012;
+    const level_release_seconds: f32 = 0.09;
     const max_frame_dt_seconds: f32 = 0.1;
     levels: [bands]f32 = @splat(0),
     phase: f32 = 0,
@@ -17,13 +18,14 @@ pub const Halo = struct {
     pub fn update(self: *Halo, dt_seconds: f32, spectrum: []const Complex) void {
         const dt = std.math.clamp(dt_seconds, 0, max_frame_dt_seconds);
         self.phase = @mod(self.phase + dt * Config.spin, std.math.tau);
-        const blend = 1 - @exp(-dt / level_smoothing_seconds);
+        const attack = 1 - @exp(-dt / level_attack_seconds);
+        const release = 1 - @exp(-dt / level_release_seconds);
         for (&self.levels, 0..) |*level, i| {
             const bin = first_fft_bin + i * fft_bins_per_band;
             if (bin >= spectrum.len) break;
             const magnitude = spectrum[bin].magnitude() / @as(f32, @floatFromInt(spectrum.len));
             const target = std.math.clamp(@sqrt(magnitude) / (1 + @sqrt(magnitude)), 0, 1);
-            level.* += (target - level.*) * blend;
+            level.* += (target - level.*) * (if (target > level.*) attack else release);
         }
     }
 
@@ -53,3 +55,17 @@ pub const Halo = struct {
         rl.DrawLineEx(previous_tip, first_tip, if (focus.selected(.halo)) 2 else 1, focus.tint(.halo, hsv(.{ .x = Config.hue, .y = Config.saturation, .z = Config.brightness * 0.55 }).into()));
     }
 };
+
+test "halo reaches a hit promptly and retains a smooth decay" {
+    var halo: Halo = .{};
+    var spectrum: [1024]Complex = @splat(.init(0, 0));
+    spectrum[2] = .init(1024, 0);
+    halo.update(0.016, &spectrum);
+    halo.update(0.016, &spectrum);
+    // Target is 0.5: at least 90% within 32 ms, instead of over 200 ms.
+    try std.testing.expect(halo.levels[0] >= 0.45);
+    const peak = halo.levels[0];
+    spectrum[2] = .init(0, 0);
+    halo.update(0.016, &spectrum);
+    try std.testing.expect(halo.levels[0] < peak and halo.levels[0] > peak * 0.8);
+}

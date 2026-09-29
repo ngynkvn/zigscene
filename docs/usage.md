@@ -109,6 +109,11 @@ active while dragging a slider; hidden layers stay hidden. **Show all / Hide
 all** in Scene controls the built-in layers. See [Lua scenes](scripting.md) to
 try a custom visualizer.
 
+Beats and sharp increases in audio level react on the first analyzed frame.
+**Swell rise** in Motion controls gradual increases; **Fall time** controls the
+decay. Waveform smoothing preserves the leading edge of hits. Holding **Space**
+still applies deliberately heavier waveform smoothing.
+
 ### Explore and save a look
 
 Open **Presets / 7**, enter a name, and choose **Save / replace**. Click a saved

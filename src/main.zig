@@ -77,6 +77,7 @@ test "root" {
     _ = @import("graphics/Highlight.zig");
     _ = @import("graphics/Viewport.zig");
     _ = @import("graphics/visualizers/spectrum.zig");
+    _ = @import("graphics/visualizers/halo.zig");
     _ = @import("gui.zig");
     _ = @import("gui/Cursor.zig");
     _ = @import("core/debug.zig");

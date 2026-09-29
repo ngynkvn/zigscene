@@ -48,7 +48,7 @@ pub const Motion = struct {
     pub const Scalars = [_]controls.Scalar{
         .{ "Energy gain", &energy_gain, .{ 0.2, 6.0 } },
         .{ "Compression", &compression, .{ 0.0, 8.0 } },
-        .{ "Rise time (s)", &attack_seconds, .{ 0.01, 0.5 } },
+        .{ "Swell rise (s)", &attack_seconds, .{ 0.01, 0.5 } },
         .{ "Fall time (s)", &release_seconds, .{ 0.03, 1.5 } },
         .{ "Beat decay (s)", &beat_decay_seconds, .{ 0.05, 1.0 } },
     };

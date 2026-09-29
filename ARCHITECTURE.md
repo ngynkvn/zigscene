@@ -139,8 +139,13 @@ by a quieter block. Beat events accumulate across that batch and trigger on
 threshold crossings, with a cooldown, rather than repeatedly during sustained
 loud passages. Seeking clears queued PCM and analysis history. If callbacks stop,
 waveform, FFT, RMS and beat history expire together after 120 ms.
-Motion applies attack/release smoothing, gain/compression and an exponential beat
-pulse. Lua gets copies of these values in reused Lua tables, including smoothed
+Sharp RMS increases bypass waveform and motion attack smoothing on their first
+analyzed frame, including before beat history has warmed up. Near-silent noise
+does not open this attack path; holding Space keeps the requested heavy waveform
+smoothing. Motion applies attack/release smoothing to gradual swells/decays,
+gain/compression and an exponential beat pulse. The halo uses a 12 ms attack and
+90 ms release instead of delaying rises with its decay filter.
+Lua gets copies of these values in reused Lua tables, including smoothed
 mono samples and the first half of the linear FFT magnitude array. Lua never
 receives pointers into the audio queue.
 

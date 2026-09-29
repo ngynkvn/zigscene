@@ -301,7 +301,7 @@ Jump to [window and interface](#window-and-interface), [audio and motion](#audio
 | `audio.wave_gain` | 0.1…3 |
 | `motion.energy_gain` | 0.2…6 |
 | `motion.compression` | 0…8 |
-| `motion.attack_seconds` | 0.01…0.5 |
+| `motion.attack_seconds` | 0.01…0.5; rise time for gradual swells; sharp onsets react immediately |
 | `motion.release_seconds` | 0.03…1.5 |
 | `motion.beat_decay_seconds` | 0.05…1 |
 
