@@ -327,6 +327,7 @@ Jump to [window and interface](#window-and-interface), [audio and motion](#audio
 | `halo.depth` | 0…220 |
 | `halo.spin` | −1…1 |
 | `halo.hue` | 0…359 |
+| `halo.saturation`, `halo.brightness` | 0…1 |
 | `bubble.ring_radius` | 0.1…8 |
 | `bubble.sphere_radius` | 0.1…4 |
 | `bubble.effect` | 0.1…1 |
@@ -336,7 +337,8 @@ Jump to [window and interface](#window-and-interface), [audio and motion](#audio
 ### HSV colors
 
 Each of `wave_lines.color1`, `wave_lines.color2`, `wave_bars.color1`,
-`wave_bars.color2`, `wave_bars.trail_color`, `bubble.color1`, and `bubble.color2`
+`wave_bars.color2`, `wave_bars.trail_color`, `bubble.color1`, `bubble.color2`,
+`spectrum.color1` (tips), and `spectrum.color2` (body)
 has `.h` (0…359), `.s` (0…1), and `.v` (0…1) components. These are HSV settings,
 whereas drawing functions receive RGBA arrays.
 

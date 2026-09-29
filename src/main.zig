@@ -29,6 +29,7 @@ fn webFrame() callconv(.c) void {
 }
 
 pub fn main(process_init: std.process.Init.Minimal) !void {
+    @import("editor/State.zig").initDefaults();
     if (builtin.os.tag == .emscripten) {
         web_app = App.create(.{});
         emscripten_set_main_loop(webFrame, 0, 1);
@@ -49,6 +50,8 @@ pub fn main(process_init: std.process.Init.Minimal) !void {
     const preferences = @import("core/preferences.zig");
     const preferences_path = preferences.path(process_init.environ, allocator) catch null;
     preferences.load(preferences_path);
+    @import("editor/Presets.zig").init(preferences_path);
+    defer @import("editor/Presets.zig").deinit();
     var app = App.create(options);
     app.preferences_path = preferences_path;
     defer app.destroy();
@@ -64,6 +67,8 @@ test "capture selection survives device reorder and detects removal" {
 
 test "root" {
     _ = @import("ext/vector.zig");
+    _ = @import("editor/State.zig");
+    _ = @import("editor/Presets.zig");
     _ = @import("audio/playback.zig");
     _ = @import("audio/Session.zig");
     _ = @import("audio/WaveformPreview.zig");

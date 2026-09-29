@@ -44,6 +44,7 @@ pub fn process(state: *State, audio: *AudioSession, script: *ScriptScene) ?Resiz
         if (last_audio_path) |path| audio.playFile(path);
     }
 
+    gui.editorShortcuts(script);
     if (!gui.editingValue()) {
         if (rl.isKeyPressed(.C)) state.camera.projection = switch (state.camera.projection) {
             rl.CAMERA_PERSPECTIVE => rl.CAMERA_ORTHOGRAPHIC,
@@ -68,6 +69,9 @@ pub fn process(state: *State, audio: *AudioSession, script: *ScriptScene) ?Resiz
         } else if (rl.isKeyPressed(.SIX)) {
             event.onTabChange(.settings);
         }
+
+        if (rl.isKeyPressed(.SEVEN)) event.onTabChange(.presets);
+        if (rl.isKeyPressed(.EIGHT)) event.onTabChange(.inspector);
 
         if (rl.isKeyPressed(.F)) {
             if (!rl.IsWindowState(rl.FLAG_BORDERLESS_WINDOWED_MODE)) rl.SetWindowPosition(0, 0);

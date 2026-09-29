@@ -16,7 +16,7 @@ typedef struct {
 } ZsSetting;
 typedef struct {
     char id[48], label[64];
-    float value, min, max;
+    float value, min, max, default_value;
 } ZsParam;
 typedef struct {
     float width, height, time, dt;

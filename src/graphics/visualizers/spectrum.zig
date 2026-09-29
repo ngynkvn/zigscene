@@ -26,8 +26,8 @@ pub const FFTSpectrum = struct {
             const raw = @sqrt(@max(0, magnitude) / @as(f32, @floatFromInt(spectrum.len))) * Config.gain;
             const y = Config.height * (raw / (1 + raw));
             const py = floor - y - 5;
-            rl.DrawRectangleRec(.{ .x = x, .y = py, .width = bar_width, .height = 2 }, focus.tint(.spectrum, rl.RAYWHITE));
-            rl.DrawRectangleRec(.{ .x = x, .y = py + 12, .width = bar_width, .height = @max(0, y - 7) }, focus.tint(.spectrum, rl.RED));
+            rl.DrawRectangleRec(.{ .x = x, .y = py, .width = bar_width, .height = 2 }, focus.tint(.spectrum, @import("../../ext/color.zig").Color.hsv.vec3(Config.color1).into()));
+            rl.DrawRectangleRec(.{ .x = x, .y = py + 12, .width = bar_width, .height = @max(0, y - 7) }, focus.tint(.spectrum, @import("../../ext/color.zig").Color.hsv.vec3(Config.color2).into()));
         }
     }
 

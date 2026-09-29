@@ -120,6 +120,23 @@ pub fn textWidth(value: [:0]const u8, size: f32) f32 {
     return rl.MeasureTextEx(fontForSize(size), value, size, 0).x;
 }
 
+/// Keep long names and control labels inside their allotted width.
+pub fn fitted(value: [:0]const u8, size: f32, available: f32, buffer: *[256]u8) [:0]const u8 {
+    if (textWidth(value, size) <= available) return value;
+    var length = @min(value.len, buffer.len - 4);
+    while (length > 0) {
+        // Do not split a UTF-8 sequence when shortening user-entered names.
+        while (length > 0 and value[length] & 0xc0 == 0x80) length -= 1;
+        @memcpy(buffer[0..length], value[0..length]);
+        @memcpy(buffer[length..][0..3], "...");
+        buffer[length + 3] = 0;
+        const result = buffer[0 .. length + 3 :0];
+        if (length == 0 or textWidth(result, size) <= available) return result;
+        length -= 1;
+    }
+    return "...";
+}
+
 pub fn centered(value: [:0]const u8, bounds: rl.Rectangle, size: f32, color: rl.Color) void {
     label(value, bounds.x + (bounds.width - textWidth(value, size)) / 2, bounds.y + (bounds.height - size) / 2, size, color);
 }
@@ -131,7 +148,8 @@ pub fn hovered(bounds: rl.Rectangle) bool {
 pub fn button(bounds: rl.Rectangle, value: [:0]const u8, selected: bool, enabled: bool) bool {
     const over = enabled and hovered(bounds);
     rounded(bounds, 7, if (selected) accent_soft else if (over) raised else surface);
-    centered(value, bounds, 14, if (!enabled) border else if (selected) accent else if (over) text else muted);
+    var label_buffer: [256]u8 = undefined;
+    centered(fitted(value, 14, bounds.width - 8, &label_buffer), bounds, 14, if (!enabled) border else if (selected) accent else if (over) text else muted);
     if (over) requestCursor(rl.MOUSE_CURSOR_POINTING_HAND);
     return over and rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT);
 }
@@ -170,4 +188,11 @@ pub fn valueBox(bounds: rl.Rectangle, buffer: [*]u8, value: *f32) bool {
     rl.SetMouseScale(1 / scale_factor, 1 / scale_factor);
     defer rl.SetMouseScale(1, 1);
     return rl.GuiValueBoxFloat(bounds, null, buffer, value, true) != 0;
+}
+
+/// Text entry uses logical mouse coordinates just like numeric fields.
+pub fn textBox(bounds: rl.Rectangle, buffer: []u8, editing: bool) bool {
+    rl.SetMouseScale(1 / scale_factor, 1 / scale_factor);
+    defer rl.SetMouseScale(1, 1);
+    return rl.GuiTextBox(bounds, buffer.ptr, @intCast(buffer.len), editing) != 0;
 }

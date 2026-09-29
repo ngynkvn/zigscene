@@ -171,17 +171,17 @@ fn renderScene(self: *App, viewport: Viewport, center: rl.Vector2, focus: Highli
 
 fn renderBuiltin(self: *App, viewport: Viewport, center: rl.Vector2, focus: Highlight) void {
     const width = viewport.width();
-    if (Config.Scene.halo) self.halo.render(center, self.motion.energy, self.motion.pulse, focus);
+    if (Highlight.Element.halo.visible()) self.halo.render(center, self.motion.energy, self.motion.pulse, focus);
     const floor = sceneFloor();
 
     {
         const context = tracy.traceNamed(@src(), "2d");
         defer context.end();
-        const lines = Config.Scene.wave_lines;
-        const bars = Config.Scene.wave_bars;
+        const lines = Highlight.Element.wave_lines.visible();
+        const bars = Highlight.Element.wave_bars.visible();
         // The shorter bars stand in front of the spectrum unless it is hovered.
         const spectrum_on_top = focus.selected(.spectrum);
-        if (Config.Scene.spectrum and !spectrum_on_top) graphics.FFTSpectrum.render(floor, width, processor.curr_fft, focus);
+        if (Highlight.Element.spectrum.visible() and !spectrum_on_top) graphics.FFTSpectrum.render(floor, width, processor.curr_fft, focus);
         if (lines or bars) for (processor.curr_buffer, processor.curr_fft, 0..) |value, frequency, i| {
             if (lines) {
                 graphics.WaveFormLine.render(.{ .y = center.y - 80 }, width, i, value, focus);
@@ -195,12 +195,12 @@ fn renderBuiltin(self: *App, viewport: Viewport, center: rl.Vector2, focus: High
             }
             if (bars) self.wave_bars.render(floor, width, i, value, focus);
         };
-        if (Config.Scene.spectrum and spectrum_on_top) graphics.FFTSpectrum.render(floor, width, processor.curr_fft, focus);
+        if (Highlight.Element.spectrum.visible() and spectrum_on_top) graphics.FFTSpectrum.render(floor, width, processor.curr_fft, focus);
     }
     {
         const context = tracy.traceNamed(@src(), "3d");
         defer context.end();
-        if (Config.Scene.bubble) graphics.Bubble.render(viewport, self.input.camera, self.input.rotation_offset, self.elapsed, self.motion.energy, self.motion.pulse, focus);
+        if (Highlight.Element.bubble.visible()) graphics.Bubble.render(viewport, self.input.camera, self.input.rotation_offset, self.elapsed, self.motion.energy, self.motion.pulse, focus);
     }
 }
 

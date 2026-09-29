@@ -39,8 +39,8 @@ pub const Halo = struct {
             const tip = rl.Vector2{ .x = center.x + direction.x * outer_radius, .y = center.y + direction.y * outer_radius };
             const color = hsv(.{
                 .x = Config.hue + @as(f32, @floatFromInt(i)) * 1.6 + energy * 80,
-                .y = 0.75,
-                .z = std.math.clamp(0.35 + level * 0.55 + pulse * 0.15, 0, 1),
+                .y = Config.saturation,
+                .z = Config.brightness * std.math.clamp(0.35 + level * 0.55 + pulse * 0.15, 0, 1),
             }).into();
             rl.DrawLineEx(inner, tip, 1.5 + energy * 2 + (if (focus.selected(.halo)) @as(f32, 1.5) else 0), focus.tint(.halo, color));
             if (i == 0) {
@@ -50,6 +50,6 @@ pub const Halo = struct {
             }
             previous_tip = tip;
         }
-        rl.DrawLineEx(previous_tip, first_tip, if (focus.selected(.halo)) 2 else 1, focus.tint(.halo, hsv(.{ .x = Config.hue, .y = 0.75, .z = 0.55 }).into()));
+        rl.DrawLineEx(previous_tip, first_tip, if (focus.selected(.halo)) 2 else 1, focus.tint(.halo, hsv(.{ .x = Config.hue, .y = Config.saturation, .z = Config.brightness * 0.55 }).into()));
     }
 };

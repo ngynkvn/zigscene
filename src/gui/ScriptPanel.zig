@@ -84,6 +84,7 @@ pub fn draw(scene: *Scene, view: rl.Rectangle, scroll: f32, slider: anytype) voi
         var number: [32]u8 = undefined;
         ui.label(std.fmt.bufPrintZ(&number, "{d:.2}", .{param.value}) catch "?", view.x + view.width - 58, y + 5, 12, ui.muted);
         _ = slider(4000 + i, ui.rect(view.x + 8, y + geometry.slider_top, view.width - 16, geometry.slider_height), &param.value, param.min, param.max, y >= view.y and y + geometry.slider_top + geometry.slider_height <= view.y + view.height, false);
+        if (y >= view.y and y + geometry.row_height <= view.y + view.height and ui.hovered(ui.rect(view.x, y, view.width, geometry.row_height)) and rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_RIGHT)) param.value = param.default_value;
         y += geometry.row_height;
     }
 }
