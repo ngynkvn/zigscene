@@ -148,6 +148,21 @@ track duration. On Linux, `/proc/self/status` exposes peak resident memory as
 `VmHWM`; its reported file length is zero, so read its contents rather than
 allocating from the file length.
 
+Use `zig build run -Dscene-bench=true -Doptimize=ReleaseSafe` to measure the
+built-in scene with synthetic PCM and no audible output or preference changes.
+It reports mean, p95, and p99 frame times with the panel open and hidden, comparing
+one upload buffer against the native renderer's twelve buffers in alternating
+order. Run without `-Doptimize` to check a Debug build. These measurements include
+presentation and depend on the display, GPU, and other running apps; they do not
+measure audio-to-display latency.
+
+On the development Mac at 1024 × 768, two alternating ReleaseSafe measurements
+with the Shape panel open averaged 3.29–3.32 ms with one upload buffer and
+1.76–1.77 ms with the native configuration. The p95 decreased from 6.27–6.37 ms
+to 4.27–4.32 ms. Both cases used the same color caching, scene geometry, and
+synthetic audio; this isolates the upload-buffer change rather than estimating
+performance on other machines.
+
 The [audio experiment](audio-experiment.md) includes an offline frame-analysis
 benchmark command and its original measurements. Those results describe that
 analysis pass, not overall application performance.
