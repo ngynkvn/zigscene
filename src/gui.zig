@@ -57,17 +57,17 @@ fn height() f32 {
 }
 fn panel() rl.Rectangle {
     const size = geometry.panelSize(config.Interface.panel_width, config.Interface.panel_height, width(), height());
-    return ui.rect(16, 88, size.width, size.height);
+    return ui.rect(geometry.margin, geometry.panel_top, size.width, size.height);
 }
 fn viewport() rl.Rectangle {
     const p = panel();
-    return ui.rect(p.x + 12, p.y + 72, p.width - 24, p.height - 108);
+    return ui.rect(p.x + 12, p.y + 60, p.width - 24, p.height - 84);
 }
 
 /// UI wheel gestures must not also move the scene camera.
 pub fn pointerOverUi() bool {
     return resize_mode != .none or @import("core/debug.zig").pointerOverUi() or
-        ui.hovered(ui.rect(16, 16, width() - 32, 58)) or
+        ui.hovered(headerBounds()) or
         ui.hovered(if (config.Interface.show_player) dockBounds() else expandPlayerBounds()) or
         (active_tab != .none and ui.hovered(ui.rect(panel().x, panel().y, panel().width + 6, panel().height + 6)));
 }
@@ -97,28 +97,32 @@ pub fn frame(audio: *AudioSession, script: *ScriptScene) void {
     drawPlayer(audio);
     if (config.Interface.show_player and !audio.hasFile() and !audio.captureActive() and width() >= 840) {
         const left = if (active_tab == .none) 16 else panel().x + panel().width + 24;
-        ui.centered("Drop an audio file to bring the scene to life", ui.rect(left, height() - 182, width() - left - 16, 24), 15, ui.muted);
+        ui.centered("Drop an audio file to bring the scene to life", ui.rect(left, dockBounds().y - 30, width() - left - 16, 24), 15, ui.muted);
     }
 }
 
+fn headerBounds() rl.Rectangle {
+    return ui.rect(geometry.margin, geometry.margin, width() - 2 * geometry.margin, geometry.header_height);
+}
+
 fn drawHeader() void {
-    ui.card(ui.rect(16, 16, width() - 32, 58));
+    ui.card(headerBounds());
     inline for (.{ 10, 22, 30, 17, 8 }, 0..) |h, i| {
-        ui.rounded(ui.rect(32 + @as(f32, @floatFromInt(i)) * 5, 45 - @as(f32, h) / 2, 3, h), 1.5, ui.accent);
+        ui.rounded(ui.rect(32 + @as(f32, @floatFromInt(i)) * 5, 36 - @as(f32, h) / 2, 3, h), 1.5, ui.accent);
     }
-    ui.label("zigscene", 68, 26, 22, ui.text);
-    ui.label("AUDIO / VISUAL", 69, 51, 9, ui.muted);
+    ui.label("zigscene", 68, 18, 21, ui.text);
+    ui.label("AUDIO / VISUAL", 69, 42, 9, ui.muted);
     const tabs = .{ .{ "Shape", Tab.scalar }, .{ "Color", Tab.color }, .{ "Motion", Tab.motion }, .{ "Scene", Tab.scene } };
     const tab_w: f32 = if (width() < 900) 64 else 88;
     const tab_x: f32 = if (width() < 900) 174 else 190;
     inline for (tabs, 0..) |tab, i| {
-        const bounds = ui.rect(tab_x + @as(f32, @floatFromInt(i)) * tab_w, 27, tab_w - 6, 36);
+        const bounds = ui.rect(tab_x + @as(f32, @floatFromInt(i)) * tab_w, 20, tab_w - 6, 32);
         if (ui.button(bounds, tab[0], active_tab == tab[1], true)) onTabChange(tab[1]);
     }
-    if (ui.button(ui.rect(width() - 184, 27, 62, 36), if (active_tab == .none) "Show / 1" else "Hide / 1", false, true)) {
+    if (ui.button(ui.rect(width() - 184, 20, 62, 32), if (active_tab == .none) "Show / 2" else "Hide / 1", false, true)) {
         onTabChange(if (active_tab == .none) .scalar else .none);
     }
-    if (ui.button(ui.rect(width() - 116, 27, 84, 36), "Settings", active_tab == .settings, true)) {
+    if (ui.button(ui.rect(width() - 116, 20, 84, 32), "Settings", active_tab == .settings, true)) {
         onTabChange(if (active_tab == .settings) .none else .settings);
     }
 }
@@ -129,7 +133,7 @@ fn contentHeight(tab: Tab) f32 {
         .motion => scalarHeight(MotionFields),
         .settings => settings_prefix + scalarHeight(SettingsFields) + 138,
         .color => colorHeight(),
-        .scene => scene_prefix + 48 + SceneItems.len * 76,
+        .scene => scene_prefix + geometry.scene_actions_height + SceneItems.len * geometry.scene_row_height,
         .audio => audio_content_height,
         .none => 0,
     };
@@ -153,10 +157,10 @@ fn elementAt(tab: Tab, view: rl.Rectangle, offset: f32, mouse: rl.Vector2, dragg
         .scene => blk: {
             if (!rl.CheckCollisionPointRec(mouse, view)) break :blk null;
             if (dragging != null) break :blk null;
-            var y = view.y - offset + scene_prefix + 48;
+            var y = view.y - offset + scene_prefix + geometry.scene_actions_height;
             inline for (SceneItems) |item| {
-                if (rl.CheckCollisionPointRec(mouse, ui.rect(view.x, y, view.width, 66))) break :blk item[3];
-                y += 76;
+                if (rl.CheckCollisionPointRec(mouse, ui.rect(view.x, y, view.width, geometry.scene_card_height))) break :blk item[3];
+                y += geometry.scene_row_height;
             }
             break :blk null;
         },
@@ -177,7 +181,7 @@ fn groupElementAt(comptime groups: anytype, view: rl.Rectangle, offset: f32, mou
     if (!rl.CheckCollisionPointRec(mouse, view)) return null;
     var y = view.y - offset;
     inline for (groups) |group| {
-        const group_height: f32 = 38 + group[1].len * 52;
+        const group_height: f32 = geometry.group_height + group[1].len * geometry.row_height;
         if (rl.CheckCollisionPointRec(mouse, ui.rect(view.x, y, view.width, group_height))) return group[2];
         y += group_height;
     }
@@ -196,8 +200,8 @@ fn drawPanel(script: *ScriptScene, audio: *AudioSession) void {
         .audio => .{ "Audio devices", "Choose where your sound comes from." },
         .none => unreachable,
     };
-    ui.label(title, p.x + 20, p.y + 16, 21, ui.text);
-    ui.label(subtitle, p.x + 20, p.y + 44, 13, ui.muted);
+    ui.label(title, p.x + 20, p.y + 12, 21, ui.text);
+    ui.label(subtitle, p.x + 20, p.y + 38, 13, ui.muted);
     const view = viewport();
     const content_h = contentHeight(active_tab);
     const max_scroll = @max(0, content_h - view.height);
@@ -366,15 +370,15 @@ fn resizePanel() void {
 
 fn scalarHeight(comptime groups: anytype) f32 {
     comptime var total: f32 = 0;
-    inline for (groups) |group| total += 38 + group[1].len * 52;
+    inline for (groups) |group| total += geometry.group_height + group[1].len * geometry.row_height;
     return total;
 }
 fn groupHeading(name: [:0]const u8, view: rl.Rectangle, y: f32) void {
     ui.label(name, view.x + 8, y + 8, 11, ui.accent);
-    rl.DrawLineEx(.{ .x = view.x + 8, .y = y + 29 }, .{ .x = view.x + view.width - 8, .y = y + 29 }, 1, ui.border);
+    rl.DrawLineEx(.{ .x = view.x + 8, .y = y + 23 }, .{ .x = view.x + view.width - 8, .y = y + 23 }, 1, ui.border);
 }
 fn rowVisible(y: f32, view: rl.Rectangle) bool {
-    return y >= view.y and y + 46 <= view.y + view.height;
+    return y >= view.y and y + geometry.slider_top + geometry.slider_height <= view.y + view.height;
 }
 
 fn drawScalars(comptime groups: anytype, view: rl.Rectangle, offset: f32) void {
@@ -382,7 +386,7 @@ fn drawScalars(comptime groups: anytype, view: rl.Rectangle, offset: f32) void {
     var id: usize = 0;
     inline for (groups) |group| {
         groupHeading(group[0], view, y);
-        y += 38;
+        y += geometry.group_height;
         inline for (group[1]) |scalar| {
             const name, const value, const range = scalar;
             const row_enabled = rowVisible(y, view);
@@ -411,9 +415,9 @@ fn drawScalars(comptime groups: anytype, view: rl.Rectangle, offset: f32) void {
                     }
                 }
             }
-            _ = slider(id, ui.rect(view.x + 8, y + 27, view.width - 16, 18), value, range[0], range[1], row_enabled, false);
+            _ = slider(id, ui.rect(view.x + 8, y + geometry.slider_top, view.width - 16, geometry.slider_height), value, range[0], range[1], row_enabled, false);
             controls.constrainScalar(scalar);
-            y += 52;
+            y += geometry.row_height;
             id += 1;
         }
     }
@@ -456,7 +460,7 @@ const ColorFields = .{
 };
 fn colorHeight() f32 {
     comptime var total: f32 = 0;
-    inline for (ColorFields) |group| total += 38 + group[1].len * 52;
+    inline for (ColorFields) |group| total += geometry.group_height + group[1].len * geometry.row_height;
     return total;
 }
 fn drawColors(view: rl.Rectangle) void {
@@ -464,7 +468,7 @@ fn drawColors(view: rl.Rectangle) void {
     var id: usize = 100;
     inline for (ColorFields) |group| {
         groupHeading(group[0], view, y);
-        y += 38;
+        y += geometry.group_height;
         inline for (group[1], 0..) |color, index| {
             const value = color[1];
             rl.DrawCircleV(.{ .x = view.x + 14, .y = y + 10 }, 6, rl.ColorFromHSV(value.*, 0.7, 1));
@@ -472,8 +476,8 @@ fn drawColors(view: rl.Rectangle) void {
             var buf: [32]u8 = undefined;
             const number = std.fmt.bufPrintZ(&buf, "{d:.0} deg", .{value.*}) catch unreachable;
             ui.label(number, view.x + view.width - 62, y + 3, 12, ui.muted);
-            _ = slider(id, ui.rect(view.x + 8, y + 27, view.width - 16, 18), value, 0, 359, rowVisible(y, view), true);
-            y += 52;
+            _ = slider(id, ui.rect(view.x + 8, y + geometry.slider_top, view.width - 16, geometry.slider_height), value, 0, 359, rowVisible(y, view), true);
+            y += geometry.row_height;
             id += 1;
         }
     }
@@ -497,13 +501,13 @@ fn drawScene(view: rl.Rectangle, script: *ScriptScene) void {
     if (ui.button(ui.rect(view.x + (view.width + 8) / 2, y, (view.width - 8) / 2, 34), "Hide all", false, actions_enabled)) {
         inline for (SceneItems) |item| item[2].* = false;
     }
-    y += 48;
+    y += geometry.scene_actions_height;
     inline for (SceneItems) |item| {
-        const bounds = ui.rect(view.x, y, view.width, 66);
-        const over = rowVisible(y, view) and ui.hovered(bounds) and ui.hovered(view);
+        const bounds = ui.rect(view.x, y, view.width, geometry.scene_card_height);
+        const over = y >= view.y and y + geometry.scene_card_height <= view.y + view.height and ui.hovered(bounds);
         ui.rounded(bounds, 8, if (over) ui.raised else ui.background);
-        ui.label(item[0], view.x + 12, y + 12, 15, if (item[2].*) ui.text else ui.muted);
-        ui.label(item[1], view.x + 12, y + 36, 11, ui.muted);
+        ui.label(item[0], view.x + 12, y + 10, 15, if (item[2].*) ui.text else ui.muted);
+        ui.label(item[1], view.x + 12, y + 32, 11, ui.muted);
         const toggle = ui.rect(view.x + view.width - 48, y + 15, 36, 20);
         ui.rounded(toggle, 10, if (item[2].*) ui.accent_soft else ui.border);
         rl.DrawCircleV(.{ .x = toggle.x + (if (item[2].*) @as(f32, 26) else 10), .y = toggle.y + 10 }, 6, if (item[2].*) ui.accent else ui.muted);
@@ -511,7 +515,7 @@ fn drawScene(view: rl.Rectangle, script: *ScriptScene) void {
             ui.requestCursor(rl.MOUSE_CURSOR_POINTING_HAND);
             if (rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT)) item[2].* = !item[2].*;
         }
-        y += 76;
+        y += geometry.scene_row_height;
     }
 }
 
@@ -536,7 +540,7 @@ pub fn sceneLeft() f32 {
 
 /// The player dock, in logical UI coordinates.
 pub fn dockBounds() rl.Rectangle {
-    return ui.rect(16, height() - 164, width() - 32, 148);
+    return ui.rect(geometry.margin, height() - geometry.margin - geometry.dock_height, width() - 2 * geometry.margin, geometry.dock_height);
 }
 
 fn expandPlayerBounds() rl.Rectangle {
@@ -562,7 +566,7 @@ fn drawPlayer(audio: *AudioSession) void {
     ui.beginScissor(ui.rect(text_x, dock.y + 10, dock.width - 104 - (if (audio.notice != null) @as(f32, 112) else if (file) @as(f32, 188) else 32), 24));
     if (audio.notice) |notice| {
         ui.label(notice, text_x, dock.y + 12, 14, rl.GetColor(0xffd28aff));
-    } else ui.label(title, text_x, dock.y + 12, 15, ui.text);
+    } else ui.label(title, text_x, dock.y + 10, 15, ui.text);
     rl.EndScissorMode();
     if (audio.notice != null and ui.button(ui.rect(width() - 212, dock.y + 8, 76, 26), "Dismiss", false, true)) audio.notice = null;
 
@@ -573,7 +577,7 @@ fn drawPlayer(audio: *AudioSession) void {
             ui.label(label, x + 8, dock.y + 14, 12, color);
         }
     }
-    const play = ui.rect(30, dock.y + 38, 104, 30);
+    const play = ui.rect(30, dock.y + 32, 104, 30);
     ui.rounded(play, 7, if (file) ui.accent_soft else ui.raised);
     const ink = if (file) ui.accent else ui.muted;
     if (audio.isFilePlaying()) {
@@ -588,22 +592,22 @@ fn drawPlayer(audio: *AudioSession) void {
         if (rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT)) audio.togglePlayback();
     }
     const capture_supported = builtin.os.tag != .emscripten;
-    if (ui.button(ui.rect(146, dock.y + 38, 132, 30), if (live) "Stop capture / M" else if (capture_supported) "Capture / M" else "Live unavailable", live, capture_supported)) audio.toggleCapture();
-    if (ui.button(ui.rect(286, dock.y + 38, 70, 30), "Devices", active_tab == .audio, capture_supported)) {
+    if (ui.button(ui.rect(146, dock.y + 32, 132, 30), if (live) "Stop capture / M" else if (capture_supported) "Capture / M" else "Live unavailable", live, capture_supported)) audio.toggleCapture();
+    if (ui.button(ui.rect(286, dock.y + 32, 70, 30), "Devices", active_tab == .audio, capture_supported)) {
         onTabChange(if (active_tab == .audio) .none else .audio);
         if (active_tab == .audio) audio.refreshCaptureDevices();
     }
-    ui.label("Volume", width() - 280, dock.y + 46, 13, ui.muted);
-    _ = slider(1001, ui.rect(width() - 222, dock.y + 44, 132, 18), &config.Audio.volume, 0, 1, true, false);
+    ui.label("Volume", width() - 280, dock.y + 40, 13, ui.muted);
+    _ = slider(1001, ui.rect(width() - 222, dock.y + 38, 132, 18), &config.Audio.volume, 0, 1, true, false);
     var volume_buffer: [16]u8 = undefined;
     const volume = std.fmt.bufPrintZ(&volume_buffer, "{d}%", .{@as(u32, @intFromFloat(config.Audio.volume * 100))}) catch unreachable;
-    ui.label(volume, width() - 74, dock.y + 46, 13, ui.text);
+    ui.label(volume, width() - 74, dock.y + 40, 13, ui.text);
     if (file) {
-        drawWaveformScrubber(audio, ui.rect(30, dock.y + 78, width() - 60, 56));
+        drawWaveformScrubber(audio, ui.rect(30, dock.y + 68, width() - 60, 44));
     } else {
-        ui.rounded(ui.rect(30, dock.y + 80, width() - 60, 54), 6, ui.background);
-        rl.DrawCircleV(.{ .x = 44, .y = dock.y + 107 }, 3, if (live) ui.accent else ui.muted);
-        ui.label(if (live) "Listening live. Drop a file to switch to playback." else "Drop an audio file anywhere to start listening.", 56, dock.y + 100, 13, if (live) ui.accent else ui.muted);
+        ui.rounded(ui.rect(30, dock.y + 68, width() - 60, 44), 6, ui.background);
+        rl.DrawCircleV(.{ .x = 44, .y = dock.y + 90 }, 3, if (live) ui.accent else ui.muted);
+        ui.label(if (live) "Listening live. Drop a file to switch to playback." else "Drop an audio file anywhere to start listening.", 56, dock.y + 83, 13, if (live) ui.accent else ui.muted);
     }
 }
 
@@ -713,11 +717,11 @@ test "hover selects the current scrolled group without leaking through clipped U
     const view = ui.rect(10, 100, 300, 300);
     try std.testing.expectEqual(@as(?Element, .wave_lines), elementAt(.scalar, view, 0, .{ .x = 30, .y = 110 }, null));
     try std.testing.expectEqual(@as(?Element, .wave_bars), elementAt(.scalar, view, 0, .{ .x = 30, .y = 220 }, null));
-    try std.testing.expectEqual(@as(?Element, .bubble), elementAt(.scalar, view, 284, .{ .x = 30, .y = 110 }, null));
-    try std.testing.expectEqual(@as(?Element, .halo), elementAt(.color, view, 478, .{ .x = 30, .y = 110 }, null));
-    try std.testing.expectEqual(@as(?Element, .spectrum), elementAt(.motion, view, 492, .{ .x = 30, .y = 110 }, null));
+    try std.testing.expectEqual(@as(?Element, .bubble), elementAt(.scalar, view, 236, .{ .x = 30, .y = 110 }, null));
+    try std.testing.expectEqual(@as(?Element, .halo), elementAt(.color, view, 398, .{ .x = 30, .y = 110 }, null));
+    try std.testing.expectEqual(@as(?Element, .spectrum), elementAt(.motion, view, 412, .{ .x = 30, .y = 110 }, null));
     try std.testing.expectEqual(@as(?Element, null), elementAt(.motion, view, 0, .{ .x = 30, .y = 110 }, null));
-    try std.testing.expectEqual(@as(?Element, null), elementAt(.scalar, view, 634, .{ .x = 30, .y = 110 }, null));
+    try std.testing.expectEqual(@as(?Element, null), elementAt(.scalar, view, 530, .{ .x = 30, .y = 110 }, null));
     try std.testing.expectEqual(@as(?Element, null), elementAt(.scalar, view, 0, .{ .x = 30, .y = 90 }, null));
     try std.testing.expectEqual(@as(?Element, null), elementAt(.scalar, view, 0, .{ .x = 30, .y = 410 }, null));
     try std.testing.expectEqual(@as(?Element, null), elementAt(.scalar, view, 0, .{ .x = 400, .y = 110 }, null));
@@ -727,7 +731,7 @@ test "scene hover excludes bulk actions and drag focus follows its owner" {
     const view = ui.rect(10, 100, 300, 300);
     try std.testing.expectEqual(@as(?Element, null), elementAt(.scene, view, 0, .{ .x = 30, .y = 120 }, null));
     try std.testing.expectEqual(@as(?Element, .wave_lines), elementAt(.scene, view, 0, .{ .x = 30, .y = 160 }, null));
-    try std.testing.expectEqual(@as(?Element, null), elementAt(.scene, view, 0, .{ .x = 30, .y = 218 }, null));
+    try std.testing.expectEqual(@as(?Element, null), elementAt(.scene, view, 0, .{ .x = 30, .y = 200 }, null));
     try std.testing.expectEqual(@as(?Element, .wave_bars), elementAt(.scene, view, 0, .{ .x = 30, .y = 230 }, null));
     try std.testing.expectEqual(@as(?Element, .wave_lines), elementAt(.scalar, view, 0, .{ .x = 900, .y = 600 }, 0));
     try std.testing.expectEqual(@as(?Element, .wave_lines), elementAt(.color, view, 0, .{ .x = 900, .y = 600 }, 100));

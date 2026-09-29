@@ -2,6 +2,7 @@
 const std = @import("std");
 const processor = @import("../audio/processor.zig");
 const config = @import("config.zig");
+const geometry = @import("../gui/geometry.zig");
 const ui = @import("../gui/theme.zig");
 const rl = @import("../raylib.zig");
 
@@ -41,11 +42,11 @@ pub fn record(timings: Timings) void {
 }
 
 fn badgeBounds() rl.Rectangle {
-    return ui.rect(ui.width() - 212, 88, 196, 30);
+    return ui.rect(ui.width() - 208, geometry.panel_top, 196, 30);
 }
 
 fn panelBounds() rl.Rectangle {
-    return ui.rect(@max(panel_margin, ui.width() - panel_width - panel_margin), 126, panel_width, panel_height);
+    return ui.rect(@max(panel_margin, ui.width() - panel_width - panel_margin), geometry.panel_top + 38, panel_width, panel_height);
 }
 
 pub fn pointerOverUi() bool {
