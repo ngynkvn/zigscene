@@ -176,18 +176,20 @@ test "a fresh hit reaches waveform and motion on its first analyzed frame" {
     Config.Audio.wave_gain = 1;
     Config.Motion.attack_seconds = 0.5;
     smoothing_held = false;
-    selectSource(.capture);
-    var motion: @import("../graphics/Motion.zig") = .{};
-    const hit: [N * channels]f32 = @splat(0.4);
-    submitCapture(&hit);
-    try std.testing.expect(update(1.0 / 144.0));
-    // First sound after loading has no beat-detector history yet.
-    try std.testing.expect(!on_beat);
-    motion.update(1.0 / 144.0, rms_energy, on_beat);
-    const level = rms_energy * Config.Motion.energy_gain;
-    const target = std.math.clamp(level / (1 + Config.Motion.compression * level), 0, 1.5);
-    try std.testing.expectApproxEqAbs(target, motion.energy, 0.00001);
-    for (curr_buffer) |value| try std.testing.expectApproxEqAbs(@as(f32, 0.4), value, 0.00001);
+    var hit: [N * channels]f32 = @splat(0.4);
+    for ([_]SampleQueue.Source{ .file, .capture }) |source| {
+        selectSource(source);
+        var motion: @import("../graphics/Motion.zig") = .{};
+        if (source == .file) audioStreamCallback(&hit, N) else submitCapture(&hit);
+        try std.testing.expect(update(1.0 / 144.0));
+        // First sound after loading has no beat-detector history yet.
+        try std.testing.expect(!on_beat);
+        motion.update(1.0 / 144.0, rms_energy, on_beat);
+        const level = rms_energy * Config.Motion.energy_gain;
+        const target = std.math.clamp(level / (1 + Config.Motion.compression * level), 0, 1.5);
+        try std.testing.expectApproxEqAbs(target, motion.energy, 0.00001);
+        for (curr_buffer) |value| try std.testing.expectApproxEqAbs(@as(f32, 0.4), value, 0.00001);
+    }
 
     selectSource(.capture);
     smoothing_held = true;
