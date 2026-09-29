@@ -200,8 +200,11 @@ paths. Booleans are saved as `0` or `1`. Unknown or malformed entries are ignore
 valid numbers are clamped to supported ranges. On Linux, an empty or relative
 `XDG_CONFIG_HOME` falls back to `~/.config`.
 
-To reset all saved preferences, close the app and move or remove `settings.conf`.
-The next launch uses defaults. **Reset UI size and panel** resets only the layout.
+Use **Reset all settings** at the top of **Settings / 6** to restore the original
+visual, audio, window, and layout defaults. It unloads the active Lua scene, resets
+the camera, and clears solo mode and edit history. Native builds save the reset
+immediately. Saved presets and swatches stay in your library, and the current
+audio source keeps playing. **Reset UI size and panel** resets only the layout.
 
 Lua-owned overrides are restored before saving, so they do not replace your
 preferences. UI edits do not rewrite a Lua source file. Script parameter sliders

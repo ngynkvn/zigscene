@@ -32,12 +32,32 @@ var active_slider: ?usize = null;
 var editing: ?usize = null;
 var editing_buffer: [128]u8 = @splat(0);
 var dragging_seek = false;
+var settings_reset_requested = false;
 const seek_id = 1000;
 const resize_id = 3000;
 const ResizeMode = enum { none, width, height, both };
 var resize_mode: ResizeMode = .none;
 var resize_origin: rl.Vector2 = .{};
 var resize_size: geometry.Size = .{ .width = 320, .height = 500 };
+
+/// Apply the reset between frames, before any controls or scripts run again.
+pub fn takeSettingsReset() bool {
+    const requested = settings_reset_requested;
+    settings_reset_requested = false;
+    return requested;
+}
+
+pub fn resetWorkspace() void {
+    editing = null;
+    active_slider = null;
+    dragging_seek = false;
+    resize_mode = .none;
+    scroll = 0;
+    saved_scroll = @splat(0);
+    scene_revision = null;
+    @import("graphics/Highlight.zig").solo = null;
+    StudioPanel.resetWorkspace();
+}
 
 pub fn onTabChange(next: Tab) void {
     if (active_tab == next) return;
@@ -327,10 +347,14 @@ const SettingsFields = [_]ScalarGroup{
         .{ "Master volume", &config.Audio.volume, .{ 0, 1 } },
     }, null },
 };
-const settings_prefix: f32 = 208;
+const settings_reset_height: f32 = 64;
+const settings_prefix: f32 = settings_reset_height + 208;
 
 fn drawSettings(view: rl.Rectangle) void {
-    const top = view.y - scroll;
+    const reset_y = view.y - scroll;
+    if (ui.button(ui.rect(view.x, reset_y, view.width, 32), "Reset all settings", false, reset_y >= view.y and reset_y + 32 <= view.y + view.height)) settings_reset_requested = true;
+    ui.label("Restores defaults. Keeps saved presets and swatches.", view.x + 4, reset_y + 40, 10, ui.muted);
+    const top = reset_y + settings_reset_height;
     groupHeading("FPS PRESETS  /  0 = UNLIMITED", view, top);
     const presets = [_]f32{ 0, 30, 60, 120, 144, 240 };
     for (presets, 0..) |fps, index| {
@@ -356,7 +380,7 @@ fn drawSettings(view: rl.Rectangle) void {
     }
     ui.label("Automatically fits smaller windows", view.x + 8, top + 186, 11, ui.muted);
     drawScalars(SettingsFields, view, settings_prefix);
-    const bottom = top + settings_prefix + scalarHeight(SettingsFields);
+    const bottom = reset_y + settings_prefix + scalarHeight(SettingsFields);
     if (ui.button(ui.rect(view.x, bottom, view.width, 32), if (config.Interface.show_fps) "FPS counter: On" else "FPS counter: Off", config.Interface.show_fps, bottom >= view.y and bottom + 32 <= view.y + view.height)) config.Interface.show_fps = !config.Interface.show_fps;
     if (ui.button(ui.rect(view.x, bottom + 42, view.width, 32), if (builtin.os.tag == .emscripten) "Always on top: Native only" else if (config.Window.always_on_top) "Always on top: On" else "Always on top: Off", config.Window.always_on_top, builtin.os.tag != .emscripten and bottom + 42 >= view.y and bottom + 74 <= view.y + view.height)) config.Window.always_on_top = !config.Window.always_on_top;
     if (ui.button(ui.rect(view.x, bottom + 84, view.width, 32), "Reset UI size and panel", false, bottom + 84 >= view.y and bottom + 116 <= view.y + view.height)) {

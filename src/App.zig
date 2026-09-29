@@ -73,6 +73,7 @@ fn applyOptions(self: *App, options: cli.Options) void {
 
 pub fn frame(self: *App) void {
     defer tracy.frameMarkNamed("zigscene");
+    if (gui.takeSettingsReset()) self.resetSettings();
     const frame_start = rl.rl.GetTime();
     const dt = rl.GetFrameTime();
     self.audio.update();
@@ -124,6 +125,15 @@ pub fn frame(self: *App) void {
     self.applyFpsLimit();
     self.applyAlwaysOnTop();
     self.elapsed += dt;
+}
+
+fn resetSettings(self: *App) void {
+    @import("editor/State.zig").resetAll(&self.script);
+    self.input = .{};
+    self.audio.endSeek();
+    processor.smoothing_held = false;
+    gui.resetWorkspace();
+    @import("core/preferences.zig").save(self.preferences_path);
 }
 
 fn applyAlwaysOnTop(self: *App) void {

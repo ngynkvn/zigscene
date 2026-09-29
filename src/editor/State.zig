@@ -97,6 +97,16 @@ pub fn resetPrefix(prefix: []const u8, scene: *Scene) void {
     }
 }
 
+/// Restore the startup defaults captured before preferences or Lua overrides.
+pub fn resetAll(scene: *Scene) void {
+    if (!initialized) return;
+    // Unload first so its saved baseline cannot overwrite the factory values.
+    scene.unload();
+    scene.auto_reload = true;
+    for (settings.entries, defaults) |entry, value| entry.set(value);
+    history.reset(scene);
+}
+
 test "history batches edits, branches redo, and excludes machine settings" {
     var scene: Scene = .{};
     const before = settings.snapshot();
@@ -162,4 +172,46 @@ test "history capacity discards oldest edits without losing redo" {
     try std.testing.expectEqual(@as(f64, 57), radius.get());
     for (0..100) |_| h.redo(&scene);
     try std.testing.expectEqual(@as(f64, 120), radius.get());
+}
+
+test "hard reset clears Lua overrides and history and persists factory defaults" {
+    const before = settings.snapshot();
+    const previous_defaults = defaults;
+    const was_initialized = initialized;
+    const previous_history = history;
+    defer {
+        for (settings.entries, before) |entry, value| entry.set(value.value);
+        defaults = previous_defaults;
+        initialized = was_initialized;
+        history = previous_history;
+    }
+    initDefaults();
+    var scene: Scene = .{};
+    defer scene.deinit();
+    for (settings.entries, defaults) |entry, value| entry.set(if (value == entry.max) entry.min else entry.max);
+    scene.loadExample(.palette);
+    try std.testing.expect(scene.runtime != null);
+    scene.auto_reload = false;
+    history.reset(&scene);
+    settings.entries[settings.find("bubble.ring_radius").?].set(3);
+    history.record(&scene);
+
+    resetAll(&scene);
+    try std.testing.expect(scene.runtime == null and !scene.canReload());
+    try std.testing.expect(scene.auto_reload);
+    try std.testing.expectEqual(@as(usize, 1), history.len);
+    history.undo(&scene);
+    history.redo(&scene);
+    scene.unload();
+    for (settings.entries, defaults, scene.owned) |entry, value, owned| {
+        try std.testing.expectEqual(value, entry.get());
+        try std.testing.expect(!owned);
+    }
+
+    const preferences = @import("../core/preferences.zig");
+    var buffer: [16384]u8 = undefined;
+    const saved = try preferences.encode(&buffer);
+    for (settings.entries) |entry| entry.set(entry.min);
+    preferences.decode(saved);
+    for (settings.entries, defaults) |entry, value| try std.testing.expectEqual(value, entry.get());
 }

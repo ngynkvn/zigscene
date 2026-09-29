@@ -20,6 +20,19 @@ var expanded_color: ?usize = 0;
 var collapsed: [3]bool = @splat(false);
 var notice: [:0]const u8 = "";
 var color_notice: [:0]const u8 = "";
+
+pub fn resetWorkspace() void {
+    text_editing = false;
+    name_buffer = initName();
+    search = @splat(0);
+    selected_preset = null;
+    selected_layer = 0;
+    expanded_color = 0;
+    collapsed = @splat(false);
+    notice = "";
+    color_notice = "";
+}
+
 const layers = [_]struct { name: [:0]const u8, prefix: []const u8, element: Element, enabled: *bool }{
     .{ .name = "Lines", .prefix = "wave_lines.", .element = .wave_lines, .enabled = &config.Scene.wave_lines },
     .{ .name = "Bars", .prefix = "wave_bars.", .element = .wave_bars, .enabled = &config.Scene.wave_bars },
