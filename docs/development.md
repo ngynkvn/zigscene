@@ -92,7 +92,10 @@ suite does not open a window or audio device. Raylib file-decoding tests disable
 its stdout trace logging because Zig uses stdout for its test-runner protocol.
 
 For visual or input changes, also run the app and check the affected controls,
-window sizes, and built-in/Lua scenes. CPU tests cannot verify GPU output.
+window sizes, and built-in/Lua scenes. CPU tests cannot verify GPU output. For a repeatable rendering pass, run
+`zig build run -Dui-smoke=true`. It renders all editor tabs at representative window
+sizes and UI scales into `.tmp/ui-review` without reading or writing preferences.
+This is a visual inspection aid, not an interaction test.
 
 CI runs Linux tests, native and Windows release builds, a macOS release build,
 and a web build with bundle validation. See the
