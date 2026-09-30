@@ -180,7 +180,7 @@ for what those timings measure.
 | **F** | Toggle borderless window mode |
 | **C** | Switch the built-in camera between perspective and orthographic |
 | **Left / Right** | Rotate the built-in 3D scene |
-| Vertical wheel over the scene | Move the camera closer/farther |
+| Vertical wheel over the scene | Move the camera closer/farther (stops short of the scene center) |
 | Horizontal wheel over the scene | Rotate the built-in 3D scene |
 | Wheel over a panel | Scroll its controls |
 | **D** or click the FPS counter | Toggle diagnostics |

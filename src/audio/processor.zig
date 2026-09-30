@@ -97,6 +97,7 @@ fn processBuffer(buffer: []const f32) void {
     const curr_len = buffer.len / channels;
 
     processFrame(buffer, curr_len);
+    fft.window(fft_buffer[0..curr_len]);
     fft.fft(fft_buffer[0..curr_len]);
     const detected = beat.process(buffer);
     if (beat_cooldown > 0) beat_cooldown -= 1;
