@@ -14,6 +14,7 @@ pub const examples = [_]struct { label: [:0]const u8, source: []const u8 }{
 };
 
 runtime: ?*c.ZsScene = null,
+revision: u64 = 0,
 previous: [settings.entries.len]f64 = @splat(0),
 owned: [settings.entries.len]bool = @splat(false),
 error_buffer: [2048]u8 = @splat(0),
@@ -28,6 +29,7 @@ pub fn deinit(self: *Scene) void {
     self.stopRuntime();
 }
 fn stopRuntime(self: *Scene) void {
+    self.revision +%= 1;
     if (self.runtime) |runtime| c.zs_destroy(runtime);
     self.runtime = null;
     for (settings.entries, &self.owned, self.previous) |entry, *owned, previous| {

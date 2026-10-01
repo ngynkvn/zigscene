@@ -44,6 +44,9 @@ pub fn link(
         "-sFULL-ES3=1",
         "-sUSE_GLFW=3",
         "-sALLOW_MEMORY_GROWTH=1",
+        // The default 64 KiB stack is too small: audio analysis alone keeps
+        // 32 KiB of PCM blocks on the stack each frame.
+        "-sSTACK_SIZE=1048576",
         "-O3",
     });
     return emcc_command;

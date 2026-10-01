@@ -5,8 +5,8 @@ const atan2 = math.atan2;
 const rl = @import("../raylib.zig");
 
 fn feql(x: f32, y: f32) bool {
-    return @abs(x - x) <= @max(1, @abs(x), @abs(x)) and
-        @abs(y - y) <= @max(1, @abs(y), @abs(y));
+    return x == y or (math.isFinite(x) and math.isFinite(y) and
+        @abs(x - y) <= 0.000001 * @max(1, @abs(x), @abs(y)));
 }
 
 pub const Vector2 = extern struct {
@@ -620,7 +620,7 @@ pub const Vector3 = extern struct {
         result.z = @min(max_v.z, @max(min_v.z, v.z));
         return result;
     }
-    pub fn equals(p: Vector3, q: Vector3) c_int {
+    pub fn equals(p: Vector3, q: Vector3) bool {
         return feql(p.x, q.x) and
             feql(p.y, q.y) and
             feql(p.z, q.z);
@@ -721,7 +721,7 @@ pub const Vector4 = extern struct {
     pub fn invert(v: Vector4) Vector4 {
         return .{ .x = 1.0 / v.x, .y = 1.0 / v.y, .z = 1.0 / v.z, .w = 1.0 / v.w };
     }
-    pub fn equals(p: Vector4, q: Vector4) c_int {
+    pub fn equals(p: Vector4, q: Vector4) bool {
         return feql(p.x, q.x) and
             feql(p.y, q.y) and
             feql(p.z, q.z) and
@@ -757,3 +757,11 @@ pub const Matrix = extern struct {
     m3: f32, m7: f32, m11: f32, m15: f32,
 };
 // zig fmt: on
+
+test "vector equality compares components with a relative tolerance" {
+    try std.testing.expect(!Vector2.equals(.{ .x = 1 }, .{ .x = 2 }));
+    try std.testing.expect(Vector3.equals(.{ .x = 1 }, .{ .x = 1.0000001 }));
+    try std.testing.expect(!Vector3.equals(.{ .z = 1 }, .{ .z = 2 }));
+    try std.testing.expect(!Vector4.equals(.{ .x = 0, .y = 0, .z = 0, .w = 1 }, .{ .x = 0, .y = 0, .z = 0, .w = 2 }));
+    try std.testing.expect(!feql(math.nan(f32), math.nan(f32)));
+}

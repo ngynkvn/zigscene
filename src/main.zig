@@ -29,6 +29,7 @@ fn webFrame() callconv(.c) void {
 }
 
 pub fn main(process_init: std.process.Init.Minimal) !void {
+    @import("editor/State.zig").initDefaults();
     if (builtin.os.tag == .emscripten) {
         web_app = App.create(.{});
         emscripten_set_main_loop(webFrame, 0, 1);
@@ -39,8 +40,10 @@ pub fn main(process_init: std.process.Init.Minimal) !void {
     defer arena.deinit();
     const allocator = arena.allocator();
     const args = try process_init.args.toSlice(allocator);
-    const plain_args = try allocator.alloc([]const u8, args.len - 1);
-    for (args[1..], plain_args) |arg, *plain| plain.* = arg;
+    // argv can legally be empty when a parent process calls execve directly.
+    const user_args = if (args.len > 0) args[1..] else args;
+    const plain_args = try allocator.alloc([]const u8, user_args.len);
+    for (user_args, plain_args) |arg, *plain| plain.* = arg;
     const options = cli.parse(plain_args) catch |err| {
         std.debug.print("Invalid command line: {s}\n", .{@errorName(err)});
         return err;
@@ -49,6 +52,8 @@ pub fn main(process_init: std.process.Init.Minimal) !void {
     const preferences = @import("core/preferences.zig");
     const preferences_path = preferences.path(process_init.environ, allocator) catch null;
     preferences.load(preferences_path);
+    @import("editor/Presets.zig").init(preferences_path);
+    defer @import("editor/Presets.zig").deinit();
     var app = App.create(options);
     app.preferences_path = preferences_path;
     defer app.destroy();
@@ -63,14 +68,19 @@ test "capture selection survives device reorder and detects removal" {
 }
 
 test "root" {
+    _ = @import("ext/vector.zig");
+    _ = @import("editor/State.zig");
+    _ = @import("editor/Presets.zig");
     _ = @import("audio/playback.zig");
     _ = @import("audio/Session.zig");
     _ = @import("audio/WaveformPreview.zig");
     _ = @import("audio/processor.zig");
     _ = @import("graphics.zig");
+    _ = @import("shader/shader.zig");
     _ = @import("graphics/Highlight.zig");
     _ = @import("graphics/Viewport.zig");
     _ = @import("graphics/visualizers/spectrum.zig");
+    _ = @import("graphics/visualizers/halo.zig");
     _ = @import("gui.zig");
     _ = @import("gui/Cursor.zig");
     _ = @import("core/debug.zig");

@@ -1,5 +1,6 @@
 const std = @import("std");
 const rl = @import("raylib");
+const geometry = @import("geometry.zig");
 const ui = @import("theme.zig");
 const Scene = @import("../scripting/Scene.zig");
 
@@ -35,7 +36,7 @@ fn noticeHeight(scene: *const Scene, width: f32) f32 {
     return if (message.len == 0) 0 else 28 + wrapped(message, 0, 0, width - 16, ui.muted, false);
 }
 pub fn height(scene: *Scene, width: f32) f32 {
-    return 208 + noticeHeight(scene, width) + @as(f32, @floatFromInt(scene.params().len)) * 52;
+    return 180 + noticeHeight(scene, width) + @as(f32, @floatFromInt(scene.params().len)) * geometry.row_height;
 }
 fn button(view: rl.Rectangle, x: f32, y: f32, width: f32, label: [:0]const u8, selected: bool, enabled: bool) bool {
     return ui.button(ui.rect(x, y, width, 30), label, selected, enabled and y >= view.y and y + 30 <= view.y + view.height);
@@ -43,14 +44,14 @@ fn button(view: rl.Rectangle, x: f32, y: f32, width: f32, label: [:0]const u8, s
 pub fn draw(scene: *Scene, view: rl.Rectangle, scroll: f32, slider: anytype) void {
     var y = view.y - scroll;
     ui.label(scene.name(), view.x + 8, y, 16, ui.accent);
-    ui.label(if (scene.runtime == null) "LUA SCENES" else if (scene.usesBuiltin()) "LUA / OVERLAY" else "LUA / CUSTOM SCENE", view.x + 8, y + 24, 10, ui.muted);
+    ui.label(if (scene.runtime == null) "LUA SCENES" else if (scene.usesBuiltin()) "LUA / OVERLAY" else "LUA / CUSTOM SCENE", view.x + 8, y + 22, 10, ui.muted);
     var caption_buffer: [256]u8 = undefined;
     const caption = if (scene.path().len > 0)
         std.fmt.bufPrintZ(&caption_buffer, "File: {s}", .{std.fs.path.basename(scene.path())}) catch "External Lua file"
     else
         "Drop a .lua file here, or try an example.";
-    ui.label(caption, view.x + 8, y + 44, 12, ui.muted);
-    y += 70;
+    ui.label(caption, view.x + 8, y + 40, 12, ui.muted);
+    y += 58;
     const third = (view.width - 12) / 3;
     inline for (Scene.examples, 0..) |entry, i| {
         if (button(view, view.x + @as(f32, @floatFromInt(i)) * (third + 6), y, third, entry.label, scene.example == @as(Scene.Example, @enumFromInt(i)), true)) {
@@ -58,7 +59,7 @@ pub fn draw(scene: *Scene, view: rl.Rectangle, scroll: f32, slider: anytype) voi
             return; // A new parameter list is drawn on the next frame.
         }
     }
-    y += 40;
+    y += 36;
     const half = (view.width - 8) / 2;
     if (button(view, view.x, y, half, "Reload / F5", false, scene.canReload())) {
         scene.reload();
@@ -68,9 +69,9 @@ pub fn draw(scene: *Scene, view: rl.Rectangle, scroll: f32, slider: anytype) voi
         scene.unload();
         return;
     }
-    y += 40;
+    y += 36;
     if (button(view, view.x, y, view.width, if (scene.auto_reload) "Auto reload: On" else "Auto reload: Off", scene.auto_reload, scene.path().len > 0)) scene.auto_reload = !scene.auto_reload;
-    y += 46;
+    y += 38;
     const is_error = scene.errorMessage().len > 0;
     const message = if (is_error) scene.errorMessage() else scene.logMessage();
     if (message.len > 0) {
@@ -82,7 +83,8 @@ pub fn draw(scene: *Scene, view: rl.Rectangle, scroll: f32, slider: anytype) voi
         ui.label(std.mem.span(@as([*:0]const u8, @ptrCast(&param.label))), view.x + 8, y + 4, 14, ui.text);
         var number: [32]u8 = undefined;
         ui.label(std.fmt.bufPrintZ(&number, "{d:.2}", .{param.value}) catch "?", view.x + view.width - 58, y + 5, 12, ui.muted);
-        _ = slider(4000 + i, ui.rect(view.x + 8, y + 27, view.width - 16, 18), &param.value, param.min, param.max, y >= view.y and y + 46 <= view.y + view.height, false);
-        y += 52;
+        _ = slider(4000 + i, ui.rect(view.x + 8, y + geometry.slider_top, view.width - 16, geometry.slider_height), &param.value, param.min, param.max, y >= view.y and y + geometry.slider_top + geometry.slider_height <= view.y + view.height, false);
+        if (y >= view.y and y + geometry.row_height <= view.y + view.height and ui.hovered(ui.rect(view.x, y, view.width, geometry.row_height)) and rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_RIGHT)) param.value = param.default_value;
+        y += geometry.row_height;
     }
 }

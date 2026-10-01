@@ -38,7 +38,7 @@ pub fn parse(args: []const []const u8) ParseError!Options {
             return error.TooManyFiles;
         }
     }
-    if (options.desktop_pet and options.capture_mode == null) options.capture_mode = .system;
+    if (options.desktop_pet and options.capture_mode == null and options.file == null) options.capture_mode = .system;
     return options;
 }
 
@@ -49,6 +49,15 @@ test "desktop pet defaults to system audio and keeps explicit device selection" 
     try std.testing.expectEqual(@as(i32, 2), options.capture_device);
     const input = try parse(&.{ "--input-audio", "--desktop-pet" });
     try std.testing.expectEqual(capture.Mode.input, input.capture_mode.?);
+}
+
+test "desktop pet keeps a requested file unless capture is explicit" {
+    const file = try parse(&.{ "--desktop-pet", "song.wav" });
+    try std.testing.expect(file.desktop_pet);
+    try std.testing.expectEqualStrings("song.wav", file.file.?);
+    try std.testing.expectEqual(@as(?capture.Mode, null), file.capture_mode);
+    const live = try parse(&.{ "song.wav", "--desktop-pet", "--system-audio" });
+    try std.testing.expectEqual(capture.Mode.system, live.capture_mode.?);
 }
 
 test "parse capture and file options" {

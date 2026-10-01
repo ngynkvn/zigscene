@@ -11,11 +11,13 @@ const variance_sensitivity: f32 = -0.0025714;
 var energy_history: [N]f32 = @splat(0);
 var history_pos: usize = 0;
 var history_len: usize = 0;
+var was_above_threshold = false;
 
 pub fn reset() void {
     energy_history = @splat(0);
     history_pos = 0;
     history_len = 0;
+    was_above_threshold = false;
 }
 
 /// The core concept comes from the observation that musical beats often
@@ -33,7 +35,9 @@ pub fn process(buffer: []const f32) bool {
     current_energy = current_energy / @as(f32, @floatFromInt(buffer.len));
 
     // Only filled entries count, so zeroed history after a reset cannot fake a spike.
-    const beat = history_len >= min_history and isSpike(energy_history[0..history_len], current_energy);
+    const above_threshold = history_len >= min_history and isSpike(energy_history[0..history_len], current_energy);
+    const beat = above_threshold and !was_above_threshold;
+    was_above_threshold = above_threshold;
     energy_history[history_pos] = current_energy;
     history_pos = (history_pos + 1) % N;
     history_len = @min(history_len + 1, N);
@@ -88,4 +92,16 @@ test "quiet passages still register relative spikes" {
     for (0..N) |_| _ = process(&quiet);
     const hit = constantBlock(0.02);
     try std.testing.expect(process(&hit));
+}
+
+test "a sustained loud passage produces one onset, not repeated beats" {
+    reset();
+    defer reset();
+    const silence = constantBlock(0);
+    const loud = constantBlock(0.5);
+    for (0..N) |_| _ = process(&silence);
+    try std.testing.expect(process(&loud));
+    for (0..N) |_| try std.testing.expect(!process(&loud));
+    for (0..N) |_| _ = process(&silence);
+    try std.testing.expect(process(&loud));
 }

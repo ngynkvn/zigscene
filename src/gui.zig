@@ -4,6 +4,9 @@ const AudioSession = @import("audio/Session.zig");
 const config = @import("core/config.zig");
 const Direction = @import("core/event.zig").Direction;
 const geometry = @import("gui/geometry.zig");
+const State = @import("editor/State.zig");
+const StudioPanel = @import("gui/StudioPanel.zig");
+var current_script: ?*ScriptScene = null;
 const controls = @import("gui/controls.zig");
 const ui = @import("gui/theme.zig");
 const rl = @import("raylib");
@@ -11,6 +14,7 @@ const WaveformCache = @import("gui/WaveformCache.zig");
 const ScriptScene = @import("scripting/Scene.zig");
 const ScriptPanel = @import("gui/ScriptPanel.zig");
 var scene_prefix: f32 = 0;
+var scene_revision: ?u64 = null;
 var waveform_cache: WaveformCache = .{};
 var audio_content_height: f32 = 210;
 
@@ -20,14 +24,15 @@ pub fn deinit() void {
 
 const Element = @import("graphics/Highlight.zig").Element;
 
-pub const Tab = enum(c_int) { none, scalar, color, motion, scene, settings, audio };
+pub const Tab = enum(c_int) { none, scalar, color, motion, scene, settings, audio, presets, inspector };
 var active_tab: Tab = .scalar;
 var scroll: f32 = 0;
-var saved_scroll: [7]f32 = @splat(0);
+var saved_scroll: [9]f32 = @splat(0);
 var active_slider: ?usize = null;
 var editing: ?usize = null;
 var editing_buffer: [128]u8 = @splat(0);
 var dragging_seek = false;
+var settings_reset_requested = false;
 const seek_id = 1000;
 const resize_id = 3000;
 const ResizeMode = enum { none, width, height, both };
@@ -35,9 +40,29 @@ var resize_mode: ResizeMode = .none;
 var resize_origin: rl.Vector2 = .{};
 var resize_size: geometry.Size = .{ .width = 320, .height = 500 };
 
+/// Apply the reset between frames, before any controls or scripts run again.
+pub fn takeSettingsReset() bool {
+    const requested = settings_reset_requested;
+    settings_reset_requested = false;
+    return requested;
+}
+
+pub fn resetWorkspace() void {
+    editing = null;
+    active_slider = null;
+    dragging_seek = false;
+    resize_mode = .none;
+    scroll = 0;
+    saved_scroll = @splat(0);
+    scene_revision = null;
+    @import("graphics/Highlight.zig").solo = null;
+    StudioPanel.resetWorkspace();
+}
+
 pub fn onTabChange(next: Tab) void {
     if (active_tab == next) return;
     editing = null;
+    StudioPanel.text_editing = false;
     active_slider = null;
     resize_mode = .none;
     saved_scroll[@intCast(@intFromEnum(active_tab))] = scroll;
@@ -46,16 +71,18 @@ pub fn onTabChange(next: Tab) void {
 }
 
 pub fn editingValue() bool {
-    return editing != null;
+    return editing != null or StudioPanel.text_editing;
 }
 
 /// End transient UI gestures before entering the desktop pet's compact view.
-pub fn cancelInteraction(audio: *AudioSession) void {
+pub fn cancelInteraction(audio: *AudioSession, script: *ScriptScene) void {
     audio.endSeek();
     dragging_seek = false;
     editing = null;
+    StudioPanel.text_editing = false;
     active_slider = null;
     resize_mode = .none;
+    State.history.record(script);
 }
 
 fn width() f32 {
@@ -66,26 +93,35 @@ fn height() f32 {
 }
 fn panel() rl.Rectangle {
     const size = geometry.panelSize(config.Interface.panel_width, config.Interface.panel_height, width(), height());
-    return ui.rect(16, 88, size.width, size.height);
+    return ui.rect(geometry.margin, geometry.panel_top, size.width, size.height);
 }
 fn viewport() rl.Rectangle {
     const p = panel();
-    return ui.rect(p.x + 12, p.y + 72, p.width - 24, p.height - 108);
+    return ui.rect(p.x + 12, p.y + 60, p.width - 24, p.height - 84);
 }
 
 /// UI wheel gestures must not also move the scene camera.
 pub fn pointerOverUi() bool {
     return resize_mode != .none or @import("core/debug.zig").pointerOverUi() or
-        ui.hovered(ui.rect(16, 16, width() - 32, 58)) or
+        ui.hovered(headerBounds()) or
         ui.hovered(if (config.Interface.show_player) dockBounds() else expandPlayerBounds()) or
         (active_tab != .none and ui.hovered(ui.rect(panel().x, panel().y, panel().width + 6, panel().height + 6)));
 }
 
 pub fn prepareScene(script: *ScriptScene) void {
+    if (scene_revision != script.revision) {
+        @import("graphics/Highlight.zig").solo = null;
+        scene_revision = script.revision;
+    }
     scene_prefix = ScriptPanel.height(script, viewport().width);
 }
 
 pub fn frame(audio: *AudioSession, script: *ScriptScene) void {
+    current_script = script;
+    State.history.sync(script);
+    defer {
+        if (!rl.IsMouseButtonDown(rl.MOUSE_BUTTON_LEFT) and !editingValue()) State.history.record(script);
+    }
     if (active_tab == .audio and !audio.capture_devices_loaded) audio.refreshCaptureDevices();
     audio_content_height = 210 + @as(f32, @floatFromInt(audio.capture_devices.count)) * 38;
     if (!rl.IsMouseButtonDown(rl.MOUSE_BUTTON_LEFT)) {
@@ -106,28 +142,34 @@ pub fn frame(audio: *AudioSession, script: *ScriptScene) void {
     drawPlayer(audio);
     if (config.Interface.show_player and !audio.hasFile() and !audio.captureActive() and width() >= 840) {
         const left = if (active_tab == .none) 16 else panel().x + panel().width + 24;
-        ui.centered("Drop an audio file to bring the scene to life", ui.rect(left, height() - 182, width() - left - 16, 24), 15, ui.muted);
+        ui.centered("Drop an audio file to bring the scene to life", ui.rect(left, dockBounds().y - 30, width() - left - 16, 24), 15, ui.muted);
     }
 }
 
+fn headerBounds() rl.Rectangle {
+    return ui.rect(geometry.margin, geometry.margin, width() - 2 * geometry.margin, geometry.header_height);
+}
+
 fn drawHeader() void {
-    ui.card(ui.rect(16, 16, width() - 32, 58));
+    ui.card(headerBounds());
     inline for (.{ 10, 22, 30, 17, 8 }, 0..) |h, i| {
-        ui.rounded(ui.rect(32 + @as(f32, @floatFromInt(i)) * 5, 45 - @as(f32, h) / 2, 3, h), 1.5, ui.accent);
+        ui.rounded(ui.rect(32 + @as(f32, @floatFromInt(i)) * 5, 36 - @as(f32, h) / 2, 3, h), 1.5, ui.accent);
     }
-    ui.label("zigscene", 68, 26, 22, ui.text);
-    ui.label("AUDIO / VISUAL", 69, 51, 9, ui.muted);
-    const tabs = .{ .{ "Shape", Tab.scalar }, .{ "Color", Tab.color }, .{ "Motion", Tab.motion }, .{ "Scene", Tab.scene } };
-    const tab_w: f32 = if (width() < 900) 64 else 88;
-    const tab_x: f32 = if (width() < 900) 174 else 190;
+    if (width() >= 900) {
+        ui.label("zigscene", 68, 18, 21, ui.text);
+        ui.label("AUDIO / VISUAL", 69, 42, 9, ui.muted);
+    }
+    const tabs = .{ .{ "Shape", Tab.scalar }, .{ "Color", Tab.color }, .{ "Motion", Tab.motion }, .{ "Scene", Tab.scene }, .{ "Presets", Tab.presets }, .{ "Layers", Tab.inspector } };
+    const tab_w: f32 = if (width() < 900) 62 else 78;
+    const tab_x: f32 = if (width() < 900) 64 else 174;
     inline for (tabs, 0..) |tab, i| {
-        const bounds = ui.rect(tab_x + @as(f32, @floatFromInt(i)) * tab_w, 27, tab_w - 6, 36);
+        const bounds = ui.rect(tab_x + @as(f32, @floatFromInt(i)) * tab_w, 20, tab_w - 6, 32);
         if (ui.button(bounds, tab[0], active_tab == tab[1], true)) onTabChange(tab[1]);
     }
-    if (ui.button(ui.rect(width() - 184, 27, 62, 36), if (active_tab == .none) "Show / 1" else "Hide / 1", false, true)) {
+    if (ui.button(ui.rect(width() - 184, 20, 62, 32), if (active_tab == .none) "Show / 2" else "Hide / 1", false, true)) {
         onTabChange(if (active_tab == .none) .scalar else .none);
     }
-    if (ui.button(ui.rect(width() - 116, 27, 84, 36), "Settings", active_tab == .settings, true)) {
+    if (ui.button(ui.rect(width() - 116, 20, 84, 32), "Settings", active_tab == .settings, true)) {
         onTabChange(if (active_tab == .settings) .none else .settings);
     }
 }
@@ -137,8 +179,10 @@ fn contentHeight(tab: Tab) f32 {
         .scalar => scalarHeight(ShapeFields),
         .motion => scalarHeight(MotionFields),
         .settings => settings_prefix + scalarHeight(SettingsFields) + 138,
-        .color => colorHeight(),
-        .scene => scene_prefix + 48 + SceneItems.len * 76,
+        .color => StudioPanel.colorHeight(),
+        .presets => StudioPanel.presetsHeight(),
+        .inspector => StudioPanel.inspectorHeight(),
+        .scene => scene_prefix + geometry.scene_actions_height + SceneItems.len * geometry.scene_row_height,
         .audio => audio_content_height,
         .none => 0,
     };
@@ -158,18 +202,19 @@ fn elementAt(tab: Tab, view: rl.Rectangle, offset: f32, mouse: rl.Vector2, dragg
     return switch (tab) {
         .scalar => groupElementAt(ShapeFields, view, offset, mouse, dragging, 0),
         .motion => groupElementAt(MotionFields, view, offset, mouse, dragging, 0),
-        .color => groupElementAt(ColorFields, view, offset, mouse, dragging, 100),
+        .color => StudioPanel.colorElementAt(view, offset, mouse, dragging),
+        .inspector => if (rl.CheckCollisionPointRec(mouse, view)) StudioPanel.inspectorElement() else null,
         .scene => blk: {
             if (!rl.CheckCollisionPointRec(mouse, view)) break :blk null;
             if (dragging != null) break :blk null;
-            var y = view.y - offset + scene_prefix + 48;
+            var y = view.y - offset + scene_prefix + geometry.scene_actions_height;
             inline for (SceneItems) |item| {
-                if (rl.CheckCollisionPointRec(mouse, ui.rect(view.x, y, view.width, 66))) break :blk item[3];
-                y += 76;
+                if (rl.CheckCollisionPointRec(mouse, ui.rect(view.x, y, view.width, geometry.scene_card_height))) break :blk item[3];
+                y += geometry.scene_row_height;
             }
             break :blk null;
         },
-        .none, .settings, .audio => null,
+        .none, .settings, .audio, .presets => null,
     };
 }
 
@@ -186,7 +231,7 @@ fn groupElementAt(comptime groups: anytype, view: rl.Rectangle, offset: f32, mou
     if (!rl.CheckCollisionPointRec(mouse, view)) return null;
     var y = view.y - offset;
     inline for (groups) |group| {
-        const group_height: f32 = 38 + group[1].len * 52;
+        const group_height: f32 = geometry.group_height + group[1].len * geometry.row_height;
         if (rl.CheckCollisionPointRec(mouse, ui.rect(view.x, y, view.width, group_height))) return group[2];
         y += group_height;
     }
@@ -203,10 +248,12 @@ fn drawPanel(script: *ScriptScene, audio: *AudioSession) void {
         .scene => .{ "Scene studio", "Script your visuals or mix built-in layers." },
         .settings => .{ "Settings", "Performance, display and workspace." },
         .audio => .{ "Audio devices", "Choose where your sound comes from." },
+        .presets => .{ "Preset library", "Save, duplicate and revisit your looks." },
+        .inspector => .{ "Layer inspector", "Search, solo and fine-tune a layer." },
         .none => unreachable,
     };
-    ui.label(title, p.x + 20, p.y + 16, 21, ui.text);
-    ui.label(subtitle, p.x + 20, p.y + 44, 13, ui.muted);
+    ui.label(title, p.x + 20, p.y + 12, 21, ui.text);
+    ui.label(subtitle, p.x + 20, p.y + 38, 13, ui.muted);
     const view = viewport();
     const content_h = contentHeight(active_tab);
     const max_scroll = @max(0, content_h - view.height);
@@ -227,7 +274,9 @@ fn drawPanel(script: *ScriptScene, audio: *AudioSession) void {
         .motion => drawScalars(MotionFields, view, 0),
         .settings => drawSettings(view),
         .audio => drawAudioDevices(view, audio),
-        .color => drawColors(view),
+        .color => StudioPanel.drawColors(script, view, scroll, editorField),
+        .presets => StudioPanel.drawPresets(script, view, scroll),
+        .inspector => StudioPanel.drawInspector(script, view, scroll, editorField),
         .scene => drawScene(view, script),
         .none => unreachable,
     }
@@ -237,7 +286,17 @@ fn drawPanel(script: *ScriptScene, audio: *AudioSession) void {
         ui.rounded(ui.rect(p.x + p.width - 7, view.y, 3, view.height), 1.5, ui.raised);
         ui.rounded(ui.rect(p.x + p.width - 7, view.y + (view.height - thumb_h) * scroll / max_scroll, 3, thumb_h), 1.5, ui.muted);
     }
-    ui.label(if (max_scroll > 0) "SCROLL TO EXPLORE" else "MAKE IT YOUR OWN", p.x + 20, p.y + p.height - 22, 10, ui.muted);
+    if (ui.button(ui.rect(p.x + 12, p.y + p.height - 24, 48, 20), "Undo", false, State.history.position > 0)) {
+        editing = null;
+        active_slider = null;
+        State.history.undo(script);
+    }
+    if (ui.button(ui.rect(p.x + 64, p.y + p.height - 24, 48, 20), "Redo", false, State.history.position + 1 < State.history.len)) {
+        editing = null;
+        active_slider = null;
+        State.history.redo(script);
+    }
+    ui.label("Right-click a control to reset", p.x + 120, p.y + p.height - 18, 10, ui.muted);
     for (0..3) |i| {
         const offset = @as(f32, @floatFromInt(i)) * 4;
         rl.DrawLineEx(.{ .x = p.x + p.width - 15 + offset, .y = p.y + p.height - 5 }, .{ .x = p.x + p.width - 5, .y = p.y + p.height - 15 + offset }, 1, if (resize_mode != .none) ui.accent else ui.muted);
@@ -299,10 +358,14 @@ const SettingsFields = [_]ScalarGroup{
         .{ "Master volume", &config.Audio.volume, .{ 0, 1 } },
     }, null },
 };
-const settings_prefix: f32 = 208;
+const settings_reset_height: f32 = 64;
+const settings_prefix: f32 = settings_reset_height + 208;
 
 fn drawSettings(view: rl.Rectangle) void {
-    const top = view.y - scroll;
+    const reset_y = view.y - scroll;
+    if (ui.button(ui.rect(view.x, reset_y, view.width, 32), "Reset all settings", false, reset_y >= view.y and reset_y + 32 <= view.y + view.height)) settings_reset_requested = true;
+    ui.label("Restores defaults. Keeps saved presets and swatches.", view.x + 4, reset_y + 40, 10, ui.muted);
+    const top = reset_y + settings_reset_height;
     groupHeading("FPS PRESETS  /  0 = UNLIMITED", view, top);
     const presets = [_]f32{ 0, 30, 60, 120, 144, 240 };
     for (presets, 0..) |fps, index| {
@@ -328,7 +391,7 @@ fn drawSettings(view: rl.Rectangle) void {
     }
     ui.label("Automatically fits smaller windows", view.x + 8, top + 186, 11, ui.muted);
     drawScalars(SettingsFields, view, settings_prefix);
-    const bottom = top + settings_prefix + scalarHeight(SettingsFields);
+    const bottom = reset_y + settings_prefix + scalarHeight(SettingsFields);
     if (ui.button(ui.rect(view.x, bottom, view.width, 32), if (config.Interface.show_fps) "FPS counter: On" else "FPS counter: Off", config.Interface.show_fps, bottom >= view.y and bottom + 32 <= view.y + view.height)) config.Interface.show_fps = !config.Interface.show_fps;
     if (ui.button(ui.rect(view.x, bottom + 42, view.width, 32), if (builtin.os.tag == .emscripten) "Always on top: Native only" else if (config.Window.always_on_top) "Always on top: On" else "Always on top: Off", config.Window.always_on_top, builtin.os.tag != .emscripten and bottom + 42 >= view.y and bottom + 74 <= view.y + view.height)) config.Window.always_on_top = !config.Window.always_on_top;
     if (ui.button(ui.rect(view.x, bottom + 84, view.width, 32), "Reset UI size and panel", false, bottom + 84 >= view.y and bottom + 116 <= view.y + view.height)) {
@@ -375,15 +438,15 @@ fn resizePanel() void {
 
 fn scalarHeight(comptime groups: anytype) f32 {
     comptime var total: f32 = 0;
-    inline for (groups) |group| total += 38 + group[1].len * 52;
+    inline for (groups) |group| total += geometry.group_height + group[1].len * geometry.row_height;
     return total;
 }
 fn groupHeading(name: [:0]const u8, view: rl.Rectangle, y: f32) void {
     ui.label(name, view.x + 8, y + 8, 11, ui.accent);
-    rl.DrawLineEx(.{ .x = view.x + 8, .y = y + 29 }, .{ .x = view.x + view.width - 8, .y = y + 29 }, 1, ui.border);
+    rl.DrawLineEx(.{ .x = view.x + 8, .y = y + 23 }, .{ .x = view.x + view.width - 8, .y = y + 23 }, 1, ui.border);
 }
 fn rowVisible(y: f32, view: rl.Rectangle) bool {
-    return y >= view.y and y + 46 <= view.y + view.height;
+    return y >= view.y and y + geometry.slider_top + geometry.slider_height <= view.y + view.height;
 }
 
 fn drawScalars(comptime groups: anytype, view: rl.Rectangle, offset: f32) void {
@@ -391,41 +454,55 @@ fn drawScalars(comptime groups: anytype, view: rl.Rectangle, offset: f32) void {
     var id: usize = 0;
     inline for (groups) |group| {
         groupHeading(group[0], view, y);
-        y += 38;
+        if (ui.button(ui.rect(view.x + view.width - 54, y + 2, 50, 22), "Reset", false, y >= view.y and y + 24 <= view.y + view.height)) {
+            if (current_script) |script| for (group[1]) |scalar| State.reset(scalar[1], script);
+        }
+        y += geometry.group_height;
         inline for (group[1]) |scalar| {
-            const name, const value, const range = scalar;
-            const row_enabled = rowVisible(y, view);
-            if (!row_enabled and editing == id) editing = null;
-            var name_buffer: [64]u8 = undefined;
-            const label = std.fmt.bufPrintZ(&name_buffer, "{s}", .{name}) catch unreachable;
-            ui.label(label, view.x + 8, y + 4, 14, ui.text);
-            const box = ui.rect(view.x + view.width - 76, y, 68, 24);
-            if (editing == id) {
-                if (ui.valueBox(box, &editing_buffer, value) or
-                    (rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT) and !ui.hovered(box))) editing = null;
-            } else {
-                var buf: [32]u8 = undefined;
-                const number = if (range[1] <= 2)
-                    std.fmt.bufPrintZ(&buf, "{d:.3}", .{value.*}) catch unreachable
-                else
-                    std.fmt.bufPrintZ(&buf, "{d:.1}", .{value.*}) catch unreachable;
-                ui.rounded(box, 5, ui.raised);
-                ui.centered(number, box, 12, ui.muted);
-                if (row_enabled and ui.hovered(box)) {
-                    ui.requestCursor(rl.MOUSE_CURSOR_IBEAM);
-                    if (rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT)) {
-                        editing = id;
-                        @memset(&editing_buffer, 0);
-                        _ = std.fmt.bufPrintZ(&editing_buffer, "{d:.3}", .{value.*}) catch unreachable;
-                    }
-                }
-            }
-            _ = slider(id, ui.rect(view.x + 8, y + 27, view.width - 16, 18), value, range[0], range[1], row_enabled, false);
-            controls.constrainScalar(scalar);
-            y += 52;
+            var label_buffer: [64]u8 = undefined;
+            const label = std.fmt.bufPrintZ(&label_buffer, "{s}", .{scalar[0]}) catch unreachable;
+            editorField(id, label, scalar[1], .{ scalar[2][0], scalar[2][1] }, view, y, false);
+            y += geometry.row_height;
             id += 1;
         }
     }
+}
+
+fn editorField(id: usize, label: [:0]const u8, value: *f32, range: [2]f32, view: rl.Rectangle, y: f32, hue: bool) void {
+    const locked = if (current_script) |script| State.locked(value, script) else false;
+    const row_enabled = rowVisible(y, view) and !locked;
+    if (!row_enabled and editing == id) editing = null;
+    if (locked and active_slider == id) active_slider = null;
+    var fitted_buffer: [256]u8 = undefined;
+    ui.label(ui.fitted(label, 14, view.width - 92, &fitted_buffer), view.x + 8, y + 4, 14, if (locked) ui.muted else ui.text);
+    if (!locked and State.changed(value)) rl.DrawCircleV(.{ .x = view.x + 2, .y = y + 10 }, 2, ui.accent);
+    const box = ui.rect(view.x + view.width - 76, y, 68, 24);
+    if (editing == id) {
+        if (ui.valueBox(box, &editing_buffer, value) or
+            (rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT) and !ui.hovered(box))) editing = null;
+    } else {
+        var buf: [32]u8 = undefined;
+        const number = if (locked) "Lua" else if (range[1] <= 2)
+            std.fmt.bufPrintZ(&buf, "{d:.3}", .{value.*}) catch unreachable
+        else
+            std.fmt.bufPrintZ(&buf, "{d:.1}", .{value.*}) catch unreachable;
+        ui.rounded(box, 5, ui.raised);
+        ui.centered(number, box, 12, ui.muted);
+        if (row_enabled and ui.hovered(box)) {
+            ui.requestCursor(rl.MOUSE_CURSOR_IBEAM);
+            if (rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT)) {
+                editing = id;
+                @memset(&editing_buffer, 0);
+                _ = std.fmt.bufPrintZ(&editing_buffer, "{d:.3}", .{value.*}) catch unreachable;
+            }
+        }
+    }
+    if (row_enabled and ui.hovered(ui.rect(view.x, y, view.width, geometry.row_height)) and rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_RIGHT)) {
+        if (current_script) |script| State.reset(value, script);
+        editing = null;
+    }
+    _ = slider(id, ui.rect(view.x + 8, y + geometry.slider_top, view.width - 16, geometry.slider_height), value, range[0], range[1], row_enabled, hue);
+    controls.constrainScalar(.{ label, value, .{ range[0], range[1] } });
 }
 
 /// A generous hit area around a slim track; drag ownership survives leaving it.
@@ -457,37 +534,6 @@ fn slider(id: usize, bounds: rl.Rectangle, value: *f32, min: f32, max: f32, enab
     return dragging;
 }
 
-const ColorFields = .{
-    .{ "WAVEFORM / LINES", &config.Visualizer.WaveFormLine.Colors, Element.wave_lines },
-    .{ "WAVEFORM / BARS", &config.Visualizer.WaveFormBar.Colors, Element.wave_bars },
-    .{ "3D BUBBLE", &config.Visualizer.Bubble.Colors, Element.bubble },
-    .{ "FREQUENCY HALO", &config.Visualizer.Halo.Colors, Element.halo },
-};
-fn colorHeight() f32 {
-    comptime var total: f32 = 0;
-    inline for (ColorFields) |group| total += 38 + group[1].len * 52;
-    return total;
-}
-fn drawColors(view: rl.Rectangle) void {
-    var y = view.y - scroll;
-    var id: usize = 100;
-    inline for (ColorFields) |group| {
-        groupHeading(group[0], view, y);
-        y += 38;
-        inline for (group[1], 0..) |color, index| {
-            const value = color[1];
-            rl.DrawCircleV(.{ .x = view.x + 14, .y = y + 10 }, 6, rl.ColorFromHSV(value.*, 0.7, 1));
-            ui.label(if (group[1].len == 1) "Hue" else if (index == 0) "Primary" else if (index == 1) "Secondary" else "Trail", view.x + 28, y + 2, 14, ui.text);
-            var buf: [32]u8 = undefined;
-            const number = std.fmt.bufPrintZ(&buf, "{d:.0} deg", .{value.*}) catch unreachable;
-            ui.label(number, view.x + view.width - 62, y + 3, 12, ui.muted);
-            _ = slider(id, ui.rect(view.x + 8, y + 27, view.width - 16, 18), value, 0, 359, rowVisible(y, view), true);
-            y += 52;
-            id += 1;
-        }
-    }
-}
-
 const SceneItems = .{
     .{ "Waveform lines", "The outline of your audio", &config.Scene.wave_lines, Element.wave_lines },
     .{ "Waveform bars", "Rhythm with a trailing glow", &config.Scene.wave_bars, Element.wave_bars },
@@ -496,31 +542,46 @@ const SceneItems = .{
     .{ "Frequency halo", "A ring of spectral energy", &config.Scene.halo, Element.halo },
 };
 
+fn setLayerVisibility(pointer: *bool, value: bool, script: *const ScriptScene) void {
+    const settings = @import("scripting/settings.zig");
+    for (settings.entries, script.owned) |entry, owned| {
+        if (entry.target == .boolean and entry.target.boolean == pointer and owned) return;
+    }
+    pointer.* = value;
+}
+
 fn drawScene(view: rl.Rectangle, script: *ScriptScene) void {
     ScriptPanel.draw(script, view, scroll, slider);
     var y = view.y - scroll + scene_prefix;
     const actions_enabled = y >= view.y and y + 36 <= view.y + view.height;
     if (ui.button(ui.rect(view.x, y, (view.width - 8) / 2, 34), "Show all", false, actions_enabled)) {
-        inline for (SceneItems) |item| item[2].* = true;
+        inline for (SceneItems) |item| setLayerVisibility(item[2], true, script);
     }
     if (ui.button(ui.rect(view.x + (view.width + 8) / 2, y, (view.width - 8) / 2, 34), "Hide all", false, actions_enabled)) {
-        inline for (SceneItems) |item| item[2].* = false;
+        inline for (SceneItems) |item| setLayerVisibility(item[2], false, script);
     }
-    y += 48;
+    y += geometry.scene_actions_height;
     inline for (SceneItems) |item| {
-        const bounds = ui.rect(view.x, y, view.width, 66);
-        const over = rowVisible(y, view) and ui.hovered(bounds) and ui.hovered(view);
+        const bounds = ui.rect(view.x, y, view.width, geometry.scene_card_height);
+        const over = y >= view.y and y + geometry.scene_card_height <= view.y + view.height and ui.hovered(bounds);
         ui.rounded(bounds, 8, if (over) ui.raised else ui.background);
-        ui.label(item[0], view.x + 12, y + 12, 15, if (item[2].*) ui.text else ui.muted);
-        ui.label(item[1], view.x + 12, y + 36, 11, ui.muted);
+        ui.label(item[0], view.x + 12, y + 10, 15, if (item[2].*) ui.text else ui.muted);
+        ui.label(item[1], view.x + 12, y + 32, 11, ui.muted);
         const toggle = ui.rect(view.x + view.width - 48, y + 15, 36, 20);
         ui.rounded(toggle, 10, if (item[2].*) ui.accent_soft else ui.border);
         rl.DrawCircleV(.{ .x = toggle.x + (if (item[2].*) @as(f32, 26) else 10), .y = toggle.y + 10 }, 6, if (item[2].*) ui.accent else ui.muted);
         if (over) {
             ui.requestCursor(rl.MOUSE_CURSOR_POINTING_HAND);
-            if (rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT)) item[2].* = !item[2].*;
+            if (rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT)) {
+                if (ui.hovered(toggle)) {
+                    setLayerVisibility(item[2], !item[2].*, script);
+                } else {
+                    StudioPanel.selectLayer(item[3]);
+                    onTabChange(.inspector);
+                }
+            }
         }
-        y += 76;
+        y += geometry.scene_row_height;
     }
 }
 
@@ -545,7 +606,7 @@ pub fn sceneLeft() f32 {
 
 /// The player dock, in logical UI coordinates.
 pub fn dockBounds() rl.Rectangle {
-    return ui.rect(16, height() - 164, width() - 32, 148);
+    return ui.rect(geometry.margin, height() - geometry.margin - geometry.dock_height, width() - 2 * geometry.margin, geometry.dock_height);
 }
 
 fn expandPlayerBounds() rl.Rectangle {
@@ -571,7 +632,7 @@ fn drawPlayer(audio: *AudioSession) void {
     ui.beginScissor(ui.rect(text_x, dock.y + 10, dock.width - 104 - (if (audio.notice != null) @as(f32, 112) else if (file) @as(f32, 188) else 32), 24));
     if (audio.notice) |notice| {
         ui.label(notice, text_x, dock.y + 12, 14, rl.GetColor(0xffd28aff));
-    } else ui.label(title, text_x, dock.y + 12, 15, ui.text);
+    } else ui.label(title, text_x, dock.y + 10, 15, ui.text);
     rl.EndScissorMode();
     if (audio.notice != null and ui.button(ui.rect(width() - 212, dock.y + 8, 76, 26), "Dismiss", false, true)) audio.notice = null;
 
@@ -582,7 +643,7 @@ fn drawPlayer(audio: *AudioSession) void {
             ui.label(label, x + 8, dock.y + 14, 12, color);
         }
     }
-    const play = ui.rect(30, dock.y + 38, 104, 30);
+    const play = ui.rect(30, dock.y + 32, 104, 30);
     ui.rounded(play, 7, if (file) ui.accent_soft else ui.raised);
     const ink = if (file) ui.accent else ui.muted;
     if (audio.isFilePlaying()) {
@@ -597,22 +658,22 @@ fn drawPlayer(audio: *AudioSession) void {
         if (rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT)) audio.togglePlayback();
     }
     const capture_supported = builtin.os.tag != .emscripten;
-    if (ui.button(ui.rect(146, dock.y + 38, 132, 30), if (live) "Stop capture / M" else if (capture_supported) "Capture / M" else "Live unavailable", live, capture_supported)) audio.toggleCapture();
-    if (ui.button(ui.rect(286, dock.y + 38, 70, 30), "Devices", active_tab == .audio, capture_supported)) {
+    if (ui.button(ui.rect(146, dock.y + 32, 132, 30), if (live) "Stop capture / M" else if (capture_supported) "Capture / M" else "Live unavailable", live, capture_supported)) audio.toggleCapture();
+    if (ui.button(ui.rect(286, dock.y + 32, 70, 30), "Devices", active_tab == .audio, capture_supported)) {
         onTabChange(if (active_tab == .audio) .none else .audio);
         if (active_tab == .audio) audio.refreshCaptureDevices();
     }
-    ui.label("Volume", width() - 280, dock.y + 46, 13, ui.muted);
-    _ = slider(1001, ui.rect(width() - 222, dock.y + 44, 132, 18), &config.Audio.volume, 0, 1, true, false);
+    ui.label("Volume", width() - 280, dock.y + 40, 13, ui.muted);
+    _ = slider(1001, ui.rect(width() - 222, dock.y + 38, 132, 18), &config.Audio.volume, 0, 1, true, false);
     var volume_buffer: [16]u8 = undefined;
     const volume = std.fmt.bufPrintZ(&volume_buffer, "{d}%", .{@as(u32, @intFromFloat(config.Audio.volume * 100))}) catch unreachable;
-    ui.label(volume, width() - 74, dock.y + 46, 13, ui.text);
+    ui.label(volume, width() - 74, dock.y + 40, 13, ui.text);
     if (file) {
-        drawWaveformScrubber(audio, ui.rect(30, dock.y + 78, width() - 60, 56));
+        drawWaveformScrubber(audio, ui.rect(30, dock.y + 68, width() - 60, 44));
     } else {
-        ui.rounded(ui.rect(30, dock.y + 80, width() - 60, 54), 6, ui.background);
-        rl.DrawCircleV(.{ .x = 44, .y = dock.y + 107 }, 3, if (live) ui.accent else ui.muted);
-        ui.label(if (live) "Listening live. Drop a file to switch to playback." else "Drop an audio file anywhere to start listening.", 56, dock.y + 100, 13, if (live) ui.accent else ui.muted);
+        ui.rounded(ui.rect(30, dock.y + 68, width() - 60, 44), 6, ui.background);
+        rl.DrawCircleV(.{ .x = 44, .y = dock.y + 90 }, 3, if (live) ui.accent else ui.muted);
+        ui.label(if (live) "Listening live. Drop a file to switch to playback." else "Drop an audio file anywhere to start listening.", 56, dock.y + 83, 13, if (live) ui.accent else ui.muted);
     }
 }
 
@@ -635,6 +696,7 @@ fn drawWaveformScrubber(audio: *AudioSession, bounds: rl.Rectangle) void {
     const played = std.math.clamp(audio.timePlayed() / @max(duration, 0.001), 0, 1);
     waveform_cache.draw(waveform, bounds, played);
     if (waveform.len == 0) {
+        ui.label(if (@import("audio/playback.zig").previewPending()) "Building waveform..." else "Waveform unavailable; seeking still works.", bounds.x + 8, bounds.y + 25, 11, ui.muted);
         const center_y = bounds.y + bounds.height / 2;
         rl.DrawLineEx(.{ .x = bounds.x, .y = center_y }, .{ .x = bounds.x + bounds.width, .y = center_y }, 1, ui.border);
     }
@@ -722,11 +784,11 @@ test "hover selects the current scrolled group without leaking through clipped U
     const view = ui.rect(10, 100, 300, 300);
     try std.testing.expectEqual(@as(?Element, .wave_lines), elementAt(.scalar, view, 0, .{ .x = 30, .y = 110 }, null));
     try std.testing.expectEqual(@as(?Element, .wave_bars), elementAt(.scalar, view, 0, .{ .x = 30, .y = 220 }, null));
-    try std.testing.expectEqual(@as(?Element, .bubble), elementAt(.scalar, view, 284, .{ .x = 30, .y = 110 }, null));
+    try std.testing.expectEqual(@as(?Element, .bubble), elementAt(.scalar, view, 236, .{ .x = 30, .y = 110 }, null));
     try std.testing.expectEqual(@as(?Element, .halo), elementAt(.color, view, 478, .{ .x = 30, .y = 110 }, null));
-    try std.testing.expectEqual(@as(?Element, .spectrum), elementAt(.motion, view, 492, .{ .x = 30, .y = 110 }, null));
+    try std.testing.expectEqual(@as(?Element, .spectrum), elementAt(.motion, view, 412, .{ .x = 30, .y = 110 }, null));
     try std.testing.expectEqual(@as(?Element, null), elementAt(.motion, view, 0, .{ .x = 30, .y = 110 }, null));
-    try std.testing.expectEqual(@as(?Element, null), elementAt(.scalar, view, 634, .{ .x = 30, .y = 110 }, null));
+    try std.testing.expectEqual(@as(?Element, null), elementAt(.scalar, view, 530, .{ .x = 30, .y = 110 }, null));
     try std.testing.expectEqual(@as(?Element, null), elementAt(.scalar, view, 0, .{ .x = 30, .y = 90 }, null));
     try std.testing.expectEqual(@as(?Element, null), elementAt(.scalar, view, 0, .{ .x = 30, .y = 410 }, null));
     try std.testing.expectEqual(@as(?Element, null), elementAt(.scalar, view, 0, .{ .x = 400, .y = 110 }, null));
@@ -736,7 +798,7 @@ test "scene hover excludes bulk actions and drag focus follows its owner" {
     const view = ui.rect(10, 100, 300, 300);
     try std.testing.expectEqual(@as(?Element, null), elementAt(.scene, view, 0, .{ .x = 30, .y = 120 }, null));
     try std.testing.expectEqual(@as(?Element, .wave_lines), elementAt(.scene, view, 0, .{ .x = 30, .y = 160 }, null));
-    try std.testing.expectEqual(@as(?Element, null), elementAt(.scene, view, 0, .{ .x = 30, .y = 218 }, null));
+    try std.testing.expectEqual(@as(?Element, null), elementAt(.scene, view, 0, .{ .x = 30, .y = 200 }, null));
     try std.testing.expectEqual(@as(?Element, .wave_bars), elementAt(.scene, view, 0, .{ .x = 30, .y = 230 }, null));
     try std.testing.expectEqual(@as(?Element, .wave_lines), elementAt(.scalar, view, 0, .{ .x = 900, .y = 600 }, 0));
     try std.testing.expectEqual(@as(?Element, .wave_lines), elementAt(.color, view, 0, .{ .x = 900, .y = 600 }, 100));
@@ -773,4 +835,14 @@ test "the scene viewport starts right of the open panel and at the edge when hid
         const p = panel();
         try std.testing.expectEqual(p.x + p.width + 8, sceneLeft());
     }
+}
+
+pub fn editorShortcuts(script: *ScriptScene) void {
+    if (editingValue()) return;
+    const command = rl.IsKeyDown(rl.KEY_LEFT_CONTROL) or rl.IsKeyDown(rl.KEY_RIGHT_CONTROL) or rl.IsKeyDown(rl.KEY_LEFT_SUPER) or rl.IsKeyDown(rl.KEY_RIGHT_SUPER);
+    if (!command) return;
+    const shift = rl.IsKeyDown(rl.KEY_LEFT_SHIFT) or rl.IsKeyDown(rl.KEY_RIGHT_SHIFT);
+    if (rl.IsKeyPressed(rl.KEY_Z)) {
+        if (shift) State.history.redo(script) else State.history.undo(script);
+    } else if (rl.IsKeyPressed(rl.KEY_Y)) State.history.redo(script);
 }

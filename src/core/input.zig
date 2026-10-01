@@ -23,6 +23,14 @@ pub const State = struct {
     },
 };
 
+/// Wheel zoom keeps the camera in front of its target. Reaching the target
+/// collapses the view direction and passing it flips the scene.
+const min_camera_distance: f32 = 2;
+const max_camera_distance: f32 = 60;
+fn zoom(camera: *rl.Camera3D, amount: f32) void {
+    camera.position.z = std.math.clamp(camera.position.z + amount, camera.target.z + min_camera_distance, camera.target.z + max_camera_distance);
+}
+
 /// A press while editing a value is typing, not a shortcut. Release always ends the hold.
 fn smoothingHold(held: *bool, pressed: bool, released: bool, editing: bool) void {
     if (pressed and !editing) held.* = true else if (released) held.* = false;
@@ -45,6 +53,7 @@ pub fn process(state: *State, audio: *AudioSession, script: *ScriptScene) ?Resiz
         if (last_audio_path) |path| audio.playFile(path);
     }
 
+    if (!pet.compact()) gui.editorShortcuts(script);
     if (!gui.editingValue() and !pet.compact()) {
         if (rl.isKeyPressed(.C)) state.camera.projection = switch (state.camera.projection) {
             rl.CAMERA_PERSPECTIVE => rl.CAMERA_ORTHOGRAPHIC,
@@ -70,6 +79,9 @@ pub fn process(state: *State, audio: *AudioSession, script: *ScriptScene) ?Resiz
             event.onTabChange(.settings);
         }
 
+        if (rl.isKeyPressed(.SEVEN)) event.onTabChange(.presets);
+        if (rl.isKeyPressed(.EIGHT)) event.onTabChange(.inspector);
+
         if (rl.isKeyPressed(.F)) {
             if (!rl.IsWindowState(rl.FLAG_BORDERLESS_WINDOWED_MODE)) rl.SetWindowPosition(0, 0);
             rl.ToggleBorderlessWindowed();
@@ -92,7 +104,7 @@ pub fn process(state: *State, audio: *AudioSession, script: *ScriptScene) ?Resiz
         if (!gui.pointerOverUi()) state.rotation_offset += wheelMove.x;
     } else {
         event.onSwipe(.vertical, wheelMove.y);
-        if (!gui.pointerOverUi()) state.camera.position.z += wheelMove.y;
+        if (!gui.pointerOverUi()) zoom(&state.camera, wheelMove.y);
     }
 
     debug.frame();
@@ -113,4 +125,16 @@ test "space smoothing ignores editing and never writes the saved setting" {
     try std.testing.expect(!held);
     // The user's setting is untouched throughout, so preferences save it as-is.
     try std.testing.expectEqual(@as(f32, 0.4), Config.Audio.wave_blend);
+}
+
+test "wheel zoom never reaches or passes the camera target" {
+    var state: State = .{};
+    for (0..100) |_| zoom(&state.camera, -1);
+    try std.testing.expectEqual(state.camera.target.z + min_camera_distance, state.camera.position.z);
+    for (0..100) |_| zoom(&state.camera, 1);
+    try std.testing.expectEqual(state.camera.target.z + max_camera_distance, state.camera.position.z);
+    // The default position is inside the range, so a fresh camera is unchanged.
+    const fresh: State = .{};
+    try std.testing.expect(fresh.camera.position.z > fresh.camera.target.z + min_camera_distance);
+    try std.testing.expect(fresh.camera.position.z < fresh.camera.target.z + max_camera_distance);
 }

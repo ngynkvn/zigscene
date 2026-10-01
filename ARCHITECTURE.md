@@ -45,7 +45,7 @@ Each `App.frame`:
 
 1. Applies volume (and refills browser playback), then processes input and resizes the
    render texture if necessary.
-2. Drains up to four fixed audio blocks and advances the motion envelope.
+2. Takes up to four recent fixed audio blocks and advances the motion envelope.
 3. Builds a Lua context from the latest analysis and input, polls any watched
    script, runs update/draw under protection, and commits valid settings changes.
 4. Advances built-in visualizer history when built-in rendering is enabled.
@@ -57,6 +57,14 @@ Each `App.frame`:
 No Lua runs on audio/device threads. `destroy` closes Lua and restores its
 settings, saves native preferences, stops audio, releases the renderer and UI
 caches, then closes raylib.
+
+The native raylib backend rotates twelve geometry upload buffers. Scene/UI
+boundaries flush the batch several times per frame; rotating avoids immediately
+rewriting a buffer still in use by the GPU. The web backend retains raylib's
+default buffer count. Waveform and spectrum colors are converted once per frame
+and reused across their samples/columns, including hover tinting. The
+[scene benchmark](docs/development.md#profiling-and-diagnostics) compares the
+native buffer configuration with a single buffer while preserving scene detail.
 
 ## Module map
 
@@ -121,13 +129,26 @@ File analysis uses raylib's mixed-audio callback. Live capture uses a thin C
 miniaudio adapter; `capture.zig` bridges it into Zig. `SampleQueue` transfers
 stereo PCM into fixed 1,024-frame blocks so device callbacks do not execute FFT,
 GUI, Lua, or GPU work. Switching sources resets analysis state. The render
-thread bounds its analysis work to four blocks per frame. Oversized callbacks
+thread bounds its analysis work to four blocks per frame, dropping older whole
+blocks when it falls behind and preserving partial blocks for the next frame. Oversized callbacks
 retain only the newest queue-capacity frames; wrapped copies use at most two
 contiguous segments on submission and consumption.
 
-The live waveform, FFT, RMS and beat state describe the latest analyzed block.
-Motion applies attack/release smoothing, gain/compression and an exponential beat
-pulse. Lua gets copies of these values in reused Lua tables, including smoothed
+The live waveform and FFT describe the latest analyzed block. The FFT input is
+Hann-windowed (scaled by 2 to keep tone peaks) so block edges do not smear
+energy across the spectrum. RMS is the peak
+block RMS in the current render frame's batch so brief hits are not overwritten
+by a quieter block. Beat events accumulate across that batch and trigger on
+threshold crossings, with a cooldown, rather than repeatedly during sustained
+loud passages. Seeking clears queued PCM and analysis history. If callbacks stop,
+waveform, FFT, RMS and beat history expire together after 120 ms.
+Sharp RMS increases bypass waveform and motion attack smoothing on their first
+analyzed frame, including before beat history has warmed up. Near-silent noise
+does not open this attack path; holding Space keeps the requested heavy waveform
+smoothing. Motion applies attack/release smoothing to gradual swells/decays,
+gain/compression and an exponential beat pulse. The halo uses a 12 ms attack and
+90 ms release instead of delaying rises with its decay filter.
+Lua gets copies of these values in reused Lua tables, including smoothed
 mono samples and the first half of the linear FFT magnitude array. Lua never
 receives pointers into the audio queue.
 
@@ -247,13 +268,15 @@ when background opacity is 1. Window opacity remains a separate OS-level control
 
 ## UI and window settings
 
-Native `--desktop-pet` mode starts system-audio capture in a 400 × 400 transparent,
-undecorated window. Right-click switches between the pet and full controls.
+Native `--desktop-pet` mode defaults to system-audio capture (or plays a supplied
+audio file) in a 400 × 400 transparent, undecorated window. Right-click opens
+the controls; right-clicking the scene outside the UI returns to the pet.
 Compact presentation overrides stay outside the persisted settings: UI and
 background noise are hidden, the window is topmost, and an uncapped FPS setting
-uses 60 FPS. Entering the compact view ends active UI gestures. Windows dragging
-queries the screen cursor directly to avoid repeating a stale mouse event as
-the window moves. See the [desktop-pet guide](docs/desktop-pet.md).
+uses 60 FPS. Entering the compact view ends active UI gestures. Dragging queries
+the native cursor rather than raylib's cached mouse events, so a stationary
+cursor cannot repeat a drag as the window moves. See the
+[desktop-pet guide](docs/desktop-pet.md).
 
 ### Drawing and interaction
 

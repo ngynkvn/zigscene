@@ -97,15 +97,49 @@ Command-line selections also appear in the **Devices** panel.
 | --- | --- |
 | **Hide / 1** | Hide the side panel |
 | **Shape / 2** | Layer geometry and shader effects |
-| **Color / 3** | Layer colors |
+| **Color / 3** | Expandable hue, saturation, brightness, and saved swatches |
 | **Motion / 4** | Volume, waveform smoothing/strength, energy gain, compression, rise/fall times, and beat decay |
 | **Scene / 5** | Layer visibility, Lua examples, and script parameters |
 | **Settings / 6** | FPS limit, opacity, volume, UI size, FPS display, and always-on-top |
+| **Presets / 7** | Save, load, and duplicate named looks |
+| **Layers / 8** | Search controls, solo a layer, and reset groups |
 
 Hover over a layer's settings to highlight it in the scene. The highlight stays
 active while dragging a slider; hidden layers stay hidden. **Show all / Hide
 all** in Scene controls the built-in layers. See [Lua scenes](scripting.md) to
 try a custom visualizer.
+
+Beats and sharp increases in audio level react on the first analyzed frame.
+**Swell rise** in Motion controls gradual increases; **Fall time** controls the
+decay. Waveform smoothing preserves the leading edge of hits. Holding **Space**
+still applies deliberately heavier waveform smoothing.
+
+### Explore and save a look
+
+Open **Presets / 7**, enter a name, and choose **Save / replace**. Click a saved
+name to restore its visual settings, Lua scene reference, and parameters. Select a
+preset and choose **Duplicate** to copy it; a new name creates a separately named
+copy. Saving with an existing name replaces that look. The library holds 24 looks.
+Native builds save immediately to `presets.json` beside `settings.conf`; browser
+presets last for the session. External Lua files are referenced by absolute path,
+so keep those files available. A missing or invalid scene keeps the current look.
+Window, interface, volume, and capture-device settings are excluded.
+
+Use **Undo / Redo** at the panel footer or the keyboard shortcuts to explore visual
+changes. History holds up to 63 edits, groups a completed slider drag into one
+edit, and restarts when a scene or preset loads. A teal dot marks controls changed
+from their defaults. Right-click a control or Lua parameter to reset it; section
+**Reset** buttons restore a group. Lua-owned host controls display **Lua** and
+remain locked; adjust the scene's exposed parameters instead.
+
+**Layers / 8** collects each layer's controls into collapsible Shape, Color, and
+Global response groups. Search by label or setting path. **Solo** temporarily shows
+only the selected enabled built-in layer, without changing saved visibility.
+Click a Scene card's body to open its inspector. Solo clears when the scene changes.
+
+In **Color**, expand a color to edit all three HSV components. Click a swatch to
+apply it; right-click a swatch to save the current color. The eight shared swatches
+save alongside presets on native builds. Spectrum tips and body have separate colors.
 
 ### Panel and UI size
 
@@ -135,7 +169,10 @@ for what those timings measure.
 
 | Key or gesture | Action |
 | --- | --- |
-| **1–6** | Select a tab, as listed [above](#customize-the-scene) |
+| **1–8** | Select a tab, as listed [above](#customize-the-scene) |
+| **Ctrl/Cmd+Z** | Undo a visual edit |
+| **Ctrl/Cmd+Shift+Z** or **Ctrl/Cmd+Y** | Redo a visual edit |
+| Right-click a control | Restore its default value |
 | **P** | Play/pause a loaded file |
 | **M** | Start/stop the selected capture source |
 | Hold **Space** | Temporarily apply heavier waveform smoothing |
@@ -143,13 +180,13 @@ for what those timings measure.
 | **F** | Toggle borderless window mode |
 | **C** | Switch the built-in camera between perspective and orthographic |
 | **Left / Right** | Rotate the built-in 3D scene |
-| Vertical wheel over the scene | Move the camera closer/farther |
+| Vertical wheel over the scene | Move the camera closer/farther (stops short of the scene center) |
 | Horizontal wheel over the scene | Rotate the built-in 3D scene |
 | Wheel over a panel | Scroll its controls |
 | **D** or click the FPS counter | Toggle diagnostics |
 
 Tab, playback, camera, and smoothing shortcuts are ignored while editing a
-numeric value. Holding Space does not change the saved smoothing setting.
+numeric value or text field. Holding Space does not change the saved smoothing setting.
 
 ## Saved settings
 
@@ -168,12 +205,15 @@ paths. Booleans are saved as `0` or `1`. Unknown or malformed entries are ignore
 valid numbers are clamped to supported ranges. On Linux, an empty or relative
 `XDG_CONFIG_HOME` falls back to `~/.config`.
 
-To reset all saved preferences, close the app and move or remove `settings.conf`.
-The next launch uses defaults. **Reset UI size and panel** resets only the layout.
+Use **Reset all settings** at the top of **Settings / 6** to restore the original
+visual, audio, window, and layout defaults. It unloads the active Lua scene, resets
+the camera, and clears solo mode and edit history. Native builds save the reset
+immediately. Saved presets and swatches stay in your library, and the current
+audio source keeps playing. **Reset UI size and panel** resets only the layout.
 
 Lua-owned overrides are restored before saving, so they do not replace your
 preferences. UI edits do not rewrite a Lua source file. Script parameter sliders
-survive reload by ID, but are not saved across app restarts. Capture-device
+survive reload by ID; save a preset to restore them across app restarts. Capture-device
 selection also lasts only for the session.
 
 ## Troubleshooting
@@ -181,7 +221,7 @@ selection also lasts only for the session.
 ### A file does not load
 
 Use an MP3, WAV, or OGG file and read the error in the player. The bundled build
-does not enable FLAC. Dropping another file retries playback.
+does not enable FLAC. Dropping another file retries playback. A failed load keeps the current audio source.
 
 ### Capture fails or is silent
 

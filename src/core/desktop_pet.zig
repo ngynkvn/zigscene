@@ -7,6 +7,11 @@ const win = struct {
     const POINT = extern struct { x: i32, y: i32 };
     extern "user32" fn GetCursorPos(point: *POINT) callconv(.winapi) i32;
 };
+const glfw = struct {
+    const Window = opaque {};
+    extern fn glfwGetCurrentContext() ?*Window;
+    extern fn glfwGetCursorPos(window: *Window, x: *f64, y: *f64) void;
+};
 
 pub const size = 400;
 pub var enabled = false;
@@ -15,11 +20,13 @@ var pet_position: rl.Vector2 = .{};
 var control_size: rl.Vector2 = .{ .x = 1024, .y = 768 };
 var drag_mouse: ?rl.Vector2 = null;
 var drag_window: rl.Vector2 = .{};
+var toggle_on_release = false;
 
 pub fn init(requested: bool) void {
     enabled = requested and builtin.os.tag != .emscripten;
     controls_open = false;
     drag_mouse = null;
+    toggle_on_release = false;
 }
 
 pub fn compact() bool {
@@ -56,7 +63,7 @@ pub fn openControls() void {
     control_size.y = @min(control_size.y, @max(480, available.y - 80));
     rl.SetWindowSize(@intFromFloat(control_size.x), @intFromFloat(control_size.y));
     move(fitPosition(pet_position, control_size, origin, available));
-    rl.SetWindowTitle("zigscene controls - Right-click: return to desktop pet");
+    rl.SetWindowTitle("zigscene controls - Right-click the scene to return to pet");
 }
 
 fn closeControls() void {
@@ -74,11 +81,20 @@ fn closeControls() void {
 }
 
 /// Returns true when the controls window changes state.
-pub fn process() bool {
+pub fn process(over_controls: bool) bool {
     if (!enabled) return false;
-    if (rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_RIGHT)) {
-        if (controls_open) closeControls() else openControls();
-        return true;
+    // Controls use right-click for resets and saving swatches. Only the scene
+    // background closes the controls; the compact pet can be clicked anywhere.
+    if (rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_RIGHT)) toggle_on_release = compact() or !over_controls;
+    if (rl.IsMouseButtonReleased(rl.MOUSE_BUTTON_RIGHT)) {
+        const toggle = toggle_on_release;
+        toggle_on_release = false;
+        if (toggle) {
+            // Open on release so the same press cannot reset a newly exposed
+            // control or overwrite a swatch underneath the cursor.
+            if (controls_open) closeControls() else openControls();
+            return true;
+        }
     }
     if (!compact()) return false;
     if (!rl.IsWindowFocused() or !rl.IsMouseButtonDown(rl.MOUSE_BUTTON_LEFT)) {
@@ -106,8 +122,11 @@ fn screenMouse(position: rl.Vector2) ?rl.Vector2 {
         if (win.GetCursorPos(&point) == 0) return null;
         return .{ .x = @floatFromInt(point.x), .y = @floatFromInt(point.y) };
     }
-    const mouse = rl.GetMousePosition();
-    return .{ .x = position.x + mouse.x, .y = position.y + mouse.y };
+    const window = glfw.glfwGetCurrentContext() orelse return null;
+    var x: f64 = 0;
+    var y: f64 = 0;
+    glfw.glfwGetCursorPos(window, &x, &y);
+    return .{ .x = position.x + @as(f32, @floatCast(x)), .y = position.y + @as(f32, @floatCast(y)) };
 }
 
 pub fn drawHint() void {

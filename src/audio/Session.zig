@@ -38,17 +38,16 @@ pub fn selectedCaptureDevice(self: *const Session) i32 {
 }
 
 pub fn playFile(self: *Session, path: []const u8) void {
+    if (!playback.loadFile(path)) {
+        self.notice = "Could not open audio. Current source kept.";
+        return;
+    }
     self.notice = null;
     capture.stop();
     self.resume_file_after_capture = false;
     self.seeking = false;
-    if (playback.loadFile(path)) {
-        processor.selectSource(.file);
-        playback.play();
-    } else {
-        self.notice = "Could not open audio. Try another file.";
-        processor.selectSource(.none);
-    }
+    processor.selectSource(.file);
+    playback.play();
 }
 
 pub fn startCapture(self: *Session, mode: capture.Mode, device_index: i32) !void {

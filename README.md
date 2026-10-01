@@ -11,6 +11,10 @@ audio, customize the built-in layers, or write a Lua scene.
 1. [Download a release](#download-a-release) or [build from source](#build-from-source).
 2. Drop an MP3, WAV, or OGG file onto the window.
 3. Use the tabs to change the visuals, or open **Scene / 5** to try a Lua example.
+4. Save a look in **Presets / 7**, or use **Layers / 8** to search and solo layers.
+
+The compact editor includes undo/redo, control and group resets, and full HSV
+colors with saved swatches. See [visual editing](docs/usage.md#explore-and-save-a-look).
 
 For live audio, click **Devices** in the player, choose a source, then click
 **Capture / M**. See the [capture guide](docs/usage.md#capture-live-audio) for

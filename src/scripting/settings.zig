@@ -1,14 +1,21 @@
 //! Stable Lua names for host settings. All writes are validated in the C bridge.
+const std = @import("std");
 const Config = @import("../core/config.zig");
 pub const c = @cImport({
     @cInclude("lua_scene.h");
 });
-const Target = union(enum) { scalar: *f32, boolean: *bool };
+pub const Target = union(enum) { scalar: *f32, boolean: *bool };
 pub const Setting = struct {
     name: [:0]const u8,
     target: Target,
     min: f64 = 0,
     max: f64 = 1,
+
+    pub fn visual(self: Setting) bool {
+        return !std.mem.startsWith(u8, self.name, "window.") and
+            !std.mem.startsWith(u8, self.name, "interface.") and
+            !std.mem.eql(u8, self.name, "audio.volume");
+    }
 
     pub fn get(self: Setting) f64 {
         return switch (self.target) {
@@ -68,13 +75,15 @@ pub const entries = [_]Setting{
     scalar("halo.depth", &V.Halo.depth, 0, 220),
     scalar("halo.spin", &V.Halo.spin, -1, 1),
     scalar("halo.hue", &V.Halo.hue, 0, 359),
+    scalar("halo.saturation", &V.Halo.saturation, 0, 1),
+    scalar("halo.brightness", &V.Halo.brightness, 0, 1),
     scalar("bubble.ring_radius", &V.Bubble.ring_radius, 0.1, 8),
     scalar("bubble.sphere_radius", &V.Bubble.sphere_radius, 0.1, 4),
     scalar("bubble.effect", &V.Bubble.effect, 0.1, 1),
     scalar("bubble.color_scale", &V.Bubble.color_scale, 0, 100),
     scalar("bubble.bubble_color_scale", &V.Bubble.bubble_color_scale, 0, 100),
     scalar("bubble.height_ring", &V.Bubble.height_ring, 0, 1),
-} ++ hsv("wave_lines.color1", &V.WaveFormLine.color1) ++ hsv("wave_lines.color2", &V.WaveFormLine.color2) ++
+} ++ hsv("spectrum.color1", &V.Spectrum.color1) ++ hsv("spectrum.color2", &V.Spectrum.color2) ++ hsv("wave_lines.color1", &V.WaveFormLine.color1) ++ hsv("wave_lines.color2", &V.WaveFormLine.color2) ++
     hsv("wave_bars.color1", &V.WaveFormBar.color1) ++ hsv("wave_bars.color2", &V.WaveFormBar.color2) ++ hsv("wave_bars.trail_color", &V.WaveFormBar.trail_color) ++
     hsv("bubble.color1", &V.Bubble.color1) ++ hsv("bubble.color2", &V.Bubble.color2);
 
@@ -82,4 +91,14 @@ pub fn snapshot() [entries.len]c.ZsSetting {
     var result: [entries.len]c.ZsSetting = undefined;
     for (entries, &result) |entry, *out| out.* = .{ .name = entry.name.ptr, .value = entry.get(), .min = entry.min, .max = entry.max, .boolean = @intFromBool(entry.target == .boolean) };
     return result;
+}
+
+pub fn indexOf(pointer: *f32) ?usize {
+    for (entries, 0..) |entry, i| if (entry.target == .scalar and entry.target.scalar == pointer) return i;
+    return null;
+}
+
+pub fn find(name: []const u8) ?usize {
+    for (entries, 0..) |entry, i| if (std.mem.eql(u8, entry.name, name)) return i;
+    return null;
 }

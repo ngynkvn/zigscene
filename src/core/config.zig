@@ -48,7 +48,7 @@ pub const Motion = struct {
     pub const Scalars = [_]controls.Scalar{
         .{ "Energy gain", &energy_gain, .{ 0.2, 6.0 } },
         .{ "Compression", &compression, .{ 0.0, 8.0 } },
-        .{ "Rise time (s)", &attack_seconds, .{ 0.01, 0.5 } },
+        .{ "Swell rise (s)", &attack_seconds, .{ 0.01, 0.5 } },
         .{ "Fall time (s)", &release_seconds, .{ 0.03, 1.5 } },
         .{ "Beat decay (s)", &beat_decay_seconds, .{ 0.05, 1.0 } },
     };
@@ -107,6 +107,8 @@ pub const Visualizer = struct {
     };
 
     pub const Spectrum = struct {
+        pub var color1: Vector3 = .{ .x = 0, .y = 0, .z = 0.96 };
+        pub var color2: Vector3 = .{ .x = 0, .y = 1, .z = 0.9 };
         pub var gain: f32 = 3.0;
         pub var height: f32 = 160;
         pub const Scalars = [_]controls.Scalar{
@@ -120,6 +122,8 @@ pub const Visualizer = struct {
         pub var depth: f32 = 100;
         pub var spin: f32 = 0.12;
         pub var hue: f32 = 195;
+        pub var saturation: f32 = 0.75;
+        pub var brightness: f32 = 1;
         pub const Scalars = [_]controls.Scalar{
             .{ "Halo radius", &radius, .{ 40, 260 } },
             .{ "Halo depth", &depth, .{ 0, 220 } },

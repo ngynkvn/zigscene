@@ -42,12 +42,31 @@ pub fn popBlock(self: *Queue, block: *[N * channels]f32) bool {
     defer self.mutex.unlock();
     if (self.frame_count < N) return false;
 
+    self.readBlock(block);
+    return true;
+}
+
+/// Take a bounded snapshot ending at the newest complete block. Discard old
+/// whole blocks when the renderer falls behind; retain the partial block so
+/// callback boundaries do not change the analysis window alignment.
+pub fn popLatestBlocks(self: *Queue, blocks: [][N * channels]f32) usize {
+    if (blocks.len == 0 or !self.mutex.tryLock()) return 0;
+    defer self.mutex.unlock();
+    const available = self.frame_count / N;
+    const count = @min(available, blocks.len);
+    const skipped = (available - count) * N;
+    self.read_frame = (self.read_frame + skipped) % capacity_frames;
+    self.frame_count -= skipped;
+    for (blocks[0..count]) |*block| self.readBlock(block);
+    return count;
+}
+
+fn readBlock(self: *Queue, block: *[N * channels]f32) void {
     const first: usize = @min(N, capacity_frames - self.read_frame);
     @memcpy(block[0 .. first * channels], self.samples[self.read_frame * channels ..][0 .. first * channels]);
     @memcpy(block[first * channels ..], self.samples[0 .. (N - first) * channels]);
     self.read_frame = (self.read_frame + N) % capacity_frames;
     self.frame_count -= N;
-    return true;
 }
 
 pub fn selectSource(self: *Queue, source: Source) void {
@@ -162,4 +181,26 @@ test "oversized submission retains only its newest frames" {
     queue.submit(.capture, samples[0..block.len]);
     try std.testing.expect(queue.popBlock(&block));
     try std.testing.expectEqualSlices(f32, samples[0..block.len], &block);
+}
+
+test "bounded snapshot catches up through a wrap and preserves partial frames" {
+    var queue: Queue = .{};
+    queue.selectSource(.capture);
+    var input: [capacity_frames * channels]f32 = undefined;
+    for (&input, 0..) |*sample, i| sample.* = @floatFromInt(i);
+    var block: [N * channels]f32 = undefined;
+    // Start at a non-aligned cursor, then wrap the next submission.
+    queue.submit(.capture, input[0 .. (3 * N + N / 2) * channels]);
+    for (0..3) |_| try std.testing.expect(queue.popBlock(&block));
+    queue.submit(.capture, input[0 .. 6 * N * channels]);
+    var latest: [4][N * channels]f32 = undefined;
+    try std.testing.expectEqual(@as(usize, 4), queue.popLatestBlocks(&latest));
+    for (latest, 0..) |actual, i| {
+        const start = (N + N / 2 + i * N) * channels;
+        try std.testing.expectEqualSlices(f32, input[start..][0..actual.len], &actual);
+    }
+    try std.testing.expectEqual(@as(usize, 0), queue.popLatestBlocks(&latest));
+    queue.submit(.capture, input[6 * N * channels ..][0 .. N / 2 * channels]);
+    try std.testing.expect(queue.popBlock(&block));
+    try std.testing.expectEqualSlices(f32, input[(5 * N + N / 2) * channels ..][0..block.len], &block);
 }

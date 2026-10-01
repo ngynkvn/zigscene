@@ -16,7 +16,7 @@ From the folder containing the executable, run this in PowerShell:
 
 Windows captures the default playback device through WASAPI loopback. To choose
 a different device, right-click the pet, stop capture, select the output in
-**Audio devices**, then start capture again. Right-click to return to the pet.
+**Audio devices**, then start capture again. Right-click the scene to return to the pet.
 If capture cannot start, the Audio devices panel opens. Read the notice in the
 player; use **Expand player** if it is hidden.
 
@@ -32,7 +32,7 @@ You can also pass an index from `--list-audio-devices`:
 | --- | --- |
 | Move the pet | Hold the left mouse button and drag |
 | Open the full controls window | Right-click |
-| Return to the pet | Right-click again |
+| Return to the pet | Right-click the scene outside the controls |
 | Quit | Press **Esc**, or close the controls window |
 
 The compact view is a 400 × 400 borderless window. The header, side panel,
@@ -42,6 +42,10 @@ It receives mouse input inside its window so you can drag it.
 The controls window provides the usual scene, Lua, audio-device, and playback
 settings. Dropping an audio file switches from live capture to that file.
 Use **Capture / M** in the controls window to return to system audio.
+Passing an audio filename with `--desktop-pet` starts that file instead; add
+`--system-audio` explicitly if you want live capture to take priority.
+The controls keep their right-click shortcuts for resetting values and saving
+swatches. Your selected tab is retained when you reopen the controls.
 
 ## Preferences and other platforms
 

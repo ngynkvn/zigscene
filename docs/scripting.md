@@ -147,8 +147,8 @@ Drawing pixels are independent of UI scale.
 | Field | Meaning |
 | --- | --- |
 | `ctx.audio.samples` | 1-based array of 1,024 smoothed mono waveform samples, clamped to −2…2; affected by wave strength/smoothing |
-| `ctx.audio.spectrum` | 1-based array of 512 linear FFT magnitudes, `abs(FFT) / 1024`; first bin is DC; not decibels or log-spaced |
-| `ctx.audio.rms` | RMS of the most recently analyzed stereo block |
+| `ctx.audio.spectrum` | 1-based array of 512 linear FFT magnitudes, `abs(FFT) / 1024` of a Hann-windowed block (window scaled so a tone keeps its peak); first bin is DC; not decibels or log-spaced |
+| `ctx.audio.rms` | Peak stereo block RMS in this render frame's analysis batch; preserves brief hits |
 | `ctx.audio.energy` | Smoothed/compressed motion energy, 0…1.5 |
 | `ctx.audio.beat` | Boolean: a beat was detected in this analysis frame |
 | `ctx.audio.pulse` | Beat envelope, 0…1, decaying with the configured beat decay |
@@ -165,8 +165,10 @@ Drawing pixels are independent of UI scale.
 ### Reading context safely
 
 Audio arrays reflect the latest analyzed block, not the full track or the seek
-waveform. They retain that block when playback pauses; energy and pulse still
-decay. Do not assume that one analysis block corresponds to one rendering frame.
+waveform. Silent playback callbacks drive them toward zero when paused; if
+callbacks stop entirely, arrays and RMS clear after 120 ms. Seeking resets
+analysis immediately. Energy and pulse decay with their configured smoothing.
+Do not assume that one analysis block corresponds to one rendering frame.
 The FFT uses the mixed/captured stream; bin spacing depends on the device sample
 rate, which is not currently exposed by this API.
 
@@ -299,7 +301,7 @@ Jump to [window and interface](#window-and-interface), [audio and motion](#audio
 | `audio.wave_gain` | 0.1…3 |
 | `motion.energy_gain` | 0.2…6 |
 | `motion.compression` | 0…8 |
-| `motion.attack_seconds` | 0.01…0.5 |
+| `motion.attack_seconds` | 0.01…0.5; rise time for gradual swells; sharp onsets react immediately |
 | `motion.release_seconds` | 0.03…1.5 |
 | `motion.beat_decay_seconds` | 0.05…1 |
 
@@ -325,6 +327,7 @@ Jump to [window and interface](#window-and-interface), [audio and motion](#audio
 | `halo.depth` | 0…220 |
 | `halo.spin` | −1…1 |
 | `halo.hue` | 0…359 |
+| `halo.saturation`, `halo.brightness` | 0…1 |
 | `bubble.ring_radius` | 0.1…8 |
 | `bubble.sphere_radius` | 0.1…4 |
 | `bubble.effect` | 0.1…1 |
@@ -334,7 +337,8 @@ Jump to [window and interface](#window-and-interface), [audio and motion](#audio
 ### HSV colors
 
 Each of `wave_lines.color1`, `wave_lines.color2`, `wave_bars.color1`,
-`wave_bars.color2`, `wave_bars.trail_color`, `bubble.color1`, and `bubble.color2`
+`wave_bars.color2`, `wave_bars.trail_color`, `bubble.color1`, `bubble.color2`,
+`spectrum.color1` (tips), and `spectrum.color2` (body)
 has `.h` (0…359), `.s` (0…1), and `.v` (0…1) components. These are HSV settings,
 whereas drawing functions receive RGBA arrays.
 

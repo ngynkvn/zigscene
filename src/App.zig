@@ -17,7 +17,6 @@ const Renderer = @import("shader/shader.zig").Renderer;
 const Highlight = @import("graphics/Highlight.zig");
 const Motion = @import("graphics/Motion.zig");
 const ScriptScene = @import("scripting/Scene.zig");
-const audio_hold_seconds: f32 = 0.12;
 const Viewport = graphics.Viewport;
 /// Time constant for the scene sliding clear of the side panel.
 const viewport_slide_seconds: f32 = 0.12;
@@ -31,7 +30,6 @@ renderer: Renderer,
 elapsed: f32 = 0,
 /// Animated left inset of the scene viewport, in window pixels.
 scene_left: f32 = 0,
-seconds_since_audio: f32 = 0,
 motion: Motion = .{},
 halo: graphics.Halo = .{},
 wave_bars: graphics.WaveFormBar = .{},
@@ -80,19 +78,20 @@ fn applyOptions(self: *App, options: cli.Options) void {
 
 pub fn frame(self: *App) void {
     defer tracy.frameMarkNamed("zigscene");
+    if (gui.takeSettingsReset()) self.resetSettings();
     const frame_start = rl.rl.GetTime();
     const dt = rl.GetFrameTime();
     self.audio.update();
-    if (pet.process()) {
-        gui.cancelInteraction(&self.audio);
+    @import("gui/theme.zig").updateScale();
+    if (pet.process(!pet.compact() and gui.pointerOverUi())) {
+        gui.cancelInteraction(&self.audio, &self.script);
         processor.smoothing_held = false;
         if (pet.compact()) @import("gui/theme.zig").resetCursor();
-        if (!pet.compact()) gui.onTabChange(.audio);
+        @import("gui/theme.zig").updateScale();
     }
-    @import("gui/theme.zig").updateScale();
     if (input_mod.process(&self.input, &self.audio, &self.script)) |size| self.renderer.resize(size.width, size.height);
-    if (processor.update()) self.seconds_since_audio = 0 else self.seconds_since_audio += dt;
-    self.motion.update(dt, if (self.seconds_since_audio < audio_hold_seconds) processor.rms_energy else 0, processor.on_beat);
+    _ = processor.update(dt);
+    self.motion.update(dt, processor.rms_energy, processor.on_beat);
     for (&self.spectrum, processor.curr_fft[0..self.spectrum.len]) |*value, frequency| value.* = frequency.magnitude() / @as(f32, @floatFromInt(Config.Audio.buffer_size));
     const viewport = self.updateViewport(dt);
     const mouse = rl.GetMousePosition();
@@ -137,6 +136,15 @@ pub fn frame(self: *App) void {
     self.applyFpsLimit();
     self.applyAlwaysOnTop();
     self.elapsed += dt;
+}
+
+fn resetSettings(self: *App) void {
+    @import("editor/State.zig").resetAll(&self.script);
+    self.input = .{};
+    self.audio.endSeek();
+    processor.smoothing_held = false;
+    gui.resetWorkspace();
+    @import("core/preferences.zig").save(self.preferences_path);
 }
 
 fn applyAlwaysOnTop(self: *App) void {
@@ -186,36 +194,38 @@ fn renderScene(self: *App, viewport: Viewport, center: rl.Vector2, focus: Highli
 
 fn renderBuiltin(self: *App, viewport: Viewport, center: rl.Vector2, focus: Highlight) void {
     const width = viewport.width();
-    if (Config.Scene.halo) self.halo.render(center, self.motion.energy, self.motion.pulse, focus);
+    if (Highlight.Element.halo.visible()) self.halo.render(center, self.motion.energy, self.motion.pulse, focus);
     const floor = sceneFloor();
 
     {
         const context = tracy.traceNamed(@src(), "2d");
         defer context.end();
-        const lines = Config.Scene.wave_lines;
-        const bars = Config.Scene.wave_bars;
+        const lines = Highlight.Element.wave_lines.visible();
+        const bars = Highlight.Element.wave_bars.visible();
+        const line_style = graphics.WaveFormLine.Style.init(focus);
+        const bar_style = graphics.WaveFormBar.Style.init(focus);
         // The shorter bars stand in front of the spectrum unless it is hovered.
         const spectrum_on_top = focus.selected(.spectrum);
-        if (Config.Scene.spectrum and !spectrum_on_top) graphics.FFTSpectrum.render(floor, width, processor.curr_fft, focus);
+        if (Highlight.Element.spectrum.visible() and !spectrum_on_top) graphics.FFTSpectrum.render(floor, width, processor.curr_fft, focus);
         if (lines or bars) for (processor.curr_buffer, processor.curr_fft, 0..) |value, frequency, i| {
             if (lines) {
-                graphics.WaveFormLine.render(.{ .y = center.y - 80 }, width, i, value, focus);
+                graphics.WaveFormLine.render(.{ .y = center.y - 80 }, width, i, value, line_style);
                 graphics.WaveFormLine.render(
                     .{ .y = center.y * 2 },
                     width,
                     i,
                     frequency.magnitude() / @as(f32, @floatFromInt(processor.curr_fft.len)) * 1.2,
-                    focus,
+                    line_style,
                 );
             }
-            if (bars) self.wave_bars.render(floor, width, i, value, focus);
+            if (bars) self.wave_bars.render(floor, width, i, value, bar_style);
         };
-        if (Config.Scene.spectrum and spectrum_on_top) graphics.FFTSpectrum.render(floor, width, processor.curr_fft, focus);
+        if (Highlight.Element.spectrum.visible() and spectrum_on_top) graphics.FFTSpectrum.render(floor, width, processor.curr_fft, focus);
     }
     {
         const context = tracy.traceNamed(@src(), "3d");
         defer context.end();
-        if (Config.Scene.bubble) graphics.Bubble.render(viewport, self.input.camera, self.input.rotation_offset, self.elapsed, self.motion.energy, self.motion.pulse, focus);
+        if (Highlight.Element.bubble.visible()) graphics.Bubble.render(viewport, self.input.camera, self.input.rotation_offset, self.elapsed, self.motion.energy, self.motion.pulse, focus);
     }
 }
 
@@ -233,9 +243,8 @@ fn renderWindow(self: *App) f64 {
     rl.ClearBackground(background);
 
     rl.BeginShaderMode(self.renderer.program);
-    rl.SetShaderValue(self.renderer.program, self.renderer.chroma_factor_location, &Config.Shader.chroma_factor, rl.RL_SHADER_UNIFORM_FLOAT);
     const noise: f32 = if (pet.compact()) 0 else Config.Shader.noise_factor;
-    rl.SetShaderValue(self.renderer.program, self.renderer.noise_factor_location, &noise, rl.RL_SHADER_UNIFORM_FLOAT);
+    self.renderer.setUniforms(self.elapsed, noise);
     rl.DrawTextureRec(
         self.renderer.scene_texture.texture,
         .{

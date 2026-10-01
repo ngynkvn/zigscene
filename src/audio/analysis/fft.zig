@@ -19,6 +19,24 @@ const twiddles = blk: {
     break :blk table;
 };
 
+/// Periodic Hann window scaled by 2, so a tone's peak magnitude matches the
+/// unwindowed transform while leakage into distant bins falls sharply.
+const hann = blk: {
+    @setEvalBranchQuota(100_000);
+    var table: [N]f32 = undefined;
+    for (&table, 0..) |*w, i| {
+        w.* = @floatCast(1 - @cos(2 * std.math.pi * @as(f64, @floatFromInt(i)) / @as(f64, @floatFromInt(N))));
+    }
+    break :blk table;
+};
+
+/// Taper an analysis block before `fft`. Without it, every block edge is a
+/// discontinuity that smears energy across the whole spectrum.
+pub fn window(values: []ComplexF32) void {
+    std.debug.assert(values.len == N);
+    for (values, hann) |*value, w| value.* = .init(value.re * w, value.im * w);
+}
+
 /// In-place iterative radix-2 Cooley-Tukey FFT. `values.len` must be a power of two no larger than N.
 /// https://en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm
 pub fn fft(values: []ComplexF32) void {
@@ -109,4 +127,23 @@ test "fft matches a direct DFT at the analysis block size" {
         try std.testing.expectApproxEqAbs(@as(f32, @floatCast(re)), actual[k].re, 0.001);
         try std.testing.expectApproxEqAbs(@as(f32, @floatCast(im)), actual[k].im, 0.001);
     }
+}
+
+test "windowing keeps a tone's peak and suppresses distant leakage" {
+    // A tone between two bins is the worst case for an unwindowed block.
+    const frequency = 100.5;
+    var plain: [N]ComplexF32 = undefined;
+    for (&plain, 0..) |*value, i| {
+        value.* = .init(@floatCast(@sin(2 * std.math.pi * frequency * @as(f64, @floatFromInt(i)) / N)), 0);
+    }
+    var windowed = plain;
+    window(&windowed);
+    fft(&plain);
+    fft(&windowed);
+    const peak_plain = @max(plain[100].magnitude(), plain[101].magnitude());
+    const peak_windowed = @max(windowed[100].magnitude(), windowed[101].magnitude());
+    // Between bins the window also recovers scalloping loss (about 1.33x here).
+    try std.testing.expect(peak_windowed >= peak_plain and peak_windowed < peak_plain * 1.5);
+    // Two hundred bins away, leakage drops by orders of magnitude.
+    try std.testing.expect(windowed[300].magnitude() < plain[300].magnitude() * 0.01);
 }

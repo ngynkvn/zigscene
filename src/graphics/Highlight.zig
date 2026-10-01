@@ -4,6 +4,8 @@ const rl = @import("../raylib.zig");
 const Scene = @import("../core/config.zig").Scene;
 const Highlight = @This();
 
+pub var solo: ?Element = null;
+
 pub const Element = enum {
     wave_lines,
     wave_bars,
@@ -12,6 +14,7 @@ pub const Element = enum {
     halo,
 
     pub fn visible(self: Element) bool {
+        if (solo != null and solo != self) return false;
         return switch (self) {
             .wave_lines => Scene.wave_lines,
             .wave_bars => Scene.wave_bars,

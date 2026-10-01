@@ -118,6 +118,7 @@ static void read_params(lua_State *L, int table) {
         lua_getfield(L, -1, "max"); p->max = (float)number(L, -1); lua_pop(L, 1);
         lua_getfield(L, -1, "default"); p->value = (float)number(L, -1); lua_pop(L, 1);
         if (p->max <= p->min || p->value < p->min || p->value > p->max) luaL_error(L, "invalid range/default for parameter '%s'", p->id);
+        p->default_value = p->value;
         if (s->previous) for (size_t j = 0; j < s->previous->param_count; j++) {
             const ZsParam *old = &s->previous->params[j];
             if (!strcmp(p->id, old->id)) p->value = fmaxf(p->min, fminf(p->max, old->value));
