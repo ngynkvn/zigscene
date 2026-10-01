@@ -5,6 +5,7 @@ const native = builtin.os.tag != .emscripten;
 const rl = @import("../raylib.zig");
 const processor = @import("processor.zig");
 const WaveformPreview = @import("WaveformPreview.zig");
+const allocator = @import("../core/memory.zig").allocator;
 
 var music = rl.Music{};
 var worker_started = false;
@@ -73,8 +74,8 @@ pub var waveform: WaveformPreview = .{};
 
 pub fn loadFile(path: []const u8) bool {
     // Validate first: a bad drop must not destroy the active stream or preview.
-    const path_z = std.heap.page_allocator.dupeZ(u8, path) catch return false;
-    defer std.heap.page_allocator.free(path_z);
+    const path_z = allocator.dupeZ(u8, path) catch return false;
+    defer allocator.free(path_z);
     const candidate = rl.LoadMusicStream(path_z.ptr);
     if (!rl.IsMusicValid(candidate)) return false;
     stopWorker();
@@ -121,7 +122,7 @@ fn buildCancelable(path: [*:0]const u8, out: *WaveformPreview, cancel: ?*const C
         var rate: c_uint = 0;
         const decoder = zigscene_preview_open(path, format, &frames, &channels, &rate) orelse return;
         defer zigscene_preview_close(decoder);
-        var builder = WaveformPreview.Builder.init(out, std.heap.page_allocator, frames, channels, rate) catch return;
+        var builder = WaveformPreview.Builder.init(out, allocator, frames, channels, rate) catch return;
         defer builder.deinit();
         var samples: [8192]f32 = undefined;
         while (builder.frames < frames and !cancelled(cancel)) {
@@ -155,7 +156,7 @@ const PreviewRequest = struct {
     build: *const fn ([*:0]const u8, *WaveformPreview, ?*const Cancellation) void,
 
     fn deinit(request: PreviewRequest) void {
-        std.heap.page_allocator.free(request.path);
+        allocator.free(request.path);
     }
 };
 
@@ -176,7 +177,7 @@ const PreviewJob = struct {
 
     fn destroy(job: *PreviewJob) void {
         job.request.deinit();
-        std.heap.page_allocator.destroy(job);
+        allocator.destroy(job);
     }
 };
 const can_spawn = native and !builtin.single_threaded;
@@ -200,7 +201,7 @@ fn startPreview(path: [:0]const u8) void {
 fn spawnPreview(path: [:0]const u8, build: *const fn ([*:0]const u8, *WaveformPreview, ?*const Cancellation) void) bool {
     abandonPreview();
     const request: PreviewRequest = .{
-        .path = std.heap.page_allocator.dupeZ(u8, path) catch return false,
+        .path = allocator.dupeZ(u8, path) catch return false,
         .build = build,
     };
     if (preview_job != null) {
@@ -215,7 +216,6 @@ fn spawnPreview(path: [:0]const u8, build: *const fn ([*:0]const u8, *WaveformPr
 /// Takes ownership of the request only if the worker starts successfully.
 fn launchPreview(request: PreviewRequest) bool {
     std.debug.assert(preview_job == null);
-    const allocator = std.heap.page_allocator;
     const job = allocator.create(PreviewJob) catch return false;
     job.* = .{ .request = request };
     job.thread = std.Thread.spawn(.{}, PreviewJob.run, .{job}) catch {

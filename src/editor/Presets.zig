@@ -4,7 +4,7 @@ const builtin = @import("builtin");
 const settings = @import("../scripting/settings.zig");
 const State = @import("State.zig");
 const Scene = @import("../scripting/Scene.zig");
-const allocator = std.heap.page_allocator;
+const allocator = @import("../core/memory.zig").allocator;
 pub const capacity = 24;
 const Pair = struct { name: []const u8, value: f64 };
 const Record = struct { name: []const u8, scene: []const u8 = "", example: ?Scene.Example = null, values: []const Pair, params: []const Pair = &.{} };
