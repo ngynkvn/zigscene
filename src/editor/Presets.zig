@@ -4,7 +4,7 @@ const builtin = @import("builtin");
 const settings = @import("../scripting/settings.zig");
 const State = @import("State.zig");
 const Scene = @import("../scripting/Scene.zig");
-const allocator = std.heap.page_allocator;
+const allocator = @import("../core/memory.zig").allocator;
 pub const capacity = 24;
 const Pair = struct { name: []const u8, value: f64 };
 const Record = struct { name: []const u8, scene: []const u8 = "", example: ?Scene.Example = null, values: []const Pair, params: []const Pair = &.{} };
@@ -96,13 +96,18 @@ pub const Store = struct {
     len: usize = 0,
     swatches: [8][3]f32 = initial_swatches,
 
-    pub fn put(self: *Store, preset: Preset, replace: bool) !usize {
+    fn find(self: *const Store, label: []const u8) ?usize {
         for (self.items[0..self.len], 0..) |*item, i| {
-            if (std.mem.eql(u8, item.name(), preset.name())) {
-                if (!replace) return error.NameExists;
-                item.* = preset;
-                return i;
-            }
+            if (std.mem.eql(u8, item.name(), label)) return i;
+        }
+        return null;
+    }
+
+    pub fn put(self: *Store, preset: Preset, replace: bool) !usize {
+        if (self.find(preset.name())) |i| {
+            if (!replace) return error.NameExists;
+            self.items[i] = preset;
+            return i;
         }
         if (self.len == capacity) return error.LibraryFull;
         self.items[self.len] = preset;
@@ -204,11 +209,14 @@ pub fn save() !void {
     try write(std.Io.Dir.cwd(), std.Io.Threaded.global_single_threaded.io(), path, &store);
 }
 
+/// Rolls back only the touched slot: a copy of the whole library is ~130 KiB,
+/// more than the browser build's stack.
 pub fn savePreset(item: Preset, replace: bool) !usize {
-    const previous = store;
+    const previous_len = store.len;
+    const replaced: ?Preset = if (store.find(item.name())) |i| store.items[i] else null;
     const index = try store.put(item, replace);
     save() catch |err| {
-        store = previous;
+        if (replaced) |old| store.items[index] = old else store.len = previous_len;
         return err;
     };
     return index;
@@ -299,4 +307,30 @@ test "preset setup sees saved baseline and failed restore rolls it back" {
     try std.testing.expectEqualSlices(f64, &previous, &scene.previous);
     scene.unload();
     try std.testing.expectEqual(@as(f64, 70), radius.get());
+}
+
+test "a failed save rolls back a replaced or appended preset" {
+    const previous_store = store;
+    const previous_failed = load_failed;
+    defer {
+        store = previous_store;
+        load_failed = previous_failed;
+    }
+    State.initDefaults();
+    var scene: Scene = .{};
+    defer scene.deinit();
+    store = .{};
+    load_failed = false;
+    var first = try Preset.capture(&scene, "Look");
+    first.values[0] = 1;
+    _ = try savePreset(first, false);
+    // An unreadable library refuses writes; the in-memory store must not change.
+    load_failed = true;
+    var changed = first;
+    changed.values[0] = 2;
+    try std.testing.expectError(error.InvalidLibrary, savePreset(changed, true));
+    try std.testing.expectEqual(@as(usize, 1), store.len);
+    try std.testing.expectEqual(@as(f64, 1), store.items[0].values[0]);
+    try std.testing.expectError(error.InvalidLibrary, savePreset(try Preset.capture(&scene, "Other"), false));
+    try std.testing.expectEqual(@as(usize, 1), store.len);
 }

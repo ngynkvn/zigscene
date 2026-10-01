@@ -98,7 +98,7 @@ sizes and UI scales into `.tmp/ui-review` without reading or writing preferences
 This is a visual inspection aid, not an interaction test.
 
 CI runs Linux tests, native and Windows release builds, a macOS release build,
-and a web build with bundle validation. See the
+and a web build with bundle validation and a Chromium smoke check. See the
 [test workflow](../.github/workflows/test.yml).
 
 ## Web build
@@ -118,10 +118,27 @@ zig build web-run -Dtarget=wasm32-emscripten -Doptimize=ReleaseSafe \
 The deployable bundle is written to `zig-out/web`. Serve it over HTTP rather than
 opening the HTML file directly.
 
+After building, check browser startup, preset save/replace/duplicate, settings
+reset, dropped audio, and recovery from a rejected post shader:
+
+```sh
+npm ci --prefix tests/web
+tests/web/node_modules/.bin/playwright install chromium
+npm test --prefix tests/web
+```
+
+The check serves the bundle locally, mutes its audio, and writes screenshots and
+console logs to `.tmp/web-check`. Set `CHROMIUM_PATH` to use an installed Chromium
+browser. Screenshots support visual review; the automated assertions check
+continued rendering, shader availability/fallback, audio loading, and runtime errors.
+
 The browser target is experimental. It supports dropped audio files, but Lua
 scenes, native live capture, native window management, and saved preferences are
 unavailable. Playback refills and preview generation run on the browser thread.
 Keep native thread/file paths guarded for Emscripten.
+Use `core/memory.zig` for allocations shared with browser code: Emscripten's
+allocator refreshes JavaScript heap views when memory grows. Zig's direct
+WebAssembly page allocator bypasses those updates and breaks audio/file I/O.
 
 ## Release builds
 

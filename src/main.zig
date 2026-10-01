@@ -40,8 +40,10 @@ pub fn main(process_init: std.process.Init.Minimal) !void {
     defer arena.deinit();
     const allocator = arena.allocator();
     const args = try process_init.args.toSlice(allocator);
-    const plain_args = try allocator.alloc([]const u8, args.len - 1);
-    for (args[1..], plain_args) |arg, *plain| plain.* = arg;
+    // argv can legally be empty when a parent process calls execve directly.
+    const user_args = if (args.len > 0) args[1..] else args;
+    const plain_args = try allocator.alloc([]const u8, user_args.len);
+    for (user_args, plain_args) |arg, *plain| plain.* = arg;
     const options = cli.parse(plain_args) catch |err| {
         std.debug.print("Invalid command line: {s}\n", .{@errorName(err)});
         return err;
@@ -74,6 +76,7 @@ test "root" {
     _ = @import("audio/WaveformPreview.zig");
     _ = @import("audio/processor.zig");
     _ = @import("graphics.zig");
+    _ = @import("shader/shader.zig");
     _ = @import("graphics/Highlight.zig");
     _ = @import("graphics/Viewport.zig");
     _ = @import("graphics/visualizers/spectrum.zig");

@@ -133,7 +133,9 @@ blocks when it falls behind and preserving partial blocks for the next frame. Ov
 retain only the newest queue-capacity frames; wrapped copies use at most two
 contiguous segments on submission and consumption.
 
-The live waveform and FFT describe the latest analyzed block. RMS is the peak
+The live waveform and FFT describe the latest analyzed block. The FFT input is
+Hann-windowed (scaled by 2 to keep tone peaks) so block edges do not smear
+energy across the spectrum. RMS is the peak
 block RMS in the current render frame's batch so brief hits are not overwritten
 by a quieter block. Beat events accumulate across that batch and trigger on
 threshold crossings, with a cooldown, rather than repeatedly during sustained

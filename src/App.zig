@@ -229,8 +229,7 @@ fn renderWindow(self: *App) f64 {
     rl.ClearBackground(background);
 
     rl.BeginShaderMode(self.renderer.program);
-    rl.SetShaderValue(self.renderer.program, self.renderer.chroma_factor_location, &Config.Shader.chroma_factor, rl.RL_SHADER_UNIFORM_FLOAT);
-    rl.SetShaderValue(self.renderer.program, self.renderer.noise_factor_location, &Config.Shader.noise_factor, rl.RL_SHADER_UNIFORM_FLOAT);
+    self.renderer.setUniforms(self.elapsed);
     rl.DrawTextureRec(
         self.renderer.scene_texture.texture,
         .{

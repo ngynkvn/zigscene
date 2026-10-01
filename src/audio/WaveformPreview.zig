@@ -106,7 +106,7 @@ pub const Builder = struct {
 
 pub fn build(self: *WaveformPreview, samples: []const f32, channels: usize, sample_rate: u32) void {
     if (channels == 0) return self.clear();
-    var builder = Builder.init(self, std.heap.page_allocator, samples.len / channels, channels, sample_rate) catch return;
+    var builder = Builder.init(self, @import("../core/memory.zig").allocator, samples.len / channels, channels, sample_rate) catch return;
     defer builder.deinit();
     builder.append(samples);
 }

@@ -147,7 +147,7 @@ Drawing pixels are independent of UI scale.
 | Field | Meaning |
 | --- | --- |
 | `ctx.audio.samples` | 1-based array of 1,024 smoothed mono waveform samples, clamped to −2…2; affected by wave strength/smoothing |
-| `ctx.audio.spectrum` | 1-based array of 512 linear FFT magnitudes, `abs(FFT) / 1024`; first bin is DC; not decibels or log-spaced |
+| `ctx.audio.spectrum` | 1-based array of 512 linear FFT magnitudes, `abs(FFT) / 1024` of a Hann-windowed block (window scaled so a tone keeps its peak); first bin is DC; not decibels or log-spaced |
 | `ctx.audio.rms` | Peak stereo block RMS in this render frame's analysis batch; preserves brief hits |
 | `ctx.audio.energy` | Smoothed/compressed motion energy, 0…1.5 |
 | `ctx.audio.beat` | Boolean: a beat was detected in this analysis frame |
