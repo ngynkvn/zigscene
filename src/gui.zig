@@ -74,6 +74,17 @@ pub fn editingValue() bool {
     return editing != null or StudioPanel.text_editing;
 }
 
+/// End transient UI gestures before entering the desktop pet's compact view.
+pub fn cancelInteraction(audio: *AudioSession, script: *ScriptScene) void {
+    audio.endSeek();
+    dragging_seek = false;
+    editing = null;
+    StudioPanel.text_editing = false;
+    active_slider = null;
+    resize_mode = .none;
+    State.history.record(script);
+}
+
 fn width() f32 {
     return ui.width();
 }

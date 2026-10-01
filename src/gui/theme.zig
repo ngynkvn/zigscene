@@ -180,6 +180,11 @@ pub fn endDrawing() void {
 pub fn requestCursor(shape: c_int) void {
     cursor.request(shape);
 }
+/// Clear a widget cursor when switching to a view without the regular UI.
+pub fn resetCursor() void {
+    cursor.begin();
+    if (cursor.change()) |next| rl.SetMouseCursor(next);
+}
 pub fn beginScissor(bounds: rl.Rectangle) void {
     rl.BeginScissorMode(@intFromFloat(bounds.x * scale_factor), @intFromFloat(bounds.y * scale_factor), @intFromFloat(bounds.width * scale_factor), @intFromFloat(bounds.height * scale_factor));
 }

@@ -56,7 +56,7 @@ pub const Renderer = struct {
     pub fn init() Renderer {
         const program = rl.LoadShaderFromMemory(vertex_source, fragment_source);
         const renderer: Renderer = .{
-            .scene_texture = rl.LoadRenderTexture(Config.Window.width, Config.Window.height),
+            .scene_texture = rl.LoadRenderTexture(rl.GetScreenWidth(), rl.GetScreenHeight()),
             .program = program,
             .chroma_factor_location = rl.rlGetLocationUniform(program.id, "chromaFactor"),
             .noise_factor_location = rl.rlGetLocationUniform(program.id, "noiseFactor"),
@@ -84,11 +84,11 @@ pub const Renderer = struct {
     }
 
     /// Per-frame post-effect uniforms. Call inside `BeginShaderMode(program)`.
-    pub fn setUniforms(self: *const Renderer, time: f32) void {
+    pub fn setUniforms(self: *const Renderer, time: f32, noise_factor: f32) void {
         const background_alpha = std.math.clamp(Config.Shader.alpha_factor, 0, 1);
         const wrapped_time = @mod(time, 1000);
         rl.SetShaderValue(self.program, self.chroma_factor_location, &Config.Shader.chroma_factor, rl.RL_SHADER_UNIFORM_FLOAT);
-        rl.SetShaderValue(self.program, self.noise_factor_location, &Config.Shader.noise_factor, rl.RL_SHADER_UNIFORM_FLOAT);
+        rl.SetShaderValue(self.program, self.noise_factor_location, &noise_factor, rl.RL_SHADER_UNIFORM_FLOAT);
         rl.SetShaderValue(self.program, self.background_alpha_location, &background_alpha, rl.RL_SHADER_UNIFORM_FLOAT);
         rl.SetShaderValue(self.program, self.time_location, &wrapped_time, rl.RL_SHADER_UNIFORM_FLOAT);
     }

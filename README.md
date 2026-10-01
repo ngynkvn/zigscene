@@ -67,6 +67,7 @@ and output files.
 | --- | --- |
 | Play a track, seek, or understand waveform colors | [Playback](docs/usage.md#play-a-track) |
 | Capture system audio or choose an input | [Live capture](docs/usage.md#capture-live-audio) |
+| Run a small Windows desktop overlay | [Desktop pet](docs/desktop-pet.md) |
 | Find a key or mouse control | [Shortcuts](docs/usage.md#shortcuts) |
 | Change layers, layout, opacity, or FPS | [Customize the scene](docs/usage.md#customize-the-scene) |
 | Find or reset saved preferences | [Saved settings](docs/usage.md#saved-settings) |

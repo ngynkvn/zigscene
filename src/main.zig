@@ -86,6 +86,7 @@ test "root" {
     _ = @import("core/debug.zig");
     _ = @import("core/config.zig");
     _ = @import("core/input.zig");
+    _ = @import("core/desktop_pet.zig");
     _ = @import("core/preferences.zig");
     _ = @import("scripting/tests.zig");
 }

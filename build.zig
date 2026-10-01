@@ -66,7 +66,7 @@ pub fn build(b: *std.Build) !void {
     const exe = b.addExecutable(.{
         .name = "zigscene",
         .use_lld = if (target.result.os.tag == .linux) false else null,
-        .root_module = b.createModule(.{ .root_source_file = b.path(if (b.option(bool, "scene-bench", "Measure built-in scene frame times") orelse false) "src/scene_bench.zig" else if (b.option(bool, "ui-smoke", "Render editor screenshots for local visual QA") orelse false) "src/ui_smoke.zig" else "src/main.zig"), .target = target, .optimize = optimize }),
+        .root_module = b.createModule(.{ .root_source_file = b.path(if (b.option(bool, "scene-bench", "Measure built-in scene frame times") orelse false) "src/scene_bench.zig" else if (b.option(bool, "ui-smoke", "Render editor screenshots for local visual QA") orelse false) "src/ui_smoke.zig" else if (b.option(bool, "pet-smoke", "Check desktop pet control transitions") orelse false) "src/pet_smoke.zig" else "src/main.zig"), .target = target, .optimize = optimize }),
     });
     lua.attach(b, exe.root_module, lua_lib);
     exe.root_module.addOptions("options", opts);

@@ -96,6 +96,10 @@ window sizes, and built-in/Lua scenes. CPU tests cannot verify GPU output. For a
 `zig build run -Dui-smoke=true`. It renders all editor tabs at representative window
 sizes and UI scales into `.tmp/ui-review` without reading or writing preferences.
 This is a visual inspection aid, not an interaction test.
+`zig build run -Dpet-smoke=true` checks desktop-pet transitions with raylib input
+events: right-click control resets, opening without an accidental reset, text
+editing cleanup, render-texture resizing, session overrides, and hard reset.
+It captures `.tmp/pet-check` screenshots without reading or saving preferences.
 
 CI runs Linux tests, native and Windows release builds, a macOS release build,
 and a web build with bundle validation and a Chromium smoke check. See the
