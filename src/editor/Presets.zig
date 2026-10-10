@@ -49,6 +49,7 @@ pub const Preset = struct {
     }
 
     pub fn apply(self: *const Preset, scene: *Scene) !void {
+        State.history.record(scene);
         const original = settings.snapshot();
         const original_previous = scene.previous;
         // Setup must see the saved baseline too, not the outgoing look.
@@ -87,7 +88,8 @@ pub const Preset = struct {
                 }
             }
         }
-        State.history.reset(scene);
+        State.history.revision = scene.revision;
+        State.history.record(scene);
     }
 };
 
@@ -96,7 +98,7 @@ pub const Store = struct {
     len: usize = 0,
     swatches: [8][3]f32 = initial_swatches,
 
-    fn find(self: *const Store, label: []const u8) ?usize {
+    pub fn find(self: *const Store, label: []const u8) ?usize {
         for (self.items[0..self.len], 0..) |*item, i| {
             if (std.mem.eql(u8, item.name(), label)) return i;
         }
@@ -333,4 +335,62 @@ test "a failed save rolls back a replaced or appended preset" {
     try std.testing.expectEqual(@as(f64, 1), store.items[0].values[0]);
     try std.testing.expectError(error.InvalidLibrary, savePreset(try Preset.capture(&scene, "Other"), false));
     try std.testing.expectEqual(@as(usize, 1), store.len);
+}
+
+test "look switching can undo and redo scenes and their parameters" {
+    const old = settings.snapshot();
+    const old_history = State.history;
+    defer {
+        for (settings.entries, old) |entry, value| entry.set(value.value);
+        State.history = old_history;
+    }
+    var scene: Scene = .{};
+    defer scene.deinit();
+    const baseline = try Preset.capture(&scene, "Before");
+    scene.loadExample(.orbit);
+    scene.params()[0].value = 123;
+    const orbit = try Preset.capture(&scene, "Orbit");
+    try baseline.apply(&scene);
+    State.history.reset(&scene);
+    try orbit.apply(&scene);
+    try std.testing.expect(scene.example == .orbit);
+    scene.params()[0].value = 160;
+    State.history.record(&scene);
+    State.history.undo(&scene);
+    try std.testing.expectEqual(@as(f32, 123), scene.params()[0].value);
+    @import("../core/config.zig").Audio.volume = 0.123;
+    State.history.undo(&scene);
+    try std.testing.expect(scene.runtime == null);
+    State.history.redo(&scene);
+    try std.testing.expect(scene.example == .orbit);
+    try std.testing.expectEqual(@as(f32, 123), scene.params()[0].value);
+    try std.testing.expectEqual(@as(f32, 0.123), @import("../core/config.zig").Audio.volume);
+    State.history.redo(&scene);
+    try std.testing.expectEqual(@as(f32, 160), scene.params()[0].value);
+}
+
+test "undo same Lua look restores its saved baseline without overwriting animation" {
+    const old = settings.snapshot();
+    const old_history = State.history;
+    defer {
+        for (settings.entries, old) |entry, value| entry.set(value.value);
+        State.history = old_history;
+    }
+    var scene: Scene = .{};
+    defer scene.deinit();
+    scene.loadExample(.palette);
+    const radius = settings.find("halo.radius").?;
+    const baseline = scene.previous[radius];
+    State.history.reset(&scene);
+    var look = try Preset.capture(&scene, "Other baseline");
+    look.values[radius] = 215;
+    try look.apply(&scene);
+    try std.testing.expectEqual(@as(f64, 215), scene.previous[radius]);
+    settings.entries[radius].set(180); // A subsequent animation frame.
+    State.history.undo(&scene);
+    try std.testing.expectEqual(baseline, scene.previous[radius]);
+    try std.testing.expectEqual(@as(f64, 180), settings.entries[radius].get());
+    State.history.redo(&scene);
+    scene.unload();
+    try std.testing.expectEqual(@as(f64, 215), settings.entries[radius].get());
 }

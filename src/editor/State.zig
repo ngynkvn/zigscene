@@ -1,4 +1,4 @@
-//! User-edit history. Script animation is excluded; a scene change starts a new history.
+//! Visual edit and look-switch history. Script animation is excluded.
 const std = @import("std");
 const settings = @import("../scripting/settings.zig");
 const Scene = @import("../scripting/Scene.zig");
@@ -14,22 +14,58 @@ pub fn initDefaults() void {
 pub const Snapshot = struct {
     values: Values,
     params: [Scene.c.ZS_MAX_PARAMS]f32 = @splat(0),
+    param_ids: [Scene.c.ZS_MAX_PARAMS][48]u8 = @splat(@splat(0)),
+    path: [4096]u8 = @splat(0),
+    example: ?Scene.Example = null,
+    scripted: bool = false,
 
     pub fn capture(scene: *Scene) Snapshot {
-        var result: Snapshot = .{ .values = undefined };
+        var result: Snapshot = .{ .values = undefined, .path = scene.path_buffer, .example = scene.example, .scripted = scene.runtime != null };
         for (settings.entries, &result.values, scene.owned, scene.previous) |entry, *value, owned, previous| value.* = if (owned) previous else entry.get();
-        for (scene.params(), 0..) |param, i| result.params[i] = param.value;
+        for (scene.params(), 0..) |param, i| {
+            result.params[i] = param.value;
+            result.param_ids[i] = param.id;
+        }
         return result;
     }
 
-    fn apply(self: Snapshot, scene: *Scene) void {
-        for (settings.entries, self.values, scene.owned) |entry, value, owned| {
-            if (entry.visual() and !owned) entry.set(value);
+    fn apply(self: *const Snapshot, scene: *Scene) !void {
+        const changed_source = self.example != scene.example or self.scripted != (scene.runtime != null) or !std.mem.eql(u8, std.mem.sliceTo(&self.path, 0), scene.path());
+        if (changed_source) {
+            const original = settings.snapshot();
+            const old_previous = scene.previous;
+            const old_path = scene.path_buffer;
+            const old_example = scene.example;
+            const old_hash = scene.last_hash;
+            errdefer {
+                for (settings.entries, original) |entry, old| entry.set(old.value);
+                scene.previous = old_previous;
+                scene.path_buffer = old_path;
+                scene.example = old_example;
+                scene.last_hash = old_hash;
+            }
+            for (settings.entries, self.values, 0..) |entry, value, i| {
+                if (!entry.visual()) continue;
+                if (scene.owned[i]) scene.previous[i] = value else entry.set(value);
+            }
+            const revision = scene.revision;
+            if (!self.scripted) scene.unload() else if (self.example) |example| scene.loadExample(example) else if (self.path[0] != 0) scene.loadFile(std.mem.sliceTo(&self.path, 0)) else return error.SceneUnavailable;
+            if (self.scripted and scene.revision == revision) return error.SceneUnavailable;
         }
-        for (scene.params(), 0..) |*param, i| param.value = std.math.clamp(self.params[i], param.min, param.max);
+        for (settings.entries, self.values, scene.owned, 0..) |entry, value, owned, i| {
+            if (!entry.visual()) continue;
+            if (owned) scene.previous[i] = value else entry.set(value);
+        }
+        for (scene.params()) |*param| for (self.param_ids, self.params) |id, value| {
+            if (std.mem.eql(u8, std.mem.sliceTo(&id, 0), std.mem.sliceTo(&param.id, 0))) {
+                param.value = std.math.clamp(value, param.min, param.max);
+                break;
+            }
+        };
     }
 
     fn equal(a: Snapshot, b: Snapshot) bool {
+        if (a.example != b.example or a.scripted != b.scripted or !std.mem.eql(u8, std.mem.sliceTo(&a.path, 0), std.mem.sliceTo(&b.path, 0))) return false;
         for (settings.entries, a.values, b.values) |entry, x, y| if (entry.visual() and x != y) return false;
         return std.mem.eql(f32, &a.params, &b.params);
     }
@@ -40,6 +76,7 @@ pub const History = struct {
     len: usize = 0,
     position: usize = 0,
     revision: u64 = 0,
+    notice: [:0]const u8 = "",
 
     pub fn sync(self: *History, scene: *Scene) void {
         if (self.len == 0 or self.revision != scene.revision) self.reset(scene);
@@ -49,6 +86,7 @@ pub const History = struct {
         self.len = 1;
         self.position = 0;
         self.revision = scene.revision;
+        self.notice = "";
     }
     pub fn record(self: *History, scene: *Scene) void {
         self.sync(scene);
@@ -66,14 +104,24 @@ pub const History = struct {
     pub fn undo(self: *History, scene: *Scene) void {
         self.record(scene);
         if (self.position == 0) return;
+        self.items[self.position - 1].apply(scene) catch {
+            self.notice = "Scene unavailable; current look kept.";
+            return;
+        };
         self.position -= 1;
-        self.items[self.position].apply(scene);
+        self.revision = scene.revision;
+        self.notice = "";
     }
     pub fn redo(self: *History, scene: *Scene) void {
         self.sync(scene);
         if (self.position + 1 >= self.len) return;
+        self.items[self.position + 1].apply(scene) catch {
+            self.notice = "Scene unavailable; current look kept.";
+            return;
+        };
         self.position += 1;
-        self.items[self.position].apply(scene);
+        self.revision = scene.revision;
+        self.notice = "";
     }
 };
 pub var history: History = .{};
