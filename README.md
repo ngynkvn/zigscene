@@ -106,8 +106,19 @@ and **F5** reloads manually. Start with the
 
 ## Screenshots
 
+The native workspace includes shape controls, full HSV color editing, a searchable
+layer inspector, and live Lua scene parameters. Click an image for a closer look.
+
+| Shape & texture | HSV color editor |
+| --- | --- |
+| [![Built-in audio-reactive scene with shape controls and the waveform player](docs/assets/studio.png)](docs/assets/studio.png) | [![HSV color editor with hue, saturation, brightness, and saved swatches](docs/assets/color-editor.png)](docs/assets/color-editor.png) |
+
+| Layer inspector | Lua scene studio |
+| --- | --- |
+| [![Layer inspector with search, visibility, solo, and grouped shape and color controls](docs/assets/layer-inspector.png)](docs/assets/layer-inspector.png) | [![Orbital sculpture Lua scene with editable parameters and the waveform player](docs/assets/lua-sculpture.png)](docs/assets/lua-sculpture.png) |
+
 <details>
-<summary>Visualization gallery</summary>
+<summary>More visualizations</summary>
 
 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
     <img src="https://github.com/user-attachments/assets/c87094ec-866d-4cd1-ad56-1fe32f4a6de0" alt="example" style="width: 40%;"/>
