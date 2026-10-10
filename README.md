@@ -9,12 +9,15 @@ audio, customize the built-in layers, or write a Lua scene.
 ## Getting started
 
 1. [Download a release](#download-a-release) or [build from source](#build-from-source).
-2. Drop an MP3, WAV, or OGG file onto the window.
-3. Use the tabs to change the visuals, or open **Scene / 5** to try a Lua example.
-4. Save a look in **Presets / 7**, or use **Layers / 8** to search and solo layers.
+2. Choose **Open audio** or **Capture system audio**. You can also
+   drop an MP3, WAV, or OGG onto the window.
+3. Choose **Calm**, **Pulse**, or **Sculpture** in **Looks / 7**, then tune a layer
+   in **Layers / 8**. **Scene / 5** has programmable Lua examples.
+4. Choose **Save as** to keep a look. **Undo / Redo** includes switching looks.
 
-The compact editor includes undo/redo, control and group resets, and full HSV
-colors with saved swatches. See [visual editing](docs/usage.md#explore-and-save-a-look).
+The editor adapts to small windows, keeps the scene clear of the controls, and
+includes keyboard focus, visible resets, and full HSV colors with saved swatches.
+See [visual editing](docs/usage.md#explore-and-save-a-look).
 
 For live audio, click **Devices** in the player, choose a source, then click
 **Capture / M**. See the [capture guide](docs/usage.md#capture-live-audio) for
@@ -56,8 +59,9 @@ optimized builds, tests, and release builds.
 
 ### Web build
 
-The browser target supports dropped audio files. Lua scenes, live capture, and
-native window controls are unavailable there; browser preferences are not saved.
+The browser target supports **Open audio** and dropped files.
+Lua scenes, live capture, and native window controls are unavailable there;
+browser preferences are not saved.
 See [building for the web](docs/development.md#web-build) for Emscripten commands
 and output files.
 
@@ -106,16 +110,18 @@ and **F5** reloads manually. Start with the
 
 ## Screenshots
 
-The native workspace includes shape controls, full HSV color editing, a searchable
+The native workspace includes starter looks, full HSV color editing, a searchable
 layer inspector, and live Lua scene parameters. Click an image for a closer look.
 
-| Shape & texture | HSV color editor |
+| Starter looks | HSV color editor |
 | --- | --- |
-| [![Built-in audio-reactive scene with shape controls and the waveform player](docs/assets/studio.png)](docs/assets/studio.png) | [![HSV color editor with hue, saturation, brightness, and saved swatches](docs/assets/color-editor.png)](docs/assets/color-editor.png) |
+| [![Calm starter look, preset previews, and the waveform player](docs/assets/studio.png)](docs/assets/studio.png) | [![HSV color editor with hue, saturation, brightness, and saved swatches](docs/assets/color-editor.png)](docs/assets/color-editor.png) |
 
 | Layer inspector | Lua scene studio |
 | --- | --- |
 | [![Layer inspector with search, visibility, solo, and grouped shape and color controls](docs/assets/layer-inspector.png)](docs/assets/layer-inspector.png) | [![Orbital sculpture Lua scene with editable parameters and the waveform player](docs/assets/lua-sculpture.png)](docs/assets/lua-sculpture.png) |
+
+[![Compact layer editor at 640 by 480](docs/assets/compact-editor.png)](docs/assets/compact-editor.png)
 
 <details>
 <summary>More visualizations</summary>
@@ -141,3 +147,8 @@ SIL Open Font License
 
 Lua 5.4.9 is embedded under the MIT license
 ([Lua copyright and license](docs/licenses/Lua.txt)).
+
+### Audio chooser
+
+Native file selection uses tinyfiledialogs under the Zlib license
+([source and license](deps/tinyfiledialogs/SOURCE.txt)).

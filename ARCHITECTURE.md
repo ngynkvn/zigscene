@@ -96,7 +96,7 @@ native buffer configuration with a single buffer while preserving scene detail.
 | Area | Responsibility |
 | --- | --- |
 | [`src/graphics.zig`](src/graphics.zig) | Built-in visualizer exports |
-| [`src/graphics/Viewport.zig`](src/graphics/Viewport.zig) | Scene area right of the side panel: 2D offset, off-axis 3D projection, slide easing |
+| [`src/graphics/Viewport.zig`](src/graphics/Viewport.zig) | Available canvas: 2D offset, fitted 3D projection, slide easing |
 | [`src/graphics/Motion.zig`](src/graphics/Motion.zig) | Frame-rate independent energy/beat envelope |
 | [`src/shader/shader.zig`](src/shader/shader.zig) | Scene texture and embedded GLSL shader lifetime |
 | [`src/gui.zig`](src/gui.zig) | Tabs, panel scrolling/resizing, controls, player and seeking |
@@ -144,7 +144,7 @@ loud passages. Seeking clears queued PCM and analysis history. If callbacks stop
 waveform, FFT, RMS and beat history expire together after 120 ms.
 Sharp RMS increases bypass waveform and motion attack smoothing on their first
 analyzed frame, including before beat history has warmed up. Near-silent noise
-does not open this attack path; holding Space keeps the requested heavy waveform
+does not open this attack path; holding Shift+Space keeps the requested heavy waveform
 smoothing. Motion applies attack/release smoothing to gradual swells/decays,
 gain/compression and an exponential beat pulse. The halo uses a 12 ms attack and
 90 ms release instead of delaying rises with its decay filter.
@@ -252,14 +252,14 @@ exposed to Lua in the current interface.
 
 ### Scene viewport
 
-All scene drawing, built-in and Lua, happens in a viewport right of the open
-side panel ([`Viewport.zig`](src/graphics/Viewport.zig)), eased toward
-`gui.sceneLeft()` so opening or hiding the panel slides the scene. 2D layers
-draw in viewport-local coordinates under a pushed translation; full-width layers
-span the viewport's width. 3D passes leave that translation (rlgl would apply it
-to 3D vertices too) and use raylib's frustum slid off-axis, which moves the image
-to the viewport's center at every depth without changing perspective or scale.
-Lua sees the viewport size as `ctx.width`/`ctx.height`.
+All scene drawing, built-in and Lua, happens inside the available canvas
+([`Viewport.zig`](src/graphics/Viewport.zig)), excluding the header, side panel,
+and player. The left inset eases toward `gui.sceneLeft()` so opening or hiding
+the panel slides the scene. 2D layers use a pushed translation and a shared
+scissor rectangle. 3D passes leave that translation and use a matching GL
+viewport and centered projection; narrow canvases widen the vertical field of
+view to preserve the horizontal framing. Lua receives the canvas size and
+local mouse coordinates. Compact desktop-pet mode retains the full window.
 
 The scene texture then passes through the existing shader. UI draws afterward,
 so replacing a scene does not replace playback or settings controls. Source-over
@@ -307,7 +307,8 @@ unreadable files do not prevent startup. Saving replaces the file through a
 temporary file after Lua teardown restores its owned settings, so script
 overrides do not become user preferences. Browser settings remain session-local.
 Changing a slider does not rewrite a Lua script. FPS 0 means uncapped.
-**Always on top** defaults to on; changing it applies/clears raylib's native
+Normal launches reset background opacity to `1` after preferences load.
+**Always on top** defaults to off; changing it applies/clears raylib's native
 topmost flag without recreating the window.
 Browser builds disable that control.
 
@@ -324,6 +325,12 @@ in [`build.zig.zon`](build.zig.zon). [`deps/build/lua.zig`](deps/build/lua.zig)
 compiles only the Lua core and exposed libraries plus the C bridge; no system Lua
 or interpreter executable is needed. Lua's license is bundled in
 [`docs/licenses/Lua.txt`](docs/licenses/Lua.txt).
+
+Native audio selection links the vendored tinyfiledialogs library, with source
+version, hashes, and license in [`deps/tinyfiledialogs/SOURCE.txt`](deps/tinyfiledialogs/SOURCE.txt).
+It uses a graphical system chooser, falling back to a path-entry dialog when no
+chooser is available. The browser uses an asynchronous HTML file input and adopts
+the selected virtual file on the next frame.
 
 Development builds retain Zig Debug checks while compiling raylib and Lua with
 ReleaseSafe optimization. This avoids per-vertex/backend work and interpreter

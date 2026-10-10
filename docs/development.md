@@ -95,7 +95,9 @@ For visual or input changes, also run the app and check the affected controls,
 window sizes, and built-in/Lua scenes. CPU tests cannot verify GPU output. For a repeatable rendering pass, run
 `zig build run -Dui-smoke=true`. It renders all editor tabs at representative window
 sizes and UI scales into `.tmp/ui-review` without reading or writing preferences.
-This is a visual inspection aid, not an interaction test.
+It also checks opaque startup, the topmost default, file/Space playback, keyboard focus, starter-look
+switching, and undo through raylib input events. Inspect the images for clipping
+or rendering problems, including the built-in and Lua 3D scenes.
 `zig build run -Dpet-smoke=true` checks desktop-pet transitions with raylib input
 events: right-click control resets, opening without an accidental reset, text
 editing cleanup, render-texture resizing, session overrides, and hard reset.
@@ -122,8 +124,8 @@ zig build web-run -Dtarget=wasm32-emscripten -Doptimize=ReleaseSafe \
 The deployable bundle is written to `zig-out/web`. Serve it over HTTP rather than
 opening the HTML file directly.
 
-After building, check browser startup, preset save/replace/duplicate, settings
-reset, dropped audio, and recovery from a rejected post shader:
+After building, check browser startup, preset save/replace/duplicate,
+settings reset, the file chooser, dropped audio, and recovery from a rejected post shader:
 
 ```sh
 npm ci --prefix tests/web

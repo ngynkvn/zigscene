@@ -132,8 +132,9 @@ app elapsed time and does not reset on reload or stop when audio is paused. Use
 
 ### Coordinates and time
 
-The viewport is the window area to the right of the open side panel, or the whole
-window when the panel is hidden. Its width eases between the two states.
+The viewport is the canvas between the side panel, header, and player. Hiding
+the panel or player gives the scene more room. Its left edge eases as the panel
+opens or closes; the other edges follow the current layout.
 Coordinates start at its top-left corner; 3D cameras center on the viewport.
 Drawing pixels are independent of UI scale.
 
@@ -285,7 +286,7 @@ Jump to [window and interface](#window-and-interface), [audio and motion](#audio
 | --- | --- |
 | `window.fps_limit` | 0…360; 0 is uncapped |
 | `window.opacity` | 0.15…1, native window opacity |
-| `window.always_on_top` | Boolean, native only; default true |
+| `window.always_on_top` | Boolean, native only; default false |
 | `interface.scale_percent` | 75…150; also fits the available window |
 | `interface.panel_width` | 240…2000 logical pixels; clamped to window |
 | `interface.panel_height` | 0…2000; 0 follows available height |

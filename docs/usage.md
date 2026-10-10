@@ -12,7 +12,11 @@ For installation, start with [Getting started](../README.md#getting-started).
 
 ## Play a track
 
-Drop an MP3, WAV, or OGG file onto the window. Dropping a new file switches back
+Choose **Open audio** (or **Ctrl/Cmd+O**) to browse for an MP3, WAV, or OGG, or
+drop one onto the window. On minimal Linux desktops without a graphical
+chooser, Open audio provides a full-path entry instead.
+
+Opening or dropping a new file switches back
 from live capture to file playback. If you drop several audio files at once,
 only the last one loads. FLAC support is disabled in the bundled raylib build.
 
@@ -20,7 +24,8 @@ The player at the bottom of the window provides:
 
 | Control | Action |
 | --- | --- |
-| **Play / Pause** or **P** | Pause or resume the loaded track |
+| **Play / Pause**, **Space**, or **P** | Pause or resume the loaded track |
+| **Open audio** | Choose another track |
 | **Volume** | Change the output volume |
 | Waveform | Drag to seek; hover to preview a time |
 | **Devices** | Choose the live-capture source |
@@ -55,6 +60,9 @@ to appear, especially after switching tracks. For decoding and caching details,
 see [Audio and the seek waveform](../ARCHITECTURE.md#audio-and-the-seek-waveform).
 
 ## Capture live audio
+
+The welcome screen's **Capture system audio** starts the automatic system source.
+If it cannot start, the device panel opens so you can choose a source.
 
 1. Click **Devices** beside the capture button.
 2. Choose **System audio** or **Input**, then select a device by name.
@@ -101,7 +109,7 @@ Command-line selections also appear in the **Devices** panel.
 | **Motion / 4** | Volume, waveform smoothing/strength, energy gain, compression, rise/fall times, and beat decay |
 | **Scene / 5** | Layer visibility, Lua examples, and script parameters |
 | **Settings / 6** | FPS limit, opacity, volume, UI size, FPS display, and always-on-top |
-| **Presets / 7** | Save, load, and duplicate named looks |
+| **Looks / 7** | Choose a starter look; save, load, and duplicate named looks |
 | **Layers / 8** | Search controls, solo a layer, and reset groups |
 
 Hover over a layer's settings to highlight it in the scene. The highlight stays
@@ -111,15 +119,19 @@ try a custom visualizer.
 
 Beats and sharp increases in audio level react on the first analyzed frame.
 **Swell rise** in Motion controls gradual increases; **Fall time** controls the
-decay. Waveform smoothing preserves the leading edge of hits. Holding **Space**
-still applies deliberately heavier waveform smoothing.
+decay. Waveform smoothing preserves the leading edge of hits. Holding
+**Shift+Space** applies deliberately heavier waveform smoothing.
 
 ### Explore and save a look
 
-Open **Presets / 7**, enter a name, and choose **Save / replace**. Click a saved
-name to restore its visual settings, Lua scene reference, and parameters. Select a
-preset and choose **Duplicate** to copy it; a new name creates a separately named
-copy. Saving with an existing name replaces that look. The library holds 24 looks.
+Open **Looks / 7** and try **Calm**, **Pulse**, or **Sculpture**. Cards show a small
+palette-and-layer preview; Lua cards use a generic scene symbol.
+
+Enter a name and choose **Save as** to create a saved look. Existing names are
+protected: select that look and choose **Replace** to overwrite it. Click a saved
+card to restore its visual settings, Lua scene reference, and parameters.
+**Duplicate** makes a separate copy. The library holds 24 saved looks in addition
+to the three starters.
 Native builds save immediately to `presets.json` beside `settings.conf`; browser
 presets last for the session. External Lua files are referenced by absolute path,
 so keep those files available. A missing or invalid scene keeps the current look.
@@ -127,13 +139,16 @@ Window, interface, volume, and capture-device settings are excluded.
 
 Use **Undo / Redo** at the panel footer or the keyboard shortcuts to explore visual
 changes. History holds up to 63 edits, groups a completed slider drag into one
-edit, and restarts when a scene or preset loads. A teal dot marks controls changed
-from their defaults. Right-click a control or Lua parameter to reset it; section
+edit, and includes switching starter or saved looks, including their Lua scenes
+and parameters. Directly loading or reloading a Lua file starts a new history.
+A teal dot marks controls changed from their defaults. Click a control's **R**
+button or right-click it to reset it; section
 **Reset** buttons restore a group. Lua-owned host controls display **Lua** and
 remain locked; adjust the scene's exposed parameters instead.
 
-**Layers / 8** collects each layer's controls into collapsible Shape, Color, and
-Global response groups. Search by label or setting path. **Solo** temporarily shows
+**Layers / 8** opens first and collects each layer's controls into collapsible
+Shape, Color, and Global response groups. Use the arrows or click the layer name
+to choose a layer. Search by label or setting path. **Solo** temporarily shows
 only the selected enabled built-in layer, without changing saved visibility.
 Click a Scene card's body to open its inspector. Solo clears when the scene changes.
 
@@ -143,25 +158,33 @@ save alongside presets on native builds. Spectrum tips and body have separate co
 
 ### Panel and UI size
 
-Scroll with the wheel or scrollbar. Tabs remember their scroll position within
-the session. Opening a side panel slides the scene into the area to its right;
-hiding it returns the scene to the full window width.
+Scroll with the wheel, scrollbar, or **Page Up / Page Down**. Tabs remember their
+scroll position within the session. The scene fits between the header, panel,
+and player. **Fit scene** restores the built-in camera after zooming or rotating;
+Lua scenes manage their own cameras. Opening or hiding the panel slides the scene.
 
 Choose 75%, 100%, 125%, or 150% UI size in **Settings**. Text, controls, and mouse
 targets scale together and fit smaller windows. Resize a panel by dragging its
 right edge, bottom edge, or bottom-right grip. **Reset UI size and panel** restores
 the default layout.
 
+Small windows use a narrower inspector and a shorter player automatically.
+**Tab / Shift+Tab** moves focus between visible buttons, text fields, and numeric
+controls. **Enter / Space** activates a focused button. On a numeric control,
+use the arrow keys to adjust, **Shift** for finer changes, **Home / End** for the
+range limits, or **Enter** to type a value. Hover for labels and control hints.
+
 ### Window and background
 
 - **Window opacity** changes the opacity of the whole native window.
-- **Background opacity** changes only the scene background. Lower it from the
-  default opaque navy to reveal the desktop. It is also available in Shape.
+- **Background opacity** changes only the scene background. Normal launches start
+  at `1` (fully opaque), even after a translucent session. Lower it to reveal the
+  desktop. It is also available in Shape.
 - **Always on top** keeps the native window above other windows and defaults to
-  on. Turn it off to let other windows cover zigscene.
+  off. Turn it on when you want zigscene to stay above other windows.
 - **FPS limit** sets the frame cap; `0` means uncapped, the default.
 
-The upper-right counter shows FPS and frame time. Click it or press **D** for
+Enable **Show FPS** in Settings to display FPS and frame time. Click it or press **D** for
 CPU diagnostics. See [Profiling and diagnostics](development.md#profiling-and-diagnostics)
 for what those timings measure.
 
@@ -173,25 +196,32 @@ for what those timings measure.
 | **Ctrl/Cmd+Z** | Undo a visual edit |
 | **Ctrl/Cmd+Shift+Z** or **Ctrl/Cmd+Y** | Redo a visual edit |
 | Right-click a control | Restore its default value |
-| **P** | Play/pause a loaded file |
+| **Space / P** | Play/pause a loaded file (Space activates a focused control) |
+| **Ctrl/Cmd+O** | Open an audio file |
+| **Tab / Shift+Tab** | Move keyboard focus forward/backward |
+| **Enter / Space** | Activate the focused button |
+| **Page Up / Page Down** | Scroll the side panel |
 | **M** | Start/stop the selected capture source |
-| Hold **Space** | Temporarily apply heavier waveform smoothing |
+| Hold **Shift+Space** | Temporarily apply heavier waveform smoothing |
 | **F5** | Reload the selected Lua scene |
 | **F** | Toggle borderless window mode |
 | **C** | Switch the built-in camera between perspective and orthographic |
-| **Left / Right** | Rotate the built-in 3D scene |
+| **Left / Right** | Rotate the built-in 3D scene when no UI control has keyboard focus |
 | Vertical wheel over the scene | Move the camera closer/farther (stops short of the scene center) |
 | Horizontal wheel over the scene | Rotate the built-in 3D scene |
 | Wheel over a panel | Scroll its controls |
 | **D** or click the FPS counter | Toggle diagnostics |
 
-Tab, playback, camera, and smoothing shortcuts are ignored while editing a
-numeric value or text field. Holding Space does not change the saved smoothing setting.
+Playback, camera, and smoothing shortcuts are ignored while editing a numeric
+value or text field. Tab finishes text entry and advances focus.
+Holding Shift+Space does not change the saved smoothing setting.
 
 ## Saved settings
 
 Native host settings save when the app closes: volume, layer controls, colors,
 panel sizes, player visibility, UI scale, FPS limit, window opacity, and always-on-top.
+Normal launches reset background opacity to `1`; desktop-pet mode keeps its
+transparent presentation.
 
 | Platform | Settings file |
 | --- | --- |
