@@ -58,6 +58,7 @@ pub fn build(b: *std.Build) !void {
         exe_lib.root_module.addOptions("options", opts);
         exe_lib.root_module.addImport("raylib", raylib.module("raylib"));
         exe_lib.root_module.addImport("tracy", tracy_mod);
+        exe_lib.root_module.addCSourceFile(.{ .file = b.path("src/audio/picker.c") });
         const link_step = try emcc.link(b, &[_]*std.Build.Step.Compile{ exe_lib, raylib.artifact("raylib"), lua_lib });
         web_step.dependOn(&link_step.step);
         run_step.step.dependOn(&link_step.step);
@@ -157,4 +158,12 @@ fn addCapture(b: *std.Build, module: *std.Build.Module, raylib: *std.Build.Depen
     module.addCSourceFile(.{ .file = b.path("src/audio/capture.c") });
     module.addCSourceFile(.{ .file = b.path("src/audio/refill_worker.c") });
     module.addCSourceFile(.{ .file = b.path("src/audio/preview_decoder.c") });
+    const dialogs = b.addLibrary(.{ .name = "audio-dialogs", .root_module = b.createModule(.{ .target = module.resolved_target.?, .optimize = .ReleaseSafe, .link_libc = true }) });
+    dialogs.root_module.addCSourceFile(.{ .file = b.path("deps/tinyfiledialogs/tinyfiledialogs.c"), .flags = &.{"-Wno-deprecated-declarations"} });
+    module.linkLibrary(dialogs);
+    if (module.resolved_target.?.result.os.tag == .windows) {
+        module.linkSystemLibrary("comdlg32", .{});
+        module.linkSystemLibrary("ole32", .{});
+        module.linkSystemLibrary("shell32", .{});
+    }
 }

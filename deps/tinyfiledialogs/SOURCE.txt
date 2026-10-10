@@ -1,0 +1,8 @@
+tinyfiledialogs 3.21.5 (2026-09-30), by Guillaume Vareille.
+Unmodified sources from the official tinyfiledialogs-current.zip:
+https://sourceforge.net/projects/tinyfiledialogs/files/
+Downloaded 2026-10-10. Zlib license is included in both source files.
+
+SHA-256:
+a061ca241f7150f403093d8eface5f8ea4dabab70b6f252952965af803c8d2b3  tinyfiledialogs.c
+d6607958c48b4c8f6b62629642e41dfb38dc5f8dc3f9bca4876c95acd5eb532f  tinyfiledialogs.h

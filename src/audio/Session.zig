@@ -133,6 +133,7 @@ pub fn endSeek(self: *Session) void {
 }
 
 pub fn update(self: *Session) void {
+    if (@import("Picker.zig").poll()) |path| self.playFile(path);
     self.applyVolume();
     playback.pollPreview();
     if (self.isFilePlaying()) playback.UpdateMusicStream();
