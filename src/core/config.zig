@@ -6,7 +6,7 @@ pub const Window = struct {
     pub const width = 1024;
     pub const height = 768;
     pub const title = "zigscene";
-    pub var always_on_top: bool = true;
+    pub var always_on_top: bool = false;
     pub var fps_limit: f32 = 0;
     pub var opacity: f32 = 1.0;
     pub const Scalars = [_]controls.Scalar{
@@ -20,7 +20,7 @@ pub const Interface = struct {
     pub var panel_width: f32 = 320;
     // Zero follows the available window height until manually resized.
     pub var panel_height: f32 = 0;
-    pub var show_fps: bool = true;
+    pub var show_fps: bool = false;
     pub var show_player: bool = true;
 };
 
@@ -55,16 +55,16 @@ pub const Motion = struct {
 };
 
 pub const Scene = struct {
-    pub var wave_lines = true;
-    pub var wave_bars = true;
+    pub var wave_lines = false;
+    pub var wave_bars = false;
     pub var spectrum = true;
-    pub var bubble = true;
+    pub var bubble = false;
     pub var halo = true;
 };
 
 pub const Shader = struct {
-    pub var chroma_factor: f32 = 0.001;
-    pub var noise_factor: f32 = 0.005;
+    pub var chroma_factor: f32 = 0;
+    pub var noise_factor: f32 = 0;
     pub var alpha_factor: f32 = 1.0;
     pub const Scalars = [_]controls.Scalar{
         .{ "Chroma", &chroma_factor, .{ 0.0, 0.01 } },
@@ -107,10 +107,10 @@ pub const Visualizer = struct {
     };
 
     pub const Spectrum = struct {
-        pub var color1: Vector3 = .{ .x = 0, .y = 0, .z = 0.96 };
-        pub var color2: Vector3 = .{ .x = 0, .y = 1, .z = 0.9 };
+        pub var color1: Vector3 = .{ .x = 185, .y = 0.35, .z = 0.85 };
+        pub var color2: Vector3 = .{ .x = 210, .y = 0.55, .z = 0.4 };
         pub var gain: f32 = 3.0;
-        pub var height: f32 = 160;
+        pub var height: f32 = 90;
         pub const Scalars = [_]controls.Scalar{
             .{ "Spectrum gain", &gain, .{ 0.2, 10.0 } },
             .{ "Spectrum height", &height, .{ 20, 300 } },
@@ -118,12 +118,12 @@ pub const Visualizer = struct {
     };
 
     pub const Halo = struct {
-        pub var radius: f32 = 135;
-        pub var depth: f32 = 100;
-        pub var spin: f32 = 0.12;
-        pub var hue: f32 = 195;
-        pub var saturation: f32 = 0.75;
-        pub var brightness: f32 = 1;
+        pub var radius: f32 = 115;
+        pub var depth: f32 = 45;
+        pub var spin: f32 = 0.06;
+        pub var hue: f32 = 185;
+        pub var saturation: f32 = 0.45;
+        pub var brightness: f32 = 0.85;
         pub const Scalars = [_]controls.Scalar{
             .{ "Halo radius", &radius, .{ 40, 260 } },
             .{ "Halo depth", &depth, .{ 0, 220 } },

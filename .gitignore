@@ -8,3 +8,4 @@ flat-copy/
 zig-pkg/
 
 tests/web/node_modules/
+.tmp/

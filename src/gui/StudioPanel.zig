@@ -7,6 +7,7 @@ const config = @import("../core/config.zig");
 const settings = @import("../scripting/settings.zig");
 const State = @import("../editor/State.zig");
 const Presets = @import("../editor/Presets.zig");
+const Looks = @import("../editor/Looks.zig");
 const Scene = @import("../scripting/Scene.zig");
 const Highlight = @import("../graphics/Highlight.zig");
 const Element = Highlight.Element;
@@ -15,9 +16,10 @@ pub var text_editing = false;
 var name_buffer: [64]u8 = initName();
 var search: [64]u8 = @splat(0);
 var selected_preset: ?usize = null;
-var selected_layer: usize = 0;
+var selected_layer: usize = 4;
 var expanded_color: ?usize = 0;
-var collapsed: [3]bool = @splat(false);
+var collapsed: [3]bool = .{ false, true, true };
+var choosing_layer = false;
 var notice: [:0]const u8 = "";
 var color_notice: [:0]const u8 = "";
 
@@ -26,9 +28,10 @@ pub fn resetWorkspace() void {
     name_buffer = initName();
     search = @splat(0);
     selected_preset = null;
-    selected_layer = 0;
+    selected_layer = 4;
     expanded_color = 0;
-    collapsed = @splat(false);
+    collapsed = .{ false, true, true };
+    choosing_layer = false;
     notice = "";
     color_notice = "";
 }
@@ -79,25 +82,53 @@ fn textInput(view: rl.Rectangle, y: f32, buffer: []u8) void {
 }
 
 pub fn presetsHeight() f32 {
-    return 164 + @as(f32, @floatFromInt(Presets.store.len)) * 36;
+    return 436 + @as(f32, @floatFromInt(Presets.store.len)) * 76;
 }
 pub fn drawPresets(scene: *Scene, view: rl.Rectangle, scroll: f32) void {
-    const y = view.y - scroll;
+    var y = view.y - scroll;
+    ui.label("STARTER LOOKS", view.x + 4, y + 4, 11, ui.muted);
+    y += 28;
+    inline for (std.meta.tags(Looks.Kind), 0..) |kind, i| {
+        const look = Looks.preset(kind);
+        const row = ui.rect(view.x, y, view.width, 68);
+        ui.rounded(row, 8, ui.background);
+        thumbnail(&look, ui.rect(row.x + 8, row.y + 8, 64, 52));
+        ui.label(Looks.names[i], row.x + 84, row.y + 12, 16, ui.text);
+        var buffer: [256]u8 = undefined;
+        ui.label(ui.fitted(Looks.descriptions[i], 11, row.width - 92, &buffer), row.x + 84, row.y + 37, 11, ui.muted);
+        if (visible(view, y, 68) and ui.hovered(row)) ui.requestCursor(rl.MOUSE_CURSOR_POINTING_HAND);
+        if (ui.activate(row, Looks.names[i], visible(view, y, 68))) {
+            look.apply(scene) catch {};
+            selected_layer = switch (kind) {
+                .calm => 4,
+                .pulse => 0,
+                .sculpture => 3,
+            };
+            selected_preset = null;
+            Highlight.solo = null;
+        }
+        y += 76;
+    }
+    y += 16;
     ui.label("Name your look", view.x + 4, y, 12, ui.muted);
     textInput(view, y + 20, &name_buffer);
-    const half = (view.width - 8) / 2;
-    if (button(view, view.x, y + 56, half, "Save / replace", false, !Presets.load_failed)) {
+    const third = (view.width - 12) / 3;
+    const typed_name = std.mem.trim(u8, std.mem.sliceTo(&name_buffer, 0), " \t\r\n");
+    const can_replace = if (selected_preset) |i| std.mem.eql(u8, typed_name, Presets.store.items[i].name()) else false;
+    const save_new = button(view, view.x, y + 56, third, "Save as", false, !Presets.load_failed);
+    const replace = button(view, view.x + third + 6, y + 56, third, "Replace", false, !Presets.load_failed and can_replace);
+    if (save_new or replace) {
         const item = Presets.Preset.capture(scene, std.mem.sliceTo(&name_buffer, 0)) catch {
             notice = "Enter a name; scene file must still exist.";
             return;
         };
-        selected_preset = Presets.savePreset(item, true) catch {
-            notice = "Save failed. Check library space and permissions.";
+        selected_preset = Presets.savePreset(item, replace) catch |err| {
+            notice = if (err == error.NameExists) "Name exists. Rename it or choose Replace." else "Save failed. Check library space and permissions.";
             return;
         };
         notice = if (Presets.persistent()) "Saved to your preset library." else "Saved for this session.";
     }
-    if (button(view, view.x + half + 8, y + 56, half, "Duplicate", false, selected_preset != null and !Presets.load_failed)) {
+    if (button(view, view.x + 2 * (third + 6), y + 56, third, "Duplicate", false, selected_preset != null and !Presets.load_failed)) {
         var item = Presets.store.items[selected_preset.?];
         const typed = std.mem.trim(u8, std.mem.sliceTo(&name_buffer, 0), " \t\r\n");
         if (typed.len == 0) {
@@ -138,17 +169,61 @@ pub fn drawPresets(scene: *Scene, view: rl.Rectangle, scroll: f32) void {
     ui.label("Visuals and scene parameters; no device settings", view.x + 4, y + 114, 11, ui.muted);
     if (Presets.store.len == 0) ui.label("No saved looks yet.", view.x + 4, y + 142, 14, ui.muted);
     for (Presets.store.items[0..Presets.store.len], 0..) |*item, i| {
-        const row_y = y + 140 + @as(f32, @floatFromInt(i)) * 36;
-        if (button(view, view.x, row_y, view.width, item.name(), selected_preset == i, true)) {
+        const row_y = y + 140 + @as(f32, @floatFromInt(i)) * 76;
+        const bounds = ui.rect(view.x, row_y, view.width, 68);
+        ui.rounded(bounds, 8, if (selected_preset == i) ui.accent_soft else ui.background);
+        thumbnail(item, ui.rect(bounds.x + 8, bounds.y + 8, 64, 52));
+        var name_fit: [256]u8 = undefined;
+        ui.label(ui.fitted(item.name(), 15, view.width - 92, &name_fit), bounds.x + 84, bounds.y + 14, 15, ui.text);
+        ui.label(if (item.example != null or item.path_buffer[0] != 0) "Lua scene" else "Built-in layers", bounds.x + 84, bounds.y + 38, 11, ui.muted);
+        if (visible(view, row_y, 68) and ui.hovered(bounds)) ui.requestCursor(rl.MOUSE_CURSOR_POINTING_HAND);
+        if (ui.activate(bounds, item.name(), visible(view, row_y, 68))) {
             item.apply(scene) catch {
                 notice = "Scene unavailable. Current look kept.";
                 return;
             };
             selected_preset = i;
             name_buffer = item.name_buffer;
-            notice = "Loaded. Undo history starts with this look.";
+            notice = "Loaded. Undo returns to your previous look.";
             text_editing = false;
             Highlight.solo = null;
+        }
+    }
+}
+
+/// A compact composition preview using the look's actual layers and palette.
+pub fn thumbnail(look: *const Presets.Preset, bounds: rl.Rectangle) void {
+    const value = struct {
+        fn get(preset: *const Presets.Preset, name: []const u8) f32 {
+            return @floatCast(preset.values[settings.find(name) orelse unreachable]);
+        }
+        fn hsv(preset: *const Presets.Preset, comptime name: []const u8) rl.Color {
+            return rl.ColorFromHSV(get(preset, name ++ ".h"), get(preset, name ++ ".s"), get(preset, name ++ ".v"));
+        }
+    };
+    ui.rounded(bounds, 6, ui.background);
+    const cx = bounds.x + bounds.width / 2;
+    const cy = bounds.y + bounds.height * 0.43;
+    if (value.get(look, "scene.halo") != 0) rl.DrawCircleLinesV(.{ .x = cx, .y = cy }, bounds.height * 0.28, rl.ColorFromHSV(value.get(look, "halo.hue"), value.get(look, "halo.saturation"), value.get(look, "halo.brightness")));
+    if (value.get(look, "scene.bubble") != 0 or look.example != null or look.path_buffer[0] != 0) {
+        const col = value.hsv(look, "bubble.color1");
+        rl.DrawCircleLinesV(.{ .x = cx, .y = cy }, bounds.height * 0.3, col);
+        rl.DrawEllipseLines(@intFromFloat(cx), @intFromFloat(cy), bounds.height * 0.15, bounds.height * 0.3, col);
+    }
+    if (value.get(look, "scene.wave_lines") != 0) {
+        const col = value.hsv(look, "wave_lines.color2");
+        for (0..24) |i| {
+            const a: f32 = @floatFromInt(i);
+            rl.DrawLineEx(.{ .x = bounds.x + a * bounds.width / 24, .y = cy + @sin(a * 0.5) * 6 }, .{ .x = bounds.x + (a + 1) * bounds.width / 24, .y = cy + @sin((a + 1) * 0.5) * 6 }, 1.5, col);
+        }
+    }
+    const bars = value.get(look, "scene.wave_bars") != 0;
+    if (bars or value.get(look, "scene.spectrum") != 0) {
+        const col = if (bars) value.hsv(look, "wave_bars.color1") else value.hsv(look, "spectrum.color1");
+        for (0..12) |i| {
+            const f: f32 = @floatFromInt(i);
+            const h = 4 + @abs(@sin(f * 0.7)) * 9;
+            ui.rounded(ui.rect(bounds.x + f * bounds.width / 12, bounds.y + bounds.height - h, bounds.width / 12 - 2, h), 1, col);
         }
     }
 }
@@ -236,7 +311,7 @@ fn matches(entry: settings.Setting, group: usize) bool {
     return query.len == 0 or std.ascii.indexOfIgnoreCase(entry.name, query) != null or std.ascii.indexOfIgnoreCase(friendly(entry, &buffer), query) != null;
 }
 pub fn inspectorHeight() f32 {
-    var height: f32 = 160;
+    var height: f32 = 112 + (if (choosing_layer) @as(f32, 160) else 0);
     for (0..3) |group| {
         height += 34;
         if (collapsed[group] and search[0] == 0) continue;
@@ -257,21 +332,32 @@ pub fn selectLayer(element: Element) void {
 }
 pub fn drawInspector(scene: *Scene, view: rl.Rectangle, scroll: f32, field: anytype) void {
     var y = view.y - scroll;
-    ui.label("Search controls", view.x + 4, y, 11, ui.muted);
-    textInput(view, y + 18, &search);
-    const third = (view.width - 12) / 3;
-    for (layers, 0..) |layer, i| {
-        if (button(view, view.x + @as(f32, @floatFromInt(i % 3)) * (third + 6), y + 54 + @as(f32, @floatFromInt(i / 3)) * 32, third, layer.name, selected_layer == i, true)) selected_layer = i;
+    if (button(view, view.x, y, 28, "<", false, true)) selected_layer = (selected_layer + layers.len - 1) % layers.len;
+    if (button(view, view.x + 34, y, view.width - 68, layers[selected_layer].name, true, true)) choosing_layer = !choosing_layer;
+    if (button(view, view.x + view.width - 28, y, 28, ">", false, true)) selected_layer = (selected_layer + 1) % layers.len;
+    y += 34;
+    if (choosing_layer) {
+        for (layers, 0..) |layer, i| {
+            if (button(view, view.x, y, view.width, layer.name, selected_layer == i, true)) {
+                selected_layer = i;
+                choosing_layer = false;
+            }
+            y += 32;
+        }
     }
+    const third = (view.width - 12) / 3;
     const layer = layers[selected_layer];
     const owned = blk: {
         for (settings.entries, scene.owned) |entry, owns| if (entry.target == .boolean and entry.target.boolean == layer.enabled) break :blk owns;
         break :blk false;
     };
-    if (button(view, view.x, y + 122, third, if (owned) "Lua owns" else if (layer.enabled.*) "Visible" else "Hidden", layer.enabled.*, !owned)) layer.enabled.* = !layer.enabled.*;
-    if (button(view, view.x + third + 6, y + 122, third, "Solo", Highlight.solo == layer.element, scene.usesBuiltin())) Highlight.solo = if (Highlight.solo == layer.element) null else layer.element;
-    if (button(view, view.x + 2 * (third + 6), y + 122, third, "Reset layer", false, true)) State.resetPrefix(layer.prefix, scene);
-    y += 160;
+    if (button(view, view.x, y, third, if (owned) "Lua owns" else if (layer.enabled.*) "Visible" else "Hidden", layer.enabled.*, !owned)) layer.enabled.* = !layer.enabled.*;
+    if (button(view, view.x + third + 6, y, third, "Solo", Highlight.solo == layer.element, scene.usesBuiltin())) Highlight.solo = if (Highlight.solo == layer.element) null else layer.element;
+    if (button(view, view.x + 2 * (third + 6), y, third, "Reset layer", false, true)) State.resetPrefix(layer.prefix, scene);
+    y += 36;
+    textInput(view, y, &search);
+    if (search[0] == 0 and !text_editing) ui.label("Search this layer...", view.x + 12, y + 7, 12, ui.muted);
+    y += 42;
     var count: usize = 0;
     for ([_][:0]const u8{ "Shape", "Color", "Global response" }, 0..) |label, group| {
         if (button(view, view.x, y, view.width - 62, label, !collapsed[group] or search[0] != 0, true)) collapsed[group] = !collapsed[group];

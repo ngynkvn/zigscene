@@ -52,8 +52,8 @@ fn rasterize(self: *WaveformCache, preview: *const Preview) void {
     const center = height / 2;
     const amplitude = height * 0.44;
     // Texture pixels have their own projection, independent of the UI matrix.
-    ui.endDrawing();
-    defer ui.beginDrawing();
+    ui.suspendDrawing();
+    defer ui.resumeDrawing();
     rl.BeginTextureMode(texture);
     defer rl.EndTextureMode();
     rl.ClearBackground(ui.background);

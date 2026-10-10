@@ -56,6 +56,7 @@ pub fn main() !void {
 
     // This point covers the amplitude row after the controls expand. Opening
     // must not dispatch the same press to that row's right-click reset.
+    gui.onTabChange(.scalar);
     click(&app, 100, 180, rl.MOUSE_BUTTON_RIGHT);
     try expect(!pet.compact(), "open controls with right-click");
     try expect(config.Visualizer.WaveFormLine.amplitude == 81, "opening must not reset an exposed control");
@@ -77,7 +78,7 @@ pub fn main() !void {
 
     gui.onTabChange(.settings);
     click(&app, 160, 146, rl.MOUSE_BUTTON_LEFT);
-    try expect(config.Window.opacity == 1 and config.Shader.noise_factor == 0.005, "hard reset restores defaults");
+    try expect(config.Window.opacity == 1 and config.Shader.noise_factor == 0, "hard reset restores defaults");
     try expect(pet.enabled and !pet.compact(), "hard reset keeps the controls usable");
     click(&app, 700, 200, rl.MOUSE_BUTTON_RIGHT);
     try expect(pet.compact(), "return to pet after hard reset");

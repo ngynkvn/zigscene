@@ -40,7 +40,7 @@ pub const Halo = struct {
             const inner = rl.Vector2{ .x = center.x + direction.x * inner_radius, .y = center.y + direction.y * inner_radius };
             const tip = rl.Vector2{ .x = center.x + direction.x * outer_radius, .y = center.y + direction.y * outer_radius };
             const color = hsv(.{
-                .x = Config.hue + @as(f32, @floatFromInt(i)) * 1.6 + energy * 80,
+                .x = Config.hue + @sin(angle) * 12 + energy * 12,
                 .y = Config.saturation,
                 .z = Config.brightness * std.math.clamp(0.35 + level * 0.55 + pulse * 0.15, 0, 1),
             }).into();

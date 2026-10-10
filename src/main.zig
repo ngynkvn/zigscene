@@ -71,6 +71,7 @@ test "root" {
     _ = @import("ext/vector.zig");
     _ = @import("editor/State.zig");
     _ = @import("editor/Presets.zig");
+    _ = @import("editor/Looks.zig");
     _ = @import("audio/playback.zig");
     _ = @import("audio/Session.zig");
     _ = @import("audio/WaveformPreview.zig");
@@ -83,6 +84,7 @@ test "root" {
     _ = @import("graphics/visualizers/halo.zig");
     _ = @import("gui.zig");
     _ = @import("gui/Cursor.zig");
+    _ = @import("gui/Focus.zig");
     _ = @import("core/debug.zig");
     _ = @import("core/config.zig");
     _ = @import("core/input.zig");

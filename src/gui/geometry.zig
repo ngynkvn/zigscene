@@ -12,6 +12,12 @@ pub const margin: f32 = 12;
 pub const header_height: f32 = 48;
 pub const panel_top: f32 = margin + header_height + 12;
 pub const dock_height: f32 = 124;
+pub fn compact(window_width: f32, window_height: f32) bool {
+    return window_width < 820 or window_height < 620;
+}
+pub fn dockHeight(window_width: f32, window_height: f32) f32 {
+    return if (compact(window_width, window_height)) 80 else dock_height;
+}
 pub const group_height: f32 = 30;
 pub const row_height: f32 = 44;
 pub const slider_top: f32 = 24;
@@ -23,9 +29,10 @@ pub const scene_row_height: f32 = 66;
 pub const Size = struct { width: f32, height: f32 };
 
 pub fn panelSize(requested_width: f32, requested_height: f32, window_width: f32, window_height: f32) Size {
-    const max_height = @max(180, window_height - panel_top - dock_height - margin - 12);
+    const max_height = @max(180, window_height - panel_top - dockHeight(window_width, window_height) - margin - 12);
+    const maximum_width: f32 = if (compact(window_width, window_height)) 280 else 640;
     return .{
-        .width = std.math.clamp(requested_width, 280, @max(280, @min(640, window_width - 240))),
+        .width = std.math.clamp(requested_width, 280, @max(280, @min(maximum_width, window_width - 240))),
         .height = if (requested_height == 0) max_height else std.math.clamp(requested_height, 180, max_height),
     };
 }
@@ -38,7 +45,7 @@ test "UI scale fits small windows and preserves requested size on larger ones" {
 
 test "resizing panels respects available space and automatic height" {
     try std.testing.expectEqual(Size{ .width = 320, .height = 548 }, panelSize(320, 0, 1024, 768));
-    try std.testing.expectEqual(Size{ .width = 400, .height = 260 }, panelSize(600, 900, 640, 480));
+    try std.testing.expectEqual(Size{ .width = 280, .height = 304 }, panelSize(600, 900, 640, 480));
     try std.testing.expectEqual(Size{ .width = 280, .height = 180 }, panelSize(0, 1, 1024, 768));
     try std.testing.expectEqual(Size{ .width = 500, .height = 350 }, panelSize(500, 350, 1024, 768));
 }

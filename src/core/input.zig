@@ -54,6 +54,8 @@ pub fn process(state: *State, audio: *AudioSession, script: *ScriptScene) ?Resiz
     }
 
     if (!pet.compact()) gui.editorShortcuts(script);
+    const ui = @import("../gui/theme.zig");
+    ui.typing = gui.editingValue();
     if (!gui.editingValue() and !pet.compact()) {
         if (rl.isKeyPressed(.C)) state.camera.projection = switch (state.camera.projection) {
             rl.CAMERA_PERSPECTIVE => rl.CAMERA_ORTHOGRAPHIC,
@@ -86,12 +88,18 @@ pub fn process(state: *State, audio: *AudioSession, script: *ScriptScene) ?Resiz
             if (!rl.IsWindowState(rl.FLAG_BORDERLESS_WINDOWED_MODE)) rl.SetWindowPosition(0, 0);
             rl.ToggleBorderlessWindowed();
         }
-        if (rl.isKeyPressed(.P)) audio.togglePlayback();
-        if (rl.isKeyDown(.LEFT)) state.rotation_offset -= 100 * rl.GetFrameTime();
-        if (rl.isKeyDown(.RIGHT)) state.rotation_offset += 100 * rl.GetFrameTime();
+        const shift = rl.rl.IsKeyDown(rl.rl.KEY_LEFT_SHIFT) or rl.rl.IsKeyDown(rl.rl.KEY_RIGHT_SHIFT);
+        if (rl.isKeyPressed(.P) or (rl.isKeyPressed(.SPACE) and !shift and !ui.keyboardActive())) audio.togglePlayback();
+        if (!ui.keyboardActive()) {
+            if (rl.isKeyDown(.LEFT)) state.rotation_offset -= 100 * rl.GetFrameTime();
+            if (rl.isKeyDown(.RIGHT)) state.rotation_offset += 100 * rl.GetFrameTime();
+        }
+        const command = rl.rl.IsKeyDown(rl.rl.KEY_LEFT_CONTROL) or rl.rl.IsKeyDown(rl.rl.KEY_RIGHT_CONTROL) or rl.rl.IsKeyDown(rl.rl.KEY_LEFT_SUPER) or rl.rl.IsKeyDown(rl.rl.KEY_RIGHT_SUPER);
+        if (command and rl.rl.IsKeyPressed(rl.rl.KEY_O)) gui.openAudio(audio);
     }
 
-    smoothingHold(&processor.smoothing_held, rl.isKeyPressed(.SPACE), rl.isKeyReleased(.SPACE), gui.editingValue() or pet.compact());
+    const shift_held = rl.rl.IsKeyDown(rl.rl.KEY_LEFT_SHIFT) or rl.rl.IsKeyDown(rl.rl.KEY_RIGHT_SHIFT);
+    smoothingHold(&processor.smoothing_held, rl.isKeyPressed(.SPACE) and shift_held, rl.isKeyReleased(.SPACE) or !shift_held, gui.editingValue() or pet.compact());
 
     var resize: ?Resize = null;
     if (rl.IsWindowResized()) {

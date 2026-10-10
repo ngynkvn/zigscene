@@ -38,6 +38,8 @@ applied_fps_limit: i32 = -1,
 applied_always_on_top: ?bool = null,
 
 pub fn create(options: cli.Options) App {
+    // Normal launches start opaque even if the previous session was translucent.
+    if (!options.desktop_pet) Config.Shader.alpha_factor = 1;
     init.startup(options.desktop_pet);
     var app: App = .{ .renderer = .init() };
     app.applyWindowOpacity();
@@ -79,6 +81,7 @@ fn applyOptions(self: *App, options: cli.Options) void {
 pub fn frame(self: *App) void {
     defer tracy.frameMarkNamed("zigscene");
     if (gui.takeSettingsReset()) self.resetSettings();
+    if (gui.takeFitRequest()) self.input = .{};
     const frame_start = rl.rl.GetTime();
     const dt = rl.GetFrameTime();
     self.audio.update();
@@ -98,7 +101,7 @@ pub fn frame(self: *App) void {
     const over_ui = pet.compact() or gui.pointerOverUi();
     self.script.update(.{
         .width = viewport.width(),
-        .height = viewport.target_height,
+        .height = viewport.height(),
         .time = self.elapsed,
         .dt = dt,
         .rms = processor.rms_energy,
@@ -113,7 +116,7 @@ pub fn frame(self: *App) void {
         .spectrum = &self.spectrum,
         .spectrum_count = self.spectrum.len,
         .mouse_x = mouse.x - viewport.left,
-        .mouse_y = mouse.y,
+        .mouse_y = mouse.y - viewport.top,
         .wheel = if (over_ui) 0 else rl.GetMouseWheelMoveV().y,
         .mouse_down = @intFromBool(!over_ui and rl.IsMouseButtonDown(rl.rl.MOUSE_BUTTON_LEFT)),
     });
@@ -122,7 +125,7 @@ pub fn frame(self: *App) void {
         self.halo.update(dt, processor.curr_fft);
         self.wave_bars.advance(dt);
     }
-    const center = viewport.toLocal(rl.GetWorldToScreen(.{}, self.input.camera));
+    const center = viewport.center();
 
     const render_context = tracy.traceNamed(@src(), "Render");
     defer render_context.end();
@@ -173,10 +176,15 @@ fn applyWindowOpacity(self: *App) void {
 
 /// Slides the scene clear of the side panel; frame-rate independent.
 fn updateViewport(self: *App, dt: f32) Viewport {
-    const target = gui.sceneLeft() * @import("gui/theme.zig").scale_factor;
+    const ui = @import("gui/theme.zig");
+    const bounds = gui.sceneBounds();
+    const target = bounds.x * ui.scale_factor;
     self.scene_left = if (pet.compact()) 0 else Viewport.slide(self.scene_left, target, dt, viewport_slide_seconds);
     return .{
         .left = self.scene_left,
+        .top = if (pet.compact()) 0 else bounds.y * ui.scale_factor,
+        .bottom = if (pet.compact()) 0 else (@as(f32, @floatFromInt(rl.GetScreenHeight())) - (bounds.y + bounds.height) * ui.scale_factor),
+        .right = if (pet.compact()) 0 else 12 * ui.scale_factor,
         .target_width = @floatFromInt(self.renderer.scene_texture.texture.width),
         .target_height = @floatFromInt(self.renderer.scene_texture.texture.height),
     };
@@ -186,6 +194,8 @@ fn renderScene(self: *App, viewport: Viewport, center: rl.Vector2, focus: Highli
     rl.BeginTextureMode(self.renderer.scene_texture);
     defer rl.EndTextureMode();
     rl.ClearBackground(.{});
+    rl.rl.BeginScissorMode(@intFromFloat(viewport.left), @intFromFloat(viewport.top), @intFromFloat(viewport.width()), @intFromFloat(viewport.height()));
+    defer rl.rl.EndScissorMode();
     viewport.begin();
     defer viewport.end();
     if (self.script.usesBuiltin()) self.renderBuiltin(viewport, center, focus);
@@ -194,8 +204,17 @@ fn renderScene(self: *App, viewport: Viewport, center: rl.Vector2, focus: Highli
 
 fn renderBuiltin(self: *App, viewport: Viewport, center: rl.Vector2, focus: Highlight) void {
     const width = viewport.width();
-    if (Highlight.Element.halo.visible()) self.halo.render(center, self.motion.energy, self.motion.pulse, focus);
-    const floor = sceneFloor();
+    if (Highlight.Element.halo.visible()) {
+        const extent = Config.Visualizer.Halo.radius + Config.Visualizer.Halo.depth + 65;
+        const fit = @min(1, @min(viewport.width(), viewport.height()) / (extent * 2 + 24));
+        rl.rl.rlPushMatrix();
+        rl.rlTranslatef(center.x, center.y, 0);
+        rl.rl.rlScalef(fit, fit, 1);
+        rl.rlTranslatef(-center.x, -center.y, 0);
+        self.halo.render(center, self.motion.energy, self.motion.pulse, focus);
+        rl.rl.rlPopMatrix();
+    }
+    const floor = viewport.height() - 6;
 
     {
         const context = tracy.traceNamed(@src(), "2d");
@@ -227,13 +246,6 @@ fn renderBuiltin(self: *App, viewport: Viewport, center: rl.Vector2, focus: High
         defer context.end();
         if (Highlight.Element.bubble.visible()) graphics.Bubble.render(viewport, self.input.camera, self.input.rotation_offset, self.elapsed, self.motion.energy, self.motion.pulse, focus);
     }
-}
-
-/// Bottom-anchored layers use the freed space when the player is hidden.
-fn sceneFloor() f32 {
-    if (pet.compact()) return @as(f32, @floatFromInt(rl.GetScreenHeight())) - 12;
-    const ui = @import("gui/theme.zig");
-    return (if (Config.Interface.show_player) gui.dockBounds().y - 6 else ui.height() - 16) * ui.scale_factor;
 }
 
 fn renderWindow(self: *App) f64 {

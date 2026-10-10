@@ -1,50 +1,52 @@
-//! The scene's drawing area: the window to the right of the open side panel.
-//! 2D layers draw in viewport-local coordinates. 3D projections move their
-//! center into the viewport without changing perspective or scale.
+//! The scene canvas, excluding editor chrome and the player.
+//! Both 2D coordinates and the 3D viewport use this same rectangle.
 const Viewport = @This();
 const std = @import("std");
 const rl = @import("../raylib.zig");
 
 /// Inset from the render target's left edge, in pixels.
 left: f32 = 0,
+top: f32 = 0,
+bottom: f32 = 0,
+right: f32 = 0,
 /// Full render target size, in pixels.
 target_width: f32,
 target_height: f32,
 
 pub fn width(self: Viewport) f32 {
-    return self.target_width - self.left;
+    return @max(1, self.target_width - self.left - self.right);
 }
-
-/// Maps a window-space projection of a world point (e.g. `GetWorldToScreen`,
-/// which knows nothing of the shift) into viewport-local coordinates.
-pub fn toLocal(self: Viewport, projected: rl.Vector2) rl.Vector2 {
-    return .{ .x = projected.x + projectedShift(self.left) - self.left, .y = projected.y };
+pub fn height(self: Viewport) f32 {
+    return @max(1, self.target_height - self.top - self.bottom);
 }
-
-/// 3D content moves by half the inset, so its center meets the viewport's.
-fn projectedShift(left: f32) f32 {
-    return left / 2;
+pub fn center(self: Viewport) rl.Vector2 {
+    return .{ .x = self.width() / 2, .y = self.height() / 2 };
 }
 
 pub fn begin(self: Viewport) void {
     rl.rlPushMatrix();
-    rl.rlTranslatef(self.left, 0, 0);
+    rl.rlTranslatef(self.left, self.top, 0);
 }
 
 pub fn end(_: Viewport) void {
     rl.rlPopMatrix();
 }
 
-/// Like `BeginMode3D`, with an off-axis projection centered on the viewport.
+/// Like `BeginMode3D`, fitted to the available canvas in both dimensions.
 /// Call between `begin` and `end`.
 pub fn begin3D(self: Viewport, camera: rl.Camera3D) void {
     // rlgl applies a pushed 2D transform to 3D vertices too; leave it first.
     self.end();
     rl.BeginMode3D(camera);
     const r = rl.rl;
+    r.rlViewport(@intFromFloat(self.left), @intFromFloat(self.bottom), @intFromFloat(self.width()), @intFromFloat(self.height()));
     r.rlMatrixMode(r.RL_PROJECTION);
     r.rlLoadIdentity();
-    const frustum = projection(camera, self.target_width / self.target_height, projectedShift(self.left) / (self.target_width / 2), r.rlGetCullDistanceNear());
+    var fitted_camera = camera;
+    // Preserve the horizontal field of view in a narrow editor canvas too.
+    const aspect = self.width() / self.height();
+    if (aspect < 1) fitted_camera.fovy = if (camera.projection == rl.CAMERA_ORTHOGRAPHIC) camera.fovy / aspect else @min(150, 2 * std.math.atan(@tan(camera.fovy * std.math.pi / 360) / aspect) * 180 / std.math.pi);
+    const frustum = projection(fitted_camera, aspect, r.rlGetCullDistanceNear());
     if (camera.projection == rl.CAMERA_ORTHOGRAPHIC)
         r.rlOrtho(frustum.left, frustum.right, -frustum.top, frustum.top, r.rlGetCullDistanceNear(), r.rlGetCullDistanceFar())
     else
@@ -55,7 +57,15 @@ pub fn begin3D(self: Viewport, camera: rl.Camera3D) void {
 /// `EndMode3D` resets the modelview, so the 2D offset is re-applied.
 pub fn end3D(self: Viewport) void {
     rl.EndMode3D();
+    rl.rl.rlViewport(0, 0, @intFromFloat(self.target_width), @intFromFloat(self.target_height));
     self.begin();
+}
+
+test "editor canvas reserves panels and player in both dimensions" {
+    const view: Viewport = .{ .left = 304, .top = 72, .bottom = 104, .right = 12, .target_width = 640, .target_height = 480 };
+    try std.testing.expectEqual(@as(f32, 324), view.width());
+    try std.testing.expectEqual(@as(f32, 304), view.height());
+    try std.testing.expectEqual(@as(f32, 152), view.center().y);
 }
 
 /// Eases an inset toward `target`, independent of frame rate. Settles exactly
@@ -67,35 +77,14 @@ pub fn slide(current: f32, target: f32, dt: f32, time_constant: f32) f32 {
 
 const Frustum = struct { left: f64, right: f64, top: f64 };
 
-/// raylib's `BeginMode3D` frustum, slid horizontally so points at every depth
-/// move by `shift_ndc` in normalized device coordinates.
-fn projection(camera: rl.Camera3D, aspect: f32, shift_ndc: f32, near: f64) Frustum {
+/// raylib's `BeginMode3D` frustum, centered inside the canvas.
+fn projection(camera: rl.Camera3D, aspect: f32, near: f64) Frustum {
     const top: f64 = if (camera.projection == rl.CAMERA_ORTHOGRAPHIC)
         camera.fovy / 2.0
     else
         near * @tan(@as(f64, camera.fovy) * 0.5 * std.math.pi / 180.0);
     const right = top * aspect;
-    const offset = right * shift_ndc;
-    return .{ .left = -right - offset, .right = right - offset, .top = top };
-}
-
-test "off-axis projection moves the center into the viewport at any depth" {
-    const target_width: f32 = 1000;
-    const inset: f32 = 300;
-    const shift_ndc = projectedShift(inset) / (target_width / 2);
-    for ([_]c_int{ rl.CAMERA_PERSPECTIVE, rl.CAMERA_ORTHOGRAPHIC }) |kind| {
-        const camera: rl.Camera3D = .{ .fovy = 45, .projection = kind };
-        const unshifted = projection(camera, 1.5, 0, 0.01);
-        const frustum = projection(camera, 1.5, shift_ndc, 0.01);
-        // Same field of view: the image moves, it does not scale.
-        try std.testing.expectApproxEqAbs(unshifted.right - unshifted.left, frustum.right - frustum.left, 1e-12);
-        // A point on the camera axis (x = 0) lands at the viewport's center.
-        const ndc = (0 - (frustum.right + frustum.left)) / (frustum.right - frustum.left);
-        const pixel = (ndc + 1) / 2 * target_width;
-        try std.testing.expectApproxEqAbs(@as(f64, inset + (target_width - inset) / 2), pixel, 1e-3);
-    }
-    const viewport: Viewport = .{ .left = inset, .target_width = target_width, .target_height = 600 };
-    try std.testing.expectApproxEqAbs(viewport.width() / 2, viewport.toLocal(.{ .x = target_width / 2, .y = 0 }).x, 1e-4);
+    return .{ .left = -right, .right = right, .top = top };
 }
 
 test "the viewport slide is frame-rate independent and settles exactly" {

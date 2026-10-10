@@ -1,10 +1,48 @@
 //! Shared palette, typography and drawing primitives for the studio UI.
 const rl = @import("raylib");
+const std = @import("std");
 const config = @import("../core/config.zig");
 const geometry = @import("geometry.zig");
 const Cursor = @import("Cursor.zig");
 var cursor: Cursor = .{};
 pub var scale_factor: f32 = 1;
+pub var blocked = false;
+var focus: @import("Focus.zig") = .{};
+pub var typing = false;
+var tip_buffer: [256]u8 = @splat(0);
+var tip_id: u64 = 0;
+var previous_tip: u64 = 0;
+var tip_start: f64 = 0;
+
+pub fn keyboardActive() bool {
+    return focus.visible;
+}
+fn controlId(bounds: rl.Rectangle, name: []const u8) u64 {
+    var hash = std.hash.Wyhash.init(0);
+    hash.update(name);
+    const position = [_]i32{ @intFromFloat(bounds.x), @intFromFloat(bounds.y) };
+    hash.update(std.mem.asBytes(&position));
+    return hash.final();
+}
+pub fn focusable(id: u64, bounds: rl.Rectangle, enabled: bool) bool {
+    if (blocked or !enabled) return false;
+    const active = focus.add(id, hovered(bounds) and rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT));
+    if (active) rl.DrawRectangleRoundedLinesEx(rect(bounds.x - 2, bounds.y - 2, bounds.width + 4, bounds.height + 4), 0.15, 6, 1, accent);
+    return active;
+}
+pub fn activate(bounds: rl.Rectangle, name: []const u8, enabled: bool) bool {
+    const focused = focusable(controlId(bounds, name), bounds, enabled);
+    const space = rl.IsKeyPressed(rl.KEY_SPACE) and !rl.IsKeyDown(rl.KEY_LEFT_SHIFT) and !rl.IsKeyDown(rl.KEY_RIGHT_SHIFT);
+    return !blocked and enabled and ((hovered(bounds) and rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT)) or
+        (focused and !typing and (rl.IsKeyPressed(rl.KEY_ENTER) or space)));
+}
+pub fn tooltip(bounds: rl.Rectangle, value: [:0]const u8) void {
+    if (!hovered(bounds)) return;
+    tip_id = controlId(bounds, value);
+    const n = @min(value.len, tip_buffer.len - 1);
+    @memcpy(tip_buffer[0..n], value[0..n]);
+    tip_buffer[n] = 0;
+}
 
 pub const background = rl.Color{ .r = 11, .g = 15, .b = 24, .a = 255 };
 pub const surface = rl.Color{ .r = 19, .g = 25, .b = 37, .a = 250 };
@@ -142,7 +180,7 @@ pub fn centered(value: [:0]const u8, bounds: rl.Rectangle, size: f32, color: rl.
 }
 
 pub fn hovered(bounds: rl.Rectangle) bool {
-    return rl.CheckCollisionPointRec(mousePosition(), bounds);
+    return !blocked and rl.CheckCollisionPointRec(mousePosition(), bounds);
 }
 
 pub fn button(bounds: rl.Rectangle, value: [:0]const u8, selected: bool, enabled: bool) bool {
@@ -151,7 +189,8 @@ pub fn button(bounds: rl.Rectangle, value: [:0]const u8, selected: bool, enabled
     var label_buffer: [256]u8 = undefined;
     centered(fitted(value, 14, bounds.width - 8, &label_buffer), bounds, 14, if (!enabled) border else if (selected) accent else if (over) text else muted);
     if (over) requestCursor(rl.MOUSE_CURSOR_POINTING_HAND);
-    return over and rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT);
+    tooltip(bounds, value);
+    return activate(bounds, value, enabled);
 }
 
 /// Draw and hit-test in the same logical coordinates. Scene rendering stays in
@@ -168,14 +207,34 @@ pub fn mousePosition() rl.Vector2 {
 }
 pub fn beginDrawing() void {
     cursor.begin();
-    rl.rlPushMatrix();
-    rl.rlScalef(scale_factor, scale_factor, 1);
+    focus.begin(rl.IsKeyPressed(rl.KEY_TAB), rl.IsKeyDown(rl.KEY_LEFT_SHIFT) or rl.IsKeyDown(rl.KEY_RIGHT_SHIFT), rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT));
+    tip_id = 0;
+    resumeDrawing();
 }
 pub fn endDrawing() void {
-    rl.rlPopMatrix();
+    focus.finish();
+    if (tip_id != previous_tip) tip_start = rl.GetTime();
+    previous_tip = tip_id;
+    if (tip_id != 0 and rl.GetTime() - tip_start > 0.6) {
+        const value = std.mem.span(@as([*:0]const u8, @ptrCast(&tip_buffer)));
+        const w = textWidth(value, 12) + 20;
+        const mouse = mousePosition();
+        const box = rect(std.math.clamp(mouse.x + 12, 4, @max(4, width() - w - 4)), @min(mouse.y + 20, height() - 32), w, 26);
+        rounded(box, 5, raised);
+        centered(value, box, 12, text);
+    }
+    suspendDrawing();
     // Raylib creates a GLFW cursor on each call. Resetting it between widgets
     // needlessly alternates arrow/hand every frame and causes native redraws.
     if (cursor.change()) |next| rl.SetMouseCursor(next);
+}
+// Offscreen waveform rasterization changes matrices, not input-frame ownership.
+pub fn suspendDrawing() void {
+    rl.rlPopMatrix();
+}
+pub fn resumeDrawing() void {
+    rl.rlPushMatrix();
+    rl.rlScalef(scale_factor, scale_factor, 1);
 }
 pub fn requestCursor(shape: c_int) void {
     cursor.request(shape);
@@ -197,7 +256,14 @@ pub fn valueBox(bounds: rl.Rectangle, buffer: [*]u8, value: *f32) bool {
 
 /// Text entry uses logical mouse coordinates just like numeric fields.
 pub fn textBox(bounds: rl.Rectangle, buffer: []u8, editing: bool) bool {
+    if (blocked) {
+        rounded(bounds, 4, raised);
+        return false;
+    }
     rl.SetMouseScale(1 / scale_factor, 1 / scale_factor);
     defer rl.SetMouseScale(1, 1);
+    const focused = focusable(controlId(bounds, "text"), bounds, true);
+    if (!editing and focused and rl.IsKeyPressed(rl.KEY_ENTER)) return true;
+    if (editing and rl.IsKeyPressed(rl.KEY_TAB)) return true;
     return rl.GuiTextBox(bounds, buffer.ptr, @intCast(buffer.len), editing) != 0;
 }

@@ -71,22 +71,7 @@ try {
       await canvas.click({ position: { x, y }, delay: 100 });
       await advance();
     };
-    await advance();
-    // Save, replace and duplicate a preset: the old whole-library rollback
-    // exhausted the web stack here even though compilation succeeded.
-    await click(522, 36);
-    await canvas.screenshot({ path: new URL(`presets-before-${rejectShader}.png`, artifacts).pathname });
-    await click(95, 202);
-    await click(95, 202);
-    await click(245, 202);
-    await canvas.screenshot({ path: new URL(`presets-after-${rejectShader}.png`, artifacts).pathname });
-    await click(120, 286); // Load the saved look.
-    await click(948, 36); // Settings.
-    await click(76, 286); // Change the FPS limit before resetting it.
-    await click(165, 146); // Reset all settings.
-    await advance();
-    await canvas.screenshot({ path: new URL(`reset-${rejectShader}.png`, artifacts).pathname });
-    // A real dropped PCM file also drives the analysis stack on the main loop.
+    // Generated fixture used only by the browser test; no bundled demo audio.
     const wav = Buffer.alloc(44 + 44100 * 2 * 2);
     wav.write('RIFF'); wav.writeUInt32LE(wav.length - 8, 4); wav.write('WAVEfmt ', 8);
     wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22);
@@ -94,6 +79,41 @@ try {
     wav.writeUInt16LE(2, 32); wav.writeUInt16LE(16, 34); wav.write('data', 36);
     wav.writeUInt32LE(wav.length - 44, 40);
     for (let i = 0; i < 88200; i++) wav.writeInt16LE(Math.round(2000 * Math.sin(i * Math.PI * 2 * 440 / 44100)), 44 + i * 2);
+    await advance();
+    await canvas.screenshot({ path: new URL(`welcome-${rejectShader}.png`, artifacts).pathname });
+    const welcomeChooser = page.waitForEvent('filechooser', { timeout: 15000 });
+    await canvas.click({ position: { x: 676, y: 344 }, delay: 100 });
+    await (await welcomeChooser).setFiles({ name: 'initial.wav', mimeType: 'audio/wav', buffer: wav });
+    await advance();
+    assert.ok(messages.some(message => message.includes('initial.wav') && message.includes('successfully')), messages.join('\n'));
+    await page.keyboard.press('Space'); // Pause/resume must leave rendering alive.
+    await advance();
+    await page.keyboard.press('Space');
+    await advance();
+    // Save, replace and duplicate a preset: the old whole-library rollback
+    // exhausted the web stack here even though compilation succeeded.
+    await page.keyboard.press('7');
+    await advance();
+    await canvas.screenshot({ path: new URL(`presets-before-${rejectShader}.png`, artifacts).pathname });
+    await click(70, 474); // Save as.
+    await click(168, 474); // Replace.
+    await click(267, 474); // Duplicate.
+    await canvas.screenshot({ path: new URL(`presets-after-${rejectShader}.png`, artifacts).pathname });
+    await page.keyboard.press('PageDown');
+    await advance();
+    await click(120, 220); // Load the saved look.
+    await page.keyboard.press('6'); // Settings.
+    await advance();
+    await click(76, 286); // Change the FPS limit before resetting it.
+    await click(165, 146); // Reset all settings.
+    await advance();
+    await canvas.screenshot({ path: new URL(`reset-${rejectShader}.png`, artifacts).pathname });
+    // A real dropped PCM file also drives the analysis stack on the main loop.
+    const chooser = page.waitForEvent('filechooser', { timeout: 15000 });
+    await canvas.click({ position: { x: 410, y: 680 }, delay: 100 });
+    await (await chooser).setFiles({ name: 'chosen.wav', mimeType: 'audio/wav', buffer: wav });
+    await advance();
+    assert.ok(messages.some(message => message.includes('chosen.wav') && message.includes('successfully')), messages.join('\n'));
     await canvas.evaluate((element, encoded) => {
       const data = Uint8Array.from(atob(encoded), c => c.charCodeAt(0));
       const transfer = new DataTransfer();
@@ -119,7 +139,7 @@ try {
     if (!rejectShader) assert.ok(!messages.some(message => /SHADER:.*(failed|error)/i.test(message)), messages.join('\n'));
     await writeFile(new URL(`console-${rejectShader}.log`, artifacts), messages.join('\n'));
     await page.close();
-    console.log(`Web startup, presets, reset and dropped audio passed (shader fallback: ${rejectShader}).`);
+    console.log(`Web startup, presets, reset, welcome/player file choosers and dropped audio passed (shader fallback: ${rejectShader}).`);
   }
 } finally {
   await browser?.close();
