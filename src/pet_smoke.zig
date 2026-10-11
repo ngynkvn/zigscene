@@ -57,14 +57,14 @@ pub fn main() !void {
     // This point covers the amplitude row after the controls expand. Opening
     // must not dispatch the same press to that row's right-click reset.
     gui.onTabChange(.scalar);
-    click(&app, 100, 180, rl.MOUSE_BUTTON_RIGHT);
+    click(&app, 100, 130, rl.MOUSE_BUTTON_RIGHT);
     try expect(!pet.compact(), "open controls with right-click");
     try expect(config.Visualizer.WaveFormLine.amplitude == 81, "opening must not reset an exposed control");
     try expect(app.renderer.scene_texture.texture.width == rl.GetScreenWidth(), "resize render texture with controls");
     try expect(!rl.IsWindowState(rl.FLAG_WINDOW_TOPMOST), "restore topmost preference in controls");
     try expect(app.applied_fps_limit == 0 and app.applied_window_opacity == 0.55, "restore presentation preferences");
 
-    click(&app, 100, 180, rl.MOUSE_BUTTON_RIGHT);
+    click(&app, 100, 130, rl.MOUSE_BUTTON_RIGHT);
     try expect(!pet.compact(), "right-click over controls must not close them");
     try expect(config.Visualizer.WaveFormLine.amplitude == 60, "right-click still resets the amplitude");
     gui.onTabChange(.presets);
@@ -72,12 +72,12 @@ pub fn main() !void {
     click(&app, 700, 200, rl.MOUSE_BUTTON_RIGHT);
     try expect(pet.compact() and !gui.editingValue(), "close controls and end text editing");
     try expect(config.Shader.alpha_factor == 0.4 and config.Shader.noise_factor == 0.2, "preserve shader preferences");
-    click(&app, 100, 180, rl.MOUSE_BUTTON_RIGHT);
+    click(&app, 100, 130, rl.MOUSE_BUTTON_RIGHT);
     try expect(!pet.compact(), "reopen controls");
     try screenshot(".tmp/pet-check/controls.png");
 
     gui.onTabChange(.settings);
-    click(&app, 160, 146, rl.MOUSE_BUTTON_LEFT);
+    click(&app, 160, 96, rl.MOUSE_BUTTON_LEFT);
     try expect(config.Window.opacity == 1 and config.Shader.noise_factor == 0, "hard reset restores defaults");
     try expect(pet.enabled and !pet.compact(), "hard reset keeps the controls usable");
     click(&app, 700, 200, rl.MOUSE_BUTTON_RIGHT);

@@ -254,7 +254,7 @@ exposed to Lua in the current interface.
 
 All scene drawing, built-in and Lua, happens inside the available canvas
 ([`Viewport.zig`](src/graphics/Viewport.zig)), excluding the header, side panel,
-and player. The left inset eases toward `gui.sceneLeft()` so opening or hiding
+player, and status bar. The left inset eases toward `gui.sceneLeft()` so opening or hiding
 the panel slides the scene. 2D layers use a pushed translation and a shared
 scissor rectangle. 3D passes leave that translation and use a matching GL
 viewport and centered projection; narrow canvases widen the vertical field of
@@ -279,6 +279,12 @@ cursor cannot repeat a drag as the window moves. See the
 [desktop-pet guide](docs/desktop-pet.md).
 
 ### Drawing and interaction
+
+The header, side panel, player, and status bar dock flush to the window edges
+and meet at one-pixel seams, leaving the rest of the window to the canvas.
+[`theme.zig`](src/gui/theme.zig) holds the graphite palette and the shared
+controls (button kinds, check boxes, disclosure rows, select fields, and line
+icons) so panels stay visually consistent.
 
 Widgets request cursor shapes during drawing. The theme applies the final shape
 once, only when it changes; resetting the native cursor between widgets caused

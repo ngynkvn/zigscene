@@ -18,7 +18,7 @@ Windows captures the default playback device through WASAPI loopback. To choose
 a different device, right-click the pet, stop capture, select the output in
 **Audio devices**, then start capture again. Right-click the scene to return to the pet.
 If capture cannot start, the Audio devices panel opens. Read the notice in the
-player; use **Expand player** if it is hidden.
+player; use **Expand player** in the status bar if it is hidden.
 
 You can also pass an index from `--list-audio-devices`:
 

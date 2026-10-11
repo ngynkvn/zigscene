@@ -184,7 +184,7 @@ fn updateViewport(self: *App, dt: f32) Viewport {
         .left = self.scene_left,
         .top = if (pet.compact()) 0 else bounds.y * ui.scale_factor,
         .bottom = if (pet.compact()) 0 else (@as(f32, @floatFromInt(rl.GetScreenHeight())) - (bounds.y + bounds.height) * ui.scale_factor),
-        .right = if (pet.compact()) 0 else 12 * ui.scale_factor,
+        .right = if (pet.compact()) 0 else @max(0, @as(f32, @floatFromInt(rl.GetScreenWidth())) - (bounds.x + bounds.width) * ui.scale_factor),
         .target_width = @floatFromInt(self.renderer.scene_texture.texture.width),
         .target_height = @floatFromInt(self.renderer.scene_texture.texture.height),
     };

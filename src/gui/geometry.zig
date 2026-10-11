@@ -8,10 +8,13 @@ pub fn scaleForWindow(percent: f32, width: f32, height: f32) f32 {
 }
 
 // Shared by drawing, scrolling and hit testing so compact spacing stays aligned.
-pub const margin: f32 = 12;
-pub const header_height: f32 = 48;
-pub const panel_top: f32 = margin + header_height + 12;
-pub const dock_height: f32 = 124;
+// Bars and panels dock flush to the window edges and meet at one-pixel seams.
+pub const header_height: f32 = 40;
+pub const panel_top: f32 = header_height;
+/// The side panel's tab strip, above its scrolling content.
+pub const panel_header: f32 = 32;
+pub const status_height: f32 = 24;
+pub const dock_height: f32 = 100;
 pub fn compact(window_width: f32, window_height: f32) bool {
     return window_width < 820 or window_height < 620;
 }
@@ -28,8 +31,11 @@ pub const scene_row_height: f32 = 66;
 
 pub const Size = struct { width: f32, height: f32 };
 
-pub fn panelSize(requested_width: f32, requested_height: f32, window_width: f32, window_height: f32) Size {
-    const max_height = @max(180, window_height - panel_top - dockHeight(window_width, window_height) - margin - 12);
+/// The side panel fills the height between the header and the player, or the
+/// status bar when the player is hidden, until it is manually resized.
+pub fn panelSize(requested_width: f32, requested_height: f32, window_width: f32, window_height: f32, player: bool) Size {
+    const floor = window_height - status_height - (if (player) dockHeight(window_width, window_height) else 0);
+    const max_height = @max(180, floor - panel_top);
     const maximum_width: f32 = if (compact(window_width, window_height)) 280 else 640;
     return .{
         .width = std.math.clamp(requested_width, 280, @max(280, @min(maximum_width, window_width - 240))),
@@ -44,8 +50,9 @@ test "UI scale fits small windows and preserves requested size on larger ones" {
 }
 
 test "resizing panels respects available space and automatic height" {
-    try std.testing.expectEqual(Size{ .width = 320, .height = 548 }, panelSize(320, 0, 1024, 768));
-    try std.testing.expectEqual(Size{ .width = 280, .height = 304 }, panelSize(600, 900, 640, 480));
-    try std.testing.expectEqual(Size{ .width = 280, .height = 180 }, panelSize(0, 1, 1024, 768));
-    try std.testing.expectEqual(Size{ .width = 500, .height = 350 }, panelSize(500, 350, 1024, 768));
+    try std.testing.expectEqual(Size{ .width = 320, .height = 604 }, panelSize(320, 0, 1024, 768, true));
+    try std.testing.expectEqual(Size{ .width = 320, .height = 704 }, panelSize(320, 0, 1024, 768, false));
+    try std.testing.expectEqual(Size{ .width = 280, .height = 336 }, panelSize(600, 900, 640, 480, true));
+    try std.testing.expectEqual(Size{ .width = 280, .height = 180 }, panelSize(0, 1, 1024, 768, true));
+    try std.testing.expectEqual(Size{ .width = 500, .height = 350 }, panelSize(500, 350, 1024, 768, true));
 }

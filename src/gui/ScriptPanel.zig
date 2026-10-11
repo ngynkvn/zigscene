@@ -43,14 +43,14 @@ fn button(view: rl.Rectangle, x: f32, y: f32, width: f32, label: [:0]const u8, s
 }
 pub fn draw(scene: *Scene, view: rl.Rectangle, scroll: f32, slider: anytype) void {
     var y = view.y - scroll;
-    ui.label(scene.name(), view.x + 8, y, 16, ui.accent);
-    ui.label(if (scene.runtime == null) "LUA SCENES" else if (scene.usesBuiltin()) "LUA / OVERLAY" else "LUA / CUSTOM SCENE", view.x + 8, y + 22, 10, ui.muted);
+    ui.label(scene.name(), view.x + 4, y, 15, ui.text);
+    ui.label(if (scene.runtime == null) "Lua scenes" else if (scene.usesBuiltin()) "Lua overlay" else "Lua custom scene", view.x + 4, y + 21, 11, ui.accent);
     var caption_buffer: [256]u8 = undefined;
     const caption = if (scene.path().len > 0)
         std.fmt.bufPrintZ(&caption_buffer, "File: {s}", .{std.fs.path.basename(scene.path())}) catch "External Lua file"
     else
         "Drop a .lua file here, or try an example.";
-    ui.label(caption, view.x + 8, y + 40, 12, ui.muted);
+    ui.label(caption, view.x + 4, y + 39, 12, ui.muted);
     y += 58;
     const third = (view.width - 12) / 3;
     inline for (Scene.examples, 0..) |entry, i| {
@@ -70,19 +70,21 @@ pub fn draw(scene: *Scene, view: rl.Rectangle, scroll: f32, slider: anytype) voi
         return;
     }
     y += 36;
-    if (button(view, view.x, y, view.width, if (scene.auto_reload) "Auto reload: On" else "Auto reload: Off", scene.auto_reload, scene.path().len > 0)) scene.auto_reload = !scene.auto_reload;
+    const shown = y >= view.y and y + 30 <= view.y + view.height;
+    if (ui.checkbox(ui.rect(view.x, y, view.width, 30), "Auto reload", scene.auto_reload, scene.path().len > 0 and shown)) scene.auto_reload = !scene.auto_reload;
     y += 38;
     const is_error = scene.errorMessage().len > 0;
     const message = if (is_error) scene.errorMessage() else scene.logMessage();
     if (message.len > 0) {
-        ui.label(if (is_error) "SCRIPT ERROR" else "SCRIPT MESSAGE", view.x + 8, y, 10, if (is_error) .{ .r = 255, .g = 150, .b = 140, .a = 255 } else ui.accent);
+        ui.label(if (is_error) "Script error" else "Script message", view.x + 8, y, 12, if (is_error) ui.danger else ui.accent);
         y += 22;
         y += wrapped(message, view.x + 8, y, view.width - 16, ui.muted, true) + 6;
     }
     for (scene.params(), 0..) |*param, i| {
-        ui.label(std.mem.span(@as([*:0]const u8, @ptrCast(&param.label))), view.x + 8, y + 4, 14, ui.text);
+        ui.label(std.mem.span(@as([*:0]const u8, @ptrCast(&param.label))), view.x + 8, y + 5, 13, ui.secondary);
         var number: [32]u8 = undefined;
-        ui.label(std.fmt.bufPrintZ(&number, "{d:.2}", .{param.value}) catch "?", view.x + view.width - 58, y + 5, 12, ui.muted);
+        const value = std.fmt.bufPrintZ(&number, "{d:.2}", .{param.value}) catch "?";
+        ui.label(value, view.x + view.width - 8 - ui.textWidth(value, 12), y + 6, 12, ui.text);
         _ = slider(4000 + i, ui.rect(view.x + 8, y + geometry.slider_top, view.width - 16, geometry.slider_height), &param.value, param.min, param.max, y >= view.y and y + geometry.slider_top + geometry.slider_height <= view.y + view.height, false);
         if (y >= view.y and y + geometry.row_height <= view.y + view.height and ui.hovered(ui.rect(view.x, y, view.width, geometry.row_height)) and rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_RIGHT)) param.value = param.default_value;
         y += geometry.row_height;

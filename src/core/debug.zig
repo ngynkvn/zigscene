@@ -41,12 +41,13 @@ pub fn record(timings: Timings) void {
     }
 }
 
+// Sits left of the canvas's Fit scene button rather than on top of it.
 fn badgeBounds() rl.Rectangle {
-    return ui.rect(ui.width() - 208, geometry.panel_top, 196, 30);
+    return ui.rect(ui.width() - 300, geometry.panel_top + 10, 196, 26);
 }
 
 fn panelBounds() rl.Rectangle {
-    return ui.rect(@max(panel_margin, ui.width() - panel_width - panel_margin), geometry.panel_top + 38, panel_width, panel_height);
+    return ui.rect(@max(panel_margin, ui.width() - panel_width - 12), geometry.panel_top + 44, panel_width, panel_height);
 }
 
 pub fn pointerOverUi() bool {

@@ -24,21 +24,21 @@ The player at the bottom of the window provides:
 
 | Control | Action |
 | --- | --- |
-| **Play / Pause**, **Space**, or **P** | Pause or resume the loaded track |
+| Round **Play / Pause** button, **Space**, or **P** | Pause or resume the loaded track |
 | **Open audio** | Choose another track |
 | **Volume** | Change the output volume |
 | Waveform | Drag to seek; hover to preview a time |
 | **Devices** | Choose the live-capture source |
 | **Capture / M** | Start or stop the selected capture source |
 
-The track name appears above the waveform, with elapsed and total time on the
-waveform. Loading and capture errors appear in the player with a **Dismiss**
-button.
+The track name and playback state appear beside the play button. Elapsed and
+total time sit at either end of the waveform (on the waveform in small windows).
+Loading and capture errors appear in the player with a **Dismiss** button.
 
 Click **Hide player** at the top-right of the player to give the scene more
-space. Playback and the **P** / **M** shortcuts keep working. The **Expand
-player** button at the bottom-right brings the controls back; it highlights when
-there is an audio notice. Native builds remember whether the player is hidden.
+space. Playback and the **P** / **M** shortcuts keep working. **Expand
+player** at the right of the status bar brings the controls back; it highlights
+when there is an audio notice. Native builds remember whether the player is hidden.
 
 ### Read the seek waveform
 
@@ -124,12 +124,12 @@ decay. Waveform smoothing preserves the leading edge of hits. Holding
 
 ### Explore and save a look
 
-Open **Looks / 7** and try **Calm**, **Pulse**, or **Sculpture**. Cards show a small
-palette-and-layer preview; Lua cards use a generic scene symbol.
+Open **Looks / 7** and try **Calm**, **Pulse**, or **Sculpture**. Each row shows a
+small palette-and-layer preview; Lua looks use a generic scene symbol.
 
 Enter a name and choose **Save as** to create a saved look. Existing names are
 protected: select that look and choose **Replace** to overwrite it. Click a saved
-card to restore its visual settings, Lua scene reference, and parameters.
+look to restore its visual settings, Lua scene reference, and parameters.
 **Duplicate** makes a separate copy. The library holds 24 saved looks in addition
 to the three starters.
 Native builds save immediately to `presets.json` beside `settings.conf`; browser
@@ -137,12 +137,12 @@ presets last for the session. External Lua files are referenced by absolute path
 so keep those files available. A missing or invalid scene keeps the current look.
 Window, interface, volume, and capture-device settings are excluded.
 
-Use **Undo / Redo** at the panel footer or the keyboard shortcuts to explore visual
+Use **Undo / Redo** in the status bar or the keyboard shortcuts to explore visual
 changes. History holds up to 63 edits, groups a completed slider drag into one
 edit, and includes switching starter or saved looks, including their Lua scenes
 and parameters. Directly loading or reloading a Lua file starts a new history.
-A teal dot marks controls changed from their defaults. Click a control's **R**
-button or right-click it to reset it; section
+A teal dot marks controls changed from their defaults. Click the reset arrow
+beside a changed value or right-click the control to reset it; section
 **Reset** buttons restore a group. Lua-owned host controls display **Lua** and
 remain locked; adjust the scene's exposed parameters instead.
 
@@ -150,7 +150,8 @@ remain locked; adjust the scene's exposed parameters instead.
 Shape, Color, and Global response groups. Use the arrows or click the layer name
 to choose a layer. Search by label or setting path. **Solo** temporarily shows
 only the selected enabled built-in layer, without changing saved visibility.
-Click a Scene card's body to open its inspector. Solo clears when the scene changes.
+In **Scene**, the eye icon shows or hides a layer; click the layer's name to
+open its inspector. Solo clears when the scene changes.
 
 In **Color**, expand a color to edit all three HSV components. Click a swatch to
 apply it; right-click a swatch to save the current color. The eight shared swatches

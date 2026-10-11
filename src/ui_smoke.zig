@@ -74,7 +74,7 @@ pub fn main() !void {
     if (!app.audio.isFilePlaying()) return error.PlaybackShortcutFailed;
     gui.onTabChange(.presets);
     app.frame();
-    click(&app, 160, 270); // Pulse starter card.
+    click(&app, 160, 222); // Pulse starter card.
     if (!config.Scene.wave_lines or config.Scene.halo) return error.StarterLookFailed;
     State.history.undo(&app.script);
     if (!config.Scene.halo or config.Scene.wave_lines) return error.LookUndoFailed;

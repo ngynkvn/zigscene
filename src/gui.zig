@@ -101,21 +101,24 @@ fn width() f32 {
 fn height() f32 {
     return ui.height();
 }
+fn panelSize() geometry.Size {
+    return geometry.panelSize(config.Interface.panel_width, config.Interface.panel_height, width(), height(), config.Interface.show_player);
+}
 fn panel() rl.Rectangle {
-    const size = geometry.panelSize(config.Interface.panel_width, config.Interface.panel_height, width(), height());
-    return ui.rect(geometry.margin, geometry.panel_top, size.width, size.height);
+    const size = panelSize();
+    return ui.rect(0, geometry.panel_top, size.width, size.height);
 }
 fn viewport() rl.Rectangle {
     const p = panel();
-    const header: f32 = if (geometry.compact(width(), height())) 44 else 60;
-    return ui.rect(p.x + 12, p.y + header, p.width - 24, p.height - header - 24);
+    const top = geometry.panel_header + 10;
+    return ui.rect(p.x + 12, p.y + top, p.width - 24, p.height - top - 12);
 }
 
 /// UI wheel gestures must not also move the scene camera.
 pub fn pointerOverUi() bool {
     return path_entry or ui.hovered(fitBounds()) or resize_mode != .none or @import("core/debug.zig").pointerOverUi() or
-        ui.hovered(headerBounds()) or
-        ui.hovered(if (config.Interface.show_player) dockBounds() else expandPlayerBounds()) or
+        ui.hovered(headerBounds()) or ui.hovered(statusBounds()) or
+        (config.Interface.show_player and ui.hovered(dockBounds())) or
         (active_tab != .none and ui.hovered(ui.rect(panel().x, panel().y, panel().width + 6, panel().height + 6)));
 }
 
@@ -152,6 +155,7 @@ pub fn frame(audio: *AudioSession, script: *ScriptScene) void {
     drawHeader();
     if (active_tab != .none) drawPanel(script, audio);
     drawPlayer(audio);
+    drawStatusBar(audio, script);
     if ((audio.hasFile() or audio.captureActive()) and ui.button(fitBounds(), "Fit scene", false, script.usesBuiltin())) fit_requested = true;
     if (!audio.hasFile() and !audio.captureActive()) drawWelcome(audio);
     ui.blocked = false;
@@ -172,29 +176,30 @@ pub fn openAudio(audio: *AudioSession) void {
 
 fn drawWelcome(audio: *AudioSession) void {
     const scene = sceneBounds();
-    const w = @min(340, scene.width - 24);
-    const box = ui.rect(scene.x + (scene.width - w) / 2, scene.y + @max(0, (scene.height - 204) / 2), w, 204);
+    const w = @min(360, scene.width - 32);
+    const h: f32 = 214;
+    const box = ui.rect(scene.x + (scene.width - w) / 2, scene.y + @max(0, (scene.height - h) / 2), w, h);
     ui.card(box);
-    ui.centered("Bring your scene to life", ui.rect(box.x, box.y + 18, w, 26), 21, ui.text);
-    ui.centered("Open a track or capture live audio.", ui.rect(box.x, box.y + 50, w, 20), 13, ui.muted);
-    if (ui.button(ui.rect(box.x + 18, box.y + 82, w - 36, 36), "Open audio", true, !path_entry)) openAudio(audio);
-    if (ui.button(ui.rect(box.x + 18, box.y + 126, w - 36, 32), "Capture system audio", false, !path_entry and builtin.os.tag != .emscripten)) {
+    ui.centered("Bring your scene to life", ui.rect(box.x, box.y + 24, w, 24), 21, ui.text);
+    ui.centered("Open a track or capture live audio.", ui.rect(box.x, box.y + 56, w, 18), 13, ui.muted);
+    if (ui.primaryButton(ui.rect(box.x + 28, box.y + 90, w - 56, 34), "Open audio", !path_entry)) openAudio(audio);
+    if (ui.secondaryButton(ui.rect(box.x + 28, box.y + 132, w - 56, 34), "Capture system audio", !path_entry and builtin.os.tag != .emscripten)) {
         audio.startCapture(.system, -1) catch onTabChange(.audio);
     }
-    ui.centered("You can also drop an MP3, WAV or OGG.", ui.rect(box.x, box.y + 171, w, 18), 11, ui.muted);
+    ui.centered("You can also drop an MP3, WAV or OGG.", ui.rect(box.x, box.y + 182, w, 18), 11, ui.muted);
 }
 
 // A path fallback keeps Open usable on minimal Linux desktops without a chooser.
 fn drawPathEntry(audio: *AudioSession) void {
     const w = @min(520, width() - 40);
-    const box = ui.rect((width() - w) / 2, (height() - 158) / 2, w, 158);
-    ui.rounded(ui.rect(0, 0, width(), height()), 0, rl.Fade(ui.background, 0.9));
+    const box = ui.rect((width() - w) / 2, (height() - 156) / 2, w, 156);
+    ui.fill(ui.rect(0, 0, width(), height()), rl.Fade(ui.background, 0.8));
     ui.card(box);
-    ui.label("Open audio file", box.x + 16, box.y + 14, 21, ui.text);
-    ui.label("Paste the full path to an MP3, WAV or OGG.", box.x + 16, box.y + 44, 13, ui.muted);
-    const submit = ui.textBox(ui.rect(box.x + 16, box.y + 70, w - 32, 30), &path_buffer, true);
-    if (ui.button(ui.rect(box.x + w - 192, box.y + 112, 80, 30), "Cancel", false, true) or rl.IsKeyPressed(rl.KEY_ESCAPE)) path_entry = false;
-    if (ui.button(ui.rect(box.x + w - 100, box.y + 112, 84, 30), "Open", true, path_buffer[0] != 0) or (submit and path_buffer[0] != 0)) {
+    ui.label("Open audio file", box.x + 20, box.y + 16, 16, ui.text);
+    ui.label("Paste the full path to an MP3, WAV or OGG.", box.x + 20, box.y + 42, 12, ui.muted);
+    const submit = ui.textBox(ui.rect(box.x + 20, box.y + 66, w - 40, 30), &path_buffer, true);
+    if (ui.secondaryButton(ui.rect(box.x + w - 200, box.y + 110, 84, 30), "Cancel", true) or rl.IsKeyPressed(rl.KEY_ESCAPE)) path_entry = false;
+    if (ui.primaryButton(ui.rect(box.x + w - 104, box.y + 110, 84, 30), "Open", path_buffer[0] != 0) or (submit and path_buffer[0] != 0)) {
         audio.playFile(std.mem.sliceTo(&path_buffer, 0));
         path_entry = false;
     }
@@ -202,29 +207,31 @@ fn drawPathEntry(audio: *AudioSession) void {
 }
 
 fn headerBounds() rl.Rectangle {
-    return ui.rect(geometry.margin, geometry.margin, width() - 2 * geometry.margin, geometry.header_height);
+    return ui.rect(0, 0, width(), geometry.header_height);
 }
 
 fn drawHeader() void {
-    ui.card(headerBounds());
-    inline for (.{ 10, 22, 30, 17, 8 }, 0..) |h, i| {
-        ui.rounded(ui.rect(32 + @as(f32, @floatFromInt(i)) * 5, 36 - @as(f32, h) / 2, 3, h), 1.5, ui.accent);
+    const bar = headerBounds();
+    ui.fill(bar, ui.surface);
+    ui.hline(0, bar.height - 1, bar.width, ui.hairline);
+    const middle = bar.height / 2;
+    inline for (.{ 8, 16, 22, 13, 6 }, 0..) |h, i| {
+        ui.rounded(ui.rect(18 + @as(f32, @floatFromInt(i)) * 4, middle - @as(f32, h) / 2, 2, h), 1, ui.accent);
     }
-    if (width() >= 900) {
-        ui.label("zigscene", 68, 18, 21, ui.text);
-        ui.label("AUDIO / VISUAL", 69, 42, 9, ui.muted);
-    }
+    const wide = width() >= 900;
+    if (wide) ui.label("zigscene", 46, middle - 8, 15, ui.text);
     const tabs = .{ .{ "Layers", Tab.inspector }, .{ "Looks", Tab.presets }, .{ "Scene", Tab.scene }, .{ "Motion", Tab.motion }, .{ "Color", Tab.color }, .{ "Shape", Tab.scalar } };
-    const tab_w: f32 = if (width() < 900) 62 else 78;
-    const tab_x: f32 = if (width() < 900) 64 else 174;
+    const tab_w: f32 = if (wide) 72 else 60;
+    const tab_x: f32 = if (wide) 132 else 50;
+    ui.vline(tab_x - 10, middle - 10, 20, ui.divider);
     inline for (tabs, 0..) |tab, i| {
-        const bounds = ui.rect(tab_x + @as(f32, @floatFromInt(i)) * tab_w, 20, tab_w - 6, 32);
-        if (ui.button(bounds, tab[0], active_tab == tab[1], true)) onTabChange(tab[1]);
+        const bounds = ui.rect(tab_x + @as(f32, @floatFromInt(i)) * tab_w, 6, tab_w - 4, 28);
+        if (ui.ghostButton(bounds, tab[0], active_tab == tab[1], true)) onTabChange(tab[1]);
     }
-    if (ui.button(ui.rect(width() - 184, 20, 62, 32), if (active_tab == .none) "Panels" else "Hide / 1", false, true)) {
+    if (ui.ghostButton(ui.rect(width() - 164, 6, 70, 28), if (active_tab == .none) "Panels" else "Hide / 1", false, true)) {
         onTabChange(if (active_tab == .none) previous_tab else .none);
     }
-    if (ui.button(ui.rect(width() - 116, 20, 84, 32), "Settings", active_tab == .settings, true)) {
+    if (ui.ghostButton(ui.rect(width() - 88, 6, 76, 28), "Settings", active_tab == .settings, true)) {
         onTabChange(if (active_tab == .settings) .none else .settings);
     }
 }
@@ -295,7 +302,11 @@ fn groupElementAt(comptime groups: anytype, view: rl.Rectangle, offset: f32, mou
 
 fn drawPanel(script: *ScriptScene, audio: *AudioSession) void {
     const p = panel();
-    ui.card(p);
+    ui.fill(p, ui.surface);
+    ui.vline(p.x + p.width - 1, p.y, p.height, ui.hairline);
+    // A manually shortened panel ends above the player instead of meeting it.
+    const full = geometry.panelSize(p.width, 0, width(), height(), config.Interface.show_player);
+    if (p.height < full.height) ui.hline(p.x, p.y + p.height - 1, p.width, ui.hairline);
     const title: [:0]const u8, const subtitle: [:0]const u8 = switch (active_tab) {
         .scalar => .{ "Shape & texture", "Fine-tune the form of your sound." },
         .color => .{ "Color palette", "Find a hue for every layer." },
@@ -307,8 +318,15 @@ fn drawPanel(script: *ScriptScene, audio: *AudioSession) void {
         .inspector => .{ "Layer inspector", "Search, solo and fine-tune a layer." },
         .none => unreachable,
     };
-    ui.label(title, p.x + 20, p.y + 12, 21, ui.text);
-    if (!geometry.compact(width(), height())) ui.label(subtitle, p.x + 20, p.y + 38, 13, ui.muted);
+    // Photoshop-style tab strip: the active tab opens into the panel body.
+    const strip_h = geometry.panel_header;
+    ui.fill(ui.rect(p.x, p.y, p.width - 1, strip_h), ui.well);
+    const tab = ui.rect(p.x, p.y, @min(p.width - 1, ui.textWidth(title, 13) + 32), strip_h);
+    ui.fill(tab, ui.surface);
+    ui.vline(tab.x + tab.width, p.y, strip_h, ui.hairline);
+    ui.hline(tab.x + tab.width, p.y + strip_h - 1, p.width - 1 - tab.width, ui.hairline);
+    ui.label(title, tab.x + 16, p.y + (strip_h - 13) / 2, 13, ui.text);
+    ui.tooltip(tab, subtitle);
     const view = viewport();
     const content_h = contentHeight(active_tab);
     const max_scroll = @max(0, content_h - view.height);
@@ -338,25 +356,68 @@ fn drawPanel(script: *ScriptScene, audio: *AudioSession) void {
     rl.EndScissorMode();
     if (max_scroll > 0) {
         const thumb_h = @max(24, view.height * view.height / content_h);
-        ui.rounded(ui.rect(p.x + p.width - 7, view.y, 3, view.height), 1.5, ui.raised);
-        ui.rounded(ui.rect(p.x + p.width - 7, view.y + (view.height - thumb_h) * scroll / max_scroll, 3, thumb_h), 1.5, ui.muted);
+        const lit = active_slider == 2000 or ui.hovered(track);
+        ui.rounded(ui.rect(p.x + p.width - 8, view.y + (view.height - thumb_h) * scroll / max_scroll, 4, thumb_h), 2, if (lit) ui.muted else ui.selection);
     }
-    if (ui.button(ui.rect(p.x + 12, p.y + p.height - 24, 48, 20), "Undo", false, State.history.position > 0)) {
+    for (0..2) |i| {
+        const offset = @as(f32, @floatFromInt(i)) * 4;
+        rl.DrawLineEx(.{ .x = p.x + p.width - 11 + offset, .y = p.y + p.height - 4 }, .{ .x = p.x + p.width - 4, .y = p.y + p.height - 11 + offset }, 1, if (resize_mode != .none) ui.accent else ui.faint);
+    }
+}
+
+fn statusBounds() rl.Rectangle {
+    return ui.rect(0, height() - geometry.status_height, width(), geometry.status_height);
+}
+
+/// History, hints and workspace facts, laid out like an editor's status bar.
+fn drawStatusBar(audio: *AudioSession, script: *ScriptScene) void {
+    const bar = statusBounds();
+    ui.fill(bar, ui.surface);
+    ui.hline(0, bar.y, bar.width, ui.hairline);
+    const y = bar.y + 3;
+    const h = bar.height - 6;
+    if (ui.ghostButton(ui.rect(6, y, 44, h), "Undo", false, State.history.position > 0)) {
         editing = null;
         active_slider = null;
         State.history.undo(script);
     }
-    if (ui.button(ui.rect(p.x + 64, p.y + p.height - 24, 48, 20), "Redo", false, State.history.position + 1 < State.history.len)) {
+    if (ui.ghostButton(ui.rect(52, y, 44, h), "Redo", false, State.history.position + 1 < State.history.len)) {
         editing = null;
         active_slider = null;
         State.history.redo(script);
     }
-    var footer: [256]u8 = undefined;
-    ui.label(ui.fitted(if (State.history.notice.len > 0) State.history.notice else "Right-click a control to reset", 10, p.width - 144, &footer), p.x + 120, p.y + p.height - 18, 10, ui.muted);
-    for (0..3) |i| {
-        const offset = @as(f32, @floatFromInt(i)) * 4;
-        rl.DrawLineEx(.{ .x = p.x + p.width - 15 + offset, .y = p.y + p.height - 5 }, .{ .x = p.x + p.width - 5, .y = p.y + p.height - 15 + offset }, 1, if (resize_mode != .none) ui.accent else ui.muted);
+    ui.vline(102, y + 2, h - 4, ui.divider);
+    // Segments are placed from the right edge; the hint takes what is left.
+    var right = bar.width - 8;
+    if (!config.Interface.show_player) {
+        right -= 104;
+        if (ui.ghostButton(ui.rect(right, y, 104, h), "Expand player", audio.notice != null, true)) config.Interface.show_player = true;
+        right -= 8;
     }
+    var buffers: [2][128]u8 = undefined;
+    var shown: usize = 0;
+    inline for (SceneItems) |item| shown += @intFromBool(item[2].*);
+    const segments = [_][:0]const u8{
+        std.fmt.bufPrintZ(&buffers[0], "UI {d:.0}%", .{ui.scale_factor * 100}) catch "",
+        if (!script.usesBuiltin())
+            std.fmt.bufPrintZ(&buffers[1], "Lua  \u{b7}  {s}", .{script.name()}) catch ""
+        else if (script.runtime != null)
+            std.fmt.bufPrintZ(&buffers[1], "Lua overlay  \u{b7}  {d} of {d} layers", .{ shown, SceneItems.len }) catch ""
+        else
+            std.fmt.bufPrintZ(&buffers[1], "{d} of {d} layers visible", .{ shown, SceneItems.len }) catch "",
+    };
+    for (segments) |segment| {
+        const w = ui.textWidth(segment, 12);
+        if (right - w - 24 < 260) break;
+        right -= w;
+        ui.label(segment, right, bar.y + 6, 12, ui.muted);
+        right -= 12;
+        ui.vline(right, y + 2, h - 4, ui.divider);
+        right -= 12;
+    }
+    var hint: [256]u8 = undefined;
+    const message = if (State.history.notice.len > 0) State.history.notice else "Right-click a control to reset it";
+    ui.label(ui.fitted(message, 12, right - 114, &hint), 112, bar.y + 6, 12, ui.muted);
 }
 
 fn drawAudioDevices(view: rl.Rectangle, audio: *AudioSession) void {
@@ -365,7 +426,7 @@ fn drawAudioDevices(view: rl.Rectangle, audio: *AudioSession) void {
     const supported = builtin.os.tag != .emscripten;
     const capture = @import("audio/capture.zig");
     const enabled = supported and !live and active_slider == null;
-    groupHeading("CAPTURE SOURCE", view, top);
+    groupHeading("Capture source", view, top, 0);
     const half = (view.width - 8) / 2;
     if (ui.button(ui.rect(view.x, top + 38, half, 30), "System audio", audio.selected_capture_mode == .system, enabled and buttonVisible(top + 38, view))) audio.selectCaptureMode(.system);
     if (ui.button(ui.rect(view.x + half + 8, top + 38, half, 30), "Input", audio.selected_capture_mode == .input, enabled and buttonVisible(top + 38, view))) audio.selectCaptureMode(.input);
@@ -373,21 +434,33 @@ fn drawAudioDevices(view: rl.Rectangle, audio: *AudioSession) void {
     ui.label(hint, view.x + 4, top + 78, 11, ui.muted);
     if (ui.button(ui.rect(view.x, top + 102, view.width, 30), "Refresh devices", false, supported and active_slider == null and buttonVisible(top + 102, view))) audio.refreshCaptureDevices();
     const selected = audio.selectedCaptureDevice();
-    ui.label(if (selected == -2) "Selected device disconnected. Choose another." else if (audio.capture_devices.count == 0) "No devices found. Connect one and refresh." else "Selection is kept until you close the app.", view.x + 4, top + 140, 11, if (selected == -2) ui.accent else ui.muted);
+    ui.label(if (selected == -2) "Selected device disconnected. Choose another." else if (audio.capture_devices.count == 0) "No devices found. Connect one and refresh." else "Selection is kept until you close the app.", view.x + 4, top + 140, 11, if (selected == -2) ui.warning else ui.muted);
     const automatic: [:0]const u8 = if (audio.selected_capture_mode == capture.Mode.input) "Default input" else "Automatic system audio";
-    if (ui.button(ui.rect(view.x, top + 166, view.width, 30), automatic, selected == -1, enabled and buttonVisible(top + 166, view))) audio.selectCaptureDevice(-1);
+    if (radioRow(ui.rect(view.x, top + 166, view.width, 30), automatic, selected == -1, enabled and buttonVisible(top + 166, view))) audio.selectCaptureDevice(-1);
     for (0..audio.capture_devices.count) |index| {
         const y = top + 204 + @as(f32, @floatFromInt(index)) * 38;
-        const row = ui.rect(view.x, y, view.width, 30);
-        const chosen = selected == @as(i32, @intCast(index));
-        const over = enabled and buttonVisible(y, view) and ui.hovered(row);
-        ui.rounded(row, 7, if (chosen) ui.accent_soft else if (over) ui.raised else ui.surface);
-        ui.label(audio.capture_devices.name(index), row.x + 8, row.y + 8, 13, if (chosen) ui.accent else if (live) ui.muted else ui.text);
-        if (over) {
-            ui.requestCursor(rl.MOUSE_CURSOR_POINTING_HAND);
-            if (rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT)) audio.selectCaptureDevice(@intCast(index));
+        if (radioRow(ui.rect(view.x, y, view.width, 30), audio.capture_devices.name(index), selected == @as(i32, @intCast(index)), enabled and buttonVisible(y, view))) {
+            audio.selectCaptureDevice(@intCast(index));
         }
     }
+}
+
+/// One choice in an exclusive list, marked with a filled radio dot.
+fn radioRow(bounds: rl.Rectangle, value: [:0]const u8, chosen: bool, enabled: bool) bool {
+    const over = enabled and ui.hovered(bounds);
+    ui.rowFill(bounds, chosen, over);
+    const dot = rl.Vector2{ .x = bounds.x + 15, .y = bounds.y + bounds.height / 2 };
+    if (chosen) {
+        rl.DrawCircleV(dot, 7, if (enabled) ui.accent else ui.accent_soft);
+        rl.DrawCircleV(dot, 2.5, ui.on_accent);
+    } else {
+        rl.DrawCircleV(dot, 7, if (over) ui.muted else ui.border);
+        rl.DrawCircleV(dot, 6, ui.field);
+    }
+    var buffer: [256]u8 = undefined;
+    ui.label(ui.fitted(value, 13, bounds.width - 40, &buffer), bounds.x + 30, bounds.y + (bounds.height - 13) / 2, 13, if (enabled or chosen) ui.text else ui.muted);
+    if (over) ui.requestCursor(rl.MOUSE_CURSOR_POINTING_HAND);
+    return ui.activate(bounds, value, enabled);
 }
 
 fn buttonVisible(y: f32, view: rl.Rectangle) bool {
@@ -396,20 +469,20 @@ fn buttonVisible(y: f32, view: rl.Rectangle) bool {
 
 const ScalarGroup = struct { [:0]const u8, []const controls.Scalar, ?Element };
 const ShapeFields = [_]ScalarGroup{
-    .{ "WAVEFORM / LINES", &config.Visualizer.WaveFormLine.Scalars, .wave_lines },
-    .{ "WAVEFORM / BARS", &config.Visualizer.WaveFormBar.Scalars, .wave_bars },
-    .{ "3D BUBBLE", &config.Visualizer.Bubble.Scalars, .bubble },
-    .{ "TEXTURE & BACKGROUND", &config.Shader.Scalars, null },
+    .{ "Waveform lines", &config.Visualizer.WaveFormLine.Scalars, .wave_lines },
+    .{ "Waveform bars", &config.Visualizer.WaveFormBar.Scalars, .wave_bars },
+    .{ "3D bubble", &config.Visualizer.Bubble.Scalars, .bubble },
+    .{ "Texture & background", &config.Shader.Scalars, null },
 };
 const MotionFields = [_]ScalarGroup{
-    .{ "ENERGY & ENVELOPE", &config.Motion.Scalars, null },
-    .{ "AUDIO RESPONSE", &config.Audio.Scalars, null },
-    .{ "SPECTRUM", &config.Visualizer.Spectrum.Scalars, .spectrum },
-    .{ "FREQUENCY HALO", &config.Visualizer.Halo.Scalars, .halo },
+    .{ "Energy & envelope", &config.Motion.Scalars, null },
+    .{ "Audio response", &config.Audio.Scalars, null },
+    .{ "Spectrum", &config.Visualizer.Spectrum.Scalars, .spectrum },
+    .{ "Frequency halo", &config.Visualizer.Halo.Scalars, .halo },
 };
 const SettingsFields = [_]ScalarGroup{
-    .{ "WINDOW", &config.Window.Scalars, null },
-    .{ "BACKGROUND & AUDIO", &.{
+    .{ "Window", &config.Window.Scalars, null },
+    .{ "Background & audio", &.{
         .{ "Background opacity", &config.Shader.alpha_factor, .{ 0, 1 } },
         .{ "Master volume", &config.Audio.volume, .{ 0, 1 } },
     }, null },
@@ -420,9 +493,9 @@ const settings_prefix: f32 = settings_reset_height + 208;
 fn drawSettings(view: rl.Rectangle) void {
     const reset_y = view.y - scroll;
     if (ui.button(ui.rect(view.x, reset_y, view.width, 32), "Reset all settings", false, reset_y >= view.y and reset_y + 32 <= view.y + view.height)) settings_reset_requested = true;
-    ui.label("Restores defaults. Keeps saved presets and swatches.", view.x + 4, reset_y + 40, 10, ui.muted);
+    ui.label("Restores defaults. Keeps saved presets and swatches.", view.x + 4, reset_y + 40, 11, ui.muted);
     const top = reset_y + settings_reset_height;
-    groupHeading("FPS PRESETS  /  0 = UNLIMITED", view, top);
+    groupHeading("Frame rate limit", view, top, 0);
     const presets = [_]f32{ 0, 30, 60, 120, 144, 240 };
     for (presets, 0..) |fps, index| {
         const x = view.x + @as(f32, @floatFromInt(index % 3)) * (view.width + 6) / 3;
@@ -434,7 +507,7 @@ fn drawSettings(view: rl.Rectangle) void {
             editing = null;
         }
     }
-    groupHeading("UI SIZE", view, top + 112);
+    groupHeading("Interface size", view, top + 112, 0);
     for ([_]f32{ 75, 100, 125, 150 }, 0..) |percent, index| {
         const x = view.x + @as(f32, @floatFromInt(index)) * (view.width + 6) / 4;
         const y = top + 150;
@@ -445,11 +518,11 @@ fn drawSettings(view: rl.Rectangle) void {
             editing = null;
         }
     }
-    ui.label("Automatically fits smaller windows", view.x + 8, top + 186, 11, ui.muted);
+    ui.label("Automatically fits smaller windows", view.x + 4, top + 186, 11, ui.muted);
     drawScalars(SettingsFields, view, settings_prefix);
     const bottom = reset_y + settings_prefix + scalarHeight(SettingsFields);
-    if (ui.button(ui.rect(view.x, bottom, view.width, 32), if (config.Interface.show_fps) "FPS counter: On" else "FPS counter: Off", config.Interface.show_fps, bottom >= view.y and bottom + 32 <= view.y + view.height)) config.Interface.show_fps = !config.Interface.show_fps;
-    if (ui.button(ui.rect(view.x, bottom + 42, view.width, 32), if (builtin.os.tag == .emscripten) "Always on top: Native only" else if (config.Window.always_on_top) "Always on top: On" else "Always on top: Off", config.Window.always_on_top, builtin.os.tag != .emscripten and bottom + 42 >= view.y and bottom + 74 <= view.y + view.height)) config.Window.always_on_top = !config.Window.always_on_top;
+    if (ui.checkbox(ui.rect(view.x, bottom, view.width, 32), "FPS counter", config.Interface.show_fps, bottom >= view.y and bottom + 32 <= view.y + view.height)) config.Interface.show_fps = !config.Interface.show_fps;
+    if (ui.checkbox(ui.rect(view.x, bottom + 42, view.width, 32), if (builtin.os.tag == .emscripten) "Always on top (native only)" else "Always on top", config.Window.always_on_top, builtin.os.tag != .emscripten and bottom + 42 >= view.y and bottom + 74 <= view.y + view.height)) config.Window.always_on_top = !config.Window.always_on_top;
     if (ui.button(ui.rect(view.x, bottom + 84, view.width, 32), "Reset UI size and panel", false, bottom + 84 >= view.y and bottom + 116 <= view.y + view.height)) {
         config.Interface.scale_percent = 100;
         config.Interface.panel_width = 320;
@@ -479,7 +552,7 @@ fn resizePanel() void {
         resize_size = .{ .width = p.width, .height = p.height };
     }
     if (resize_mode != .none and rl.IsMouseButtonDown(rl.MOUSE_BUTTON_LEFT)) {
-        const size = geometry.panelSize(resize_size.width + mouse.x - resize_origin.x, resize_size.height + mouse.y - resize_origin.y, width(), height());
+        const size = geometry.panelSize(resize_size.width + mouse.x - resize_origin.x, resize_size.height + mouse.y - resize_origin.y, width(), height(), config.Interface.show_player);
         if (resize_mode == .width or resize_mode == .both) config.Interface.panel_width = size.width;
         if (resize_mode == .height or resize_mode == .both) config.Interface.panel_height = size.height;
     }
@@ -497,9 +570,9 @@ fn scalarHeight(comptime groups: anytype) f32 {
     inline for (groups) |group| total += geometry.group_height + group[1].len * geometry.row_height;
     return total;
 }
-fn groupHeading(name: [:0]const u8, view: rl.Rectangle, y: f32) void {
-    ui.label(name, view.x + 8, y + 8, 11, ui.accent);
-    rl.DrawLineEx(.{ .x = view.x + 8, .y = y + 23 }, .{ .x = view.x + view.width - 8, .y = y + 23 }, 1, ui.border);
+/// `reserve` leaves room at the right for an inline action such as Reset.
+fn groupHeading(name: [:0]const u8, view: rl.Rectangle, y: f32, reserve: f32) void {
+    ui.heading(name, view.x + 4, y + 8, view.width - 4 - (if (reserve > 0) reserve + 8 else 4));
 }
 fn rowVisible(y: f32, view: rl.Rectangle) bool {
     return y >= view.y and y + geometry.slider_top + geometry.slider_height <= view.y + view.height;
@@ -509,8 +582,8 @@ fn drawScalars(comptime groups: anytype, view: rl.Rectangle, offset: f32) void {
     var y = view.y - scroll + offset;
     var id: usize = 0;
     inline for (groups) |group| {
-        groupHeading(group[0], view, y);
-        if (ui.button(ui.rect(view.x + view.width - 54, y + 2, 50, 22), "Reset", false, y >= view.y and y + 24 <= view.y + view.height)) {
+        groupHeading(group[0], view, y, 50);
+        if (ui.ghostButton(ui.rect(view.x + view.width - 50, y + 3, 50, 22), "Reset", false, y >= view.y and y + 24 <= view.y + view.height)) {
             if (current_script) |script| for (group[1]) |scalar| State.reset(scalar[1], script);
         }
         y += geometry.group_height;
@@ -531,9 +604,9 @@ fn editorField(id: usize, label: [:0]const u8, value: *f32, range: [2]f32, view:
     if (!row_enabled and editing == id) editing = null;
     if (locked and active_slider == id) active_slider = null;
     var fitted_buffer: [256]u8 = undefined;
-    ui.label(ui.fitted(label, 14, view.width - 116, &fitted_buffer), view.x + 8, y + 4, 14, if (locked) ui.muted else ui.text);
+    ui.label(ui.fitted(label, 13, view.width - 116, &fitted_buffer), view.x + 8, y + 5, 13, if (locked) ui.faint else ui.secondary);
     if (row_enabled) ui.tooltip(ui.rect(view.x, y, view.width - 106, 24), label);
-    if (!locked and State.changed(value)) rl.DrawCircleV(.{ .x = view.x + 2, .y = y + 10 }, 2, ui.accent);
+    if (!locked and State.changed(value)) rl.DrawCircleV(.{ .x = view.x + 2, .y = y + 11 }, 2, ui.accent);
     const box = ui.rect(view.x + view.width - 98, y, 64, 24);
     const focused = ui.focusable(0x10000000 + id, box, row_enabled);
     if (focused and editing == null) {
@@ -552,9 +625,10 @@ fn editorField(id: usize, label: [:0]const u8, value: *f32, range: [2]f32, view:
             std.fmt.bufPrintZ(&buf, "{d:.3}", .{value.*}) catch unreachable
         else
             std.fmt.bufPrintZ(&buf, "{d:.1}", .{value.*}) catch unreachable;
-        ui.rounded(box, 5, ui.raised);
-        ui.centered(number, box, 12, ui.muted);
-        if (row_enabled and ui.hovered(box)) {
+        const over_box = row_enabled and ui.hovered(box);
+        ui.framed(box, 3, ui.field, if (over_box) ui.muted else ui.divider);
+        ui.label(number, box.x + box.width - 8 - ui.textWidth(number, 12), box.y + 6, 12, if (locked) ui.faint else ui.text);
+        if (over_box) {
             ui.requestCursor(rl.MOUSE_CURSOR_IBEAM);
             if (rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT)) {
                 editing = id;
@@ -568,8 +642,9 @@ fn editorField(id: usize, label: [:0]const u8, value: *f32, range: [2]f32, view:
         @memset(&editing_buffer, 0);
         _ = std.fmt.bufPrintZ(&editing_buffer, "{d:.3}", .{value.*}) catch unreachable;
     }
+    // The reset icon appears only once a value differs from its default.
     const reset = ui.rect(view.x + view.width - 28, y, 24, 24);
-    if (ui.button(reset, "R", false, row_enabled and State.changed(value))) {
+    if (row_enabled and State.changed(value) and ui.iconButton(reset, .reset, "Reset this value to its default", false, true)) {
         if (current_script) |script| State.reset(value, script);
     }
     if (row_enabled) {
@@ -608,18 +683,23 @@ fn slider(id: usize, bounds: rl.Rectangle, value: *f32, min: f32, max: f32, enab
     if (over or dragging) ui.requestCursor(rl.MOUSE_CURSOR_POINTING_HAND);
     const ratio = if (max > min) std.math.clamp((value.* - min) / (max - min), 0, 1) else 0;
     const cy = bounds.y + bounds.height / 2;
-    ui.rounded(ui.rect(bounds.x, cy - 2, bounds.width, 4), 2, ui.border);
     if (hue) {
         for (0..6) |i| {
             const x = bounds.x + @as(f32, @floatFromInt(i)) * bounds.width / 6;
-            const a = rl.ColorFromHSV(@as(f32, @floatFromInt(i)) * 60, 0.65, 0.9);
-            const b = rl.ColorFromHSV(@as(f32, @floatFromInt(i + 1)) * 60, 0.65, 0.9);
-            rl.DrawRectangleGradientEx(ui.rect(x, cy - 3, bounds.width / 6 + 1, 6), a, a, b, b);
+            const a = rl.ColorFromHSV(@as(f32, @floatFromInt(i)) * 60, 0.7, 0.92);
+            const b = rl.ColorFromHSV(@as(f32, @floatFromInt(i + 1)) * 60, 0.7, 0.92);
+            rl.DrawRectangleGradientEx(ui.rect(x, cy - 2, bounds.width / 6 + 1, 4), a, a, b, b);
         }
-    } else if (ratio > 0) ui.rounded(ui.rect(bounds.x, cy - 2, @max(4, bounds.width * ratio), 4), 2, ui.accent);
+    } else {
+        ui.rounded(ui.rect(bounds.x, cy - 1.5, bounds.width, 3), 1.5, ui.selection);
+        if (ratio > 0) ui.rounded(ui.rect(bounds.x, cy - 1.5, @max(3, bounds.width * ratio), 3), 1.5, if (enabled) ui.accent else ui.faint);
+    }
+    // A white knob with a dark ring stays legible over both track colors.
     const center = rl.Vector2{ .x = bounds.x + ratio * bounds.width, .y = cy };
-    if (over or dragging) rl.DrawCircleV(center, 10, rl.Fade(ui.accent, 0.15));
-    rl.DrawCircleV(center, if (over or dragging) 6 else 4, ui.text);
+    const radius: f32 = if (over or dragging) 6.5 else 5.5;
+    if (dragging) rl.DrawCircleV(center, 11, rl.Fade(ui.accent, 0.2));
+    rl.DrawCircleV(center, radius + 1, ui.hairline);
+    rl.DrawCircleV(center, radius, if (enabled or dragging) ui.text else ui.muted);
     return dragging;
 }
 
@@ -643,26 +723,29 @@ fn drawScene(view: rl.Rectangle, script: *ScriptScene) void {
     ScriptPanel.draw(script, view, scroll, slider);
     var y = view.y - scroll + scene_prefix;
     const actions_enabled = y >= view.y and y + 36 <= view.y + view.height;
-    if (ui.button(ui.rect(view.x, y, (view.width - 8) / 2, 34), "Show all", false, actions_enabled)) {
+    groupHeading("Built-in layers", view, y + 2, 136);
+    if (ui.ghostButton(ui.rect(view.x + view.width - 136, y + 5, 66, 24), "Show all", false, actions_enabled)) {
         inline for (SceneItems) |item| setLayerVisibility(item[2], true, script);
     }
-    if (ui.button(ui.rect(view.x + (view.width + 8) / 2, y, (view.width - 8) / 2, 34), "Hide all", false, actions_enabled)) {
+    if (ui.ghostButton(ui.rect(view.x + view.width - 66, y + 5, 66, 24), "Hide all", false, actions_enabled)) {
         inline for (SceneItems) |item| setLayerVisibility(item[2], false, script);
     }
     y += geometry.scene_actions_height;
-    inline for (SceneItems) |item| {
+    // Rows read like an editor's layers list: visibility first, then the name.
+    inline for (SceneItems, 0..) |item, i| {
         const bounds = ui.rect(view.x, y, view.width, geometry.scene_card_height);
-        const over = y >= view.y and y + geometry.scene_card_height <= view.y + view.height and ui.hovered(bounds);
-        ui.rounded(bounds, 8, if (over) ui.raised else ui.background);
-        ui.label(item[0], view.x + 12, y + 10, 15, if (item[2].*) ui.text else ui.muted);
-        ui.label(item[1], view.x + 12, y + 32, 11, ui.muted);
-        const toggle = ui.rect(view.x + view.width - 48, y + 15, 36, 20);
-        ui.rounded(toggle, 10, if (item[2].*) ui.accent_soft else ui.border);
-        rl.DrawCircleV(.{ .x = toggle.x + (if (item[2].*) @as(f32, 26) else 10), .y = toggle.y + 10 }, 6, if (item[2].*) ui.accent else ui.muted);
-        if (over) ui.requestCursor(rl.MOUSE_CURSOR_POINTING_HAND);
         const visible = y >= view.y and y + geometry.scene_card_height <= view.y + view.height;
-        if (ui.activate(toggle, "Toggle layer visibility", visible)) setLayerVisibility(item[2], !item[2].*, script);
-        if (ui.activate(ui.rect(bounds.x, bounds.y, bounds.width - 52, bounds.height), item[0], visible)) {
+        const body = ui.rect(bounds.x + 40, bounds.y, bounds.width - 40, bounds.height);
+        const over = visible and ui.hovered(bounds);
+        ui.rowFill(bounds, false, over);
+        if (i + 1 < SceneItems.len) ui.hline(view.x + 8, y + geometry.scene_card_height + 4, view.width - 16, ui.divider);
+        const eye = ui.rect(bounds.x + 6, bounds.y + 15, 28, 28);
+        if (ui.iconButton(eye, if (item[2].*) .eye else .eye_off, "Show or hide this layer", false, visible)) setLayerVisibility(item[2], !item[2].*, script);
+        ui.label(item[0], body.x + 4, y + 11, 14, if (item[2].*) ui.text else ui.muted);
+        ui.label(item[1], body.x + 4, y + 32, 11, ui.muted);
+        ui.icon(.chevron_right, .{ .x = bounds.x + bounds.width - 16, .y = y + geometry.scene_card_height / 2 }, if (over) ui.text else ui.faint);
+        if (visible and ui.hovered(body)) ui.requestCursor(rl.MOUSE_CURSOR_POINTING_HAND);
+        if (ui.activate(body, item[0], visible)) {
             StudioPanel.selectLayer(item[3]);
             onTabChange(.inspector);
         }
@@ -687,120 +770,154 @@ fn applyScroll(dir: Direction, amount: f32, pointer_over_panel: bool) void {
 pub fn sceneLeft() f32 {
     if (active_tab == .none) return 0;
     const p = panel();
-    return p.x + p.width + 8;
+    return p.x + p.width;
 }
 
 /// The player dock, in logical UI coordinates.
 pub fn dockBounds() rl.Rectangle {
     const h = geometry.dockHeight(width(), height());
-    return ui.rect(geometry.margin, height() - geometry.margin - h, width() - 2 * geometry.margin, h);
+    return ui.rect(0, height() - geometry.status_height - h, width(), h);
 }
 
+/// The canvas between the docked bars and panels.
 pub fn sceneBounds() rl.Rectangle {
     const left = sceneLeft();
-    const bottom = if (config.Interface.show_player) dockBounds().y - 12 else height() - 12;
-    return ui.rect(left, geometry.panel_top, width() - left - 12, @max(1, bottom - geometry.panel_top));
+    const bottom = if (config.Interface.show_player) dockBounds().y else statusBounds().y;
+    return ui.rect(left, geometry.panel_top, @max(1, width() - left), @max(1, bottom - geometry.panel_top));
 }
 
 fn fitBounds() rl.Rectangle {
-    return ui.rect(width() - 108, geometry.panel_top + 6, 84, 28);
+    return ui.rect(width() - 96, geometry.panel_top + 10, 84, 26);
 }
 
-fn expandPlayerBounds() rl.Rectangle {
-    return ui.rect(width() - 144, height() - 46, 128, 30);
+/// Round transport button; the accent fill marks a loaded track.
+fn playButton(audio: *AudioSession, bounds: rl.Rectangle, file: bool) void {
+    const enabled = file and !path_entry;
+    const over = enabled and ui.hovered(bounds);
+    const center = rl.Vector2{ .x = bounds.x + bounds.width / 2, .y = bounds.y + bounds.height / 2 };
+    rl.DrawCircleV(center, bounds.width / 2, if (!file) ui.control else if (over) ui.accent_hover else ui.accent);
+    ui.icon(if (audio.isFilePlaying()) .pause else .play, center, if (file) ui.on_accent else ui.faint);
+    ui.tooltip(bounds, "Play or pause (Space / P)");
+    if (over) ui.requestCursor(rl.MOUSE_CURSOR_POINTING_HAND);
+    if (ui.activate(bounds, "Playback", enabled)) audio.togglePlayback();
+}
+
+/// Speaker icon, slider and level; returns the left edge it used.
+fn drawVolume(right: f32, y: f32, slider_width: f32, enabled: bool) f32 {
+    var volume_buffer: [16]u8 = undefined;
+    const volume = std.fmt.bufPrintZ(&volume_buffer, "{d}%", .{@as(u32, @intFromFloat(config.Audio.volume * 100))}) catch unreachable;
+    const level_x = right - 34;
+    ui.label(volume, level_x, y + 7, 12, ui.secondary);
+    const track = ui.rect(level_x - 12 - slider_width, y + 5, slider_width, 18);
+    _ = slider(1001, track, &config.Audio.volume, 0, 1, enabled, false);
+    ui.icon(.volume, .{ .x = track.x - 22, .y = y + 14 }, ui.muted);
+    return track.x - 34;
+}
+
+fn formatTime(buffer: []u8, seconds: f32) [:0]const u8 {
+    const whole: u32 = @intFromFloat(@max(0, seconds));
+    return std.fmt.bufPrintZ(buffer, "{d}:{d:0>2}", .{ whole / 60, whole % 60 }) catch unreachable;
 }
 
 fn drawPlayer(audio: *AudioSession) void {
-    if (!config.Interface.show_player) {
-        if (ui.button(expandPlayerBounds(), "Expand player", audio.notice != null, true)) config.Interface.show_player = true;
-        return;
-    }
+    if (!config.Interface.show_player) return;
     const dock = dockBounds();
-    ui.card(dock);
+    ui.fill(dock, ui.surface);
+    ui.hline(dock.x, dock.y, dock.width, ui.hairline);
     if (geometry.compact(width(), height())) {
         drawCompactPlayer(audio, dock);
         return;
     }
-    if (ui.button(ui.rect(width() - 128, dock.y + 8, 96, 26), "Hide player", false, true)) {
+    const live = audio.captureActive();
+    const file = audio.hasFile() and !live;
+    const capture_supported = builtin.os.tag != .emscripten;
+    const row = dock.y + 10;
+    playButton(audio, ui.rect(16, row, 32, 32), file);
+
+    // Controls are placed from the right edge so the title gets what is left.
+    var x = dock.width - 16 - 92;
+    if (ui.button(ui.rect(x, row + 2, 92, 28), "Hide player", false, true)) {
         config.Interface.show_player = false;
         return;
     }
-    const live = audio.captureActive();
-    const file = audio.hasFile() and !live;
-    const text_x: f32 = 32;
-    var title_buffer: [512]u8 = undefined;
-    const title = if (live) (if (audio.captureMode() == .system) "LIVE INPUT  /  System audio" else "LIVE INPUT  /  Input audio") else if (file) std.fmt.bufPrintZ(&title_buffer, "{s}  /  {s}", .{ if (audio.seeking) "SEEKING" else if (audio.isFilePlaying()) "PLAYING" else "PAUSED", audio.filename() }) catch "Audio file" else "Your sound. Your scene.";
-    ui.beginScissor(ui.rect(text_x, dock.y + 10, dock.width - 104 - (if (audio.notice != null) @as(f32, 112) else if (file) @as(f32, 188) else 32), 24));
-    if (audio.notice) |notice| {
-        ui.label(notice, text_x, dock.y + 12, 14, rl.GetColor(0xffd28aff));
-    } else ui.label(title, text_x, dock.y + 10, 15, ui.text);
-    rl.EndScissorMode();
-    if (audio.notice != null and ui.button(ui.rect(width() - 212, dock.y + 8, 76, 26), "Dismiss", false, true)) audio.notice = null;
-
-    if (file and audio.notice == null) {
-        for ([_][:0]const u8{ "Low", "Mid", "High" }, WaveformCache.colors, 0..) |label, color, index| {
-            const x = dock.x + dock.width - 270 + @as(f32, @floatFromInt(index)) * 52;
-            rl.DrawCircleV(.{ .x = x, .y = dock.y + 20 }, 3, color);
-            ui.label(label, x + 8, dock.y + 14, 12, color);
-        }
-    }
-    const play = ui.rect(30, dock.y + 32, 104, 30);
-    ui.rounded(play, 7, if (file) ui.accent_soft else ui.raised);
-    const ink = if (file) ui.accent else ui.muted;
-    if (audio.isFilePlaying()) {
-        ui.rounded(ui.rect(play.x + 11, play.y + 9, 3, 12), 1, ink);
-        ui.rounded(ui.rect(play.x + 17, play.y + 9, 3, 12), 1, ink);
-    } else {
-        rl.DrawTriangle(.{ .x = play.x + 11, .y = play.y + 8 }, .{ .x = play.x + 11, .y = play.y + 22 }, .{ .x = play.x + 22, .y = play.y + 15 }, ink);
-    }
-    ui.label(if (audio.isFilePlaying()) "Pause / P" else "Play / P", play.x + 30, play.y + 8, 13, ink);
-    ui.tooltip(play, "Play or pause (Space / P)");
-    if (file and ui.hovered(play)) {
-        ui.requestCursor(rl.MOUSE_CURSOR_POINTING_HAND);
-    }
-    if (ui.activate(play, "Playback", file)) audio.togglePlayback();
-    const capture_supported = builtin.os.tag != .emscripten;
-    if (ui.button(ui.rect(146, dock.y + 32, 132, 30), if (live) "Stop capture / M" else if (capture_supported) "Capture / M" else "Live unavailable", live, capture_supported)) audio.toggleCapture();
-    if (ui.button(ui.rect(286, dock.y + 32, 70, 30), "Devices", active_tab == .audio, capture_supported)) {
+    x = drawVolume(x - 16, row + 2, if (dock.width < 960) 72 else 96, true);
+    ui.vline(x, row + 6, 20, ui.divider);
+    x -= 12 + 96;
+    if (ui.button(ui.rect(x, row + 2, 96, 28), "Open audio", false, !path_entry)) openAudio(audio);
+    x -= 8 + 76;
+    if (ui.button(ui.rect(x, row + 2, 76, 28), "Devices", active_tab == .audio, capture_supported)) {
         onTabChange(if (active_tab == .audio) .none else .audio);
         if (active_tab == .audio) audio.refreshCaptureDevices();
     }
-    if (ui.button(ui.rect(364, dock.y + 32, 94, 30), "Open audio", false, !path_entry)) openAudio(audio);
-    ui.label("Volume", width() - 280, dock.y + 40, 13, ui.muted);
-    _ = slider(1001, ui.rect(width() - 222, dock.y + 38, 132, 18), &config.Audio.volume, 0, 1, true, false);
-    var volume_buffer: [16]u8 = undefined;
-    const volume = std.fmt.bufPrintZ(&volume_buffer, "{d}%", .{@as(u32, @intFromFloat(config.Audio.volume * 100))}) catch unreachable;
-    ui.label(volume, width() - 74, dock.y + 40, 13, ui.text);
-    if (file) {
-        drawWaveformScrubber(audio, ui.rect(30, dock.y + 68, width() - 60, 44));
+    x -= 8 + 124;
+    if (ui.button(ui.rect(x, row + 2, 124, 28), if (live) "Stop capture / M" else if (capture_supported) "Capture / M" else "Live unavailable", live, capture_supported)) audio.toggleCapture();
+    if (audio.notice != null) {
+        x -= 8 + 76;
+        if (ui.button(ui.rect(x, row + 2, 76, 28), "Dismiss", false, true)) audio.notice = null;
+    }
+
+    const title_x: f32 = 60;
+    const title_w = @max(0, x - 16 - title_x);
+    var buffer: [256]u8 = undefined;
+    if (audio.notice) |notice| {
+        ui.label(ui.fitted(notice, 13, title_w, &buffer), title_x, row + 9, 13, ui.warning);
+        ui.tooltip(ui.rect(title_x, row, title_w, 32), notice);
     } else {
-        ui.rounded(ui.rect(30, dock.y + 68, width() - 60, 44), 6, ui.background);
-        rl.DrawCircleV(.{ .x = 44, .y = dock.y + 90 }, 3, if (live) ui.accent else ui.muted);
-        ui.label(if (live) "Listening live. Drop a file to switch to playback." else "Drop an audio file anywhere to start listening.", 56, dock.y + 83, 13, if (live) ui.accent else ui.muted);
+        var name_buffer: [512]u8 = undefined;
+        const title: [:0]const u8 = if (live) "Live input" else if (file) (std.fmt.bufPrintZ(&name_buffer, "{s}", .{audio.filename()}) catch "Audio file") else "No audio loaded";
+        const status: [:0]const u8 = if (live) (if (audio.captureMode() == .system) "System audio" else "Input device") else if (!file) "Open a file or capture live audio" else if (audio.seeking) "Seeking" else if (audio.isFilePlaying()) "Playing" else "Paused";
+        ui.label(ui.fitted(title, 14, title_w, &buffer), title_x, row + 1, 14, ui.text);
+        ui.label(status, title_x, row + 20, 11, if (live) ui.accent else ui.muted);
+        // Band colors of the seek waveform, beside the status when there is room.
+        var legend_x = title_x + ui.textWidth(status, 11) + 14;
+        if (file and legend_x + 150 <= title_x + title_w) {
+            for ([_][:0]const u8{ "Low", "Mid", "High" }, WaveformCache.colors) |band, color| {
+                rl.DrawCircleV(.{ .x = legend_x + 3, .y = row + 26 }, 3, color);
+                ui.label(band, legend_x + 10, row + 20, 11, ui.muted);
+                legend_x += 18 + ui.textWidth(band, 11) + 12;
+            }
+        }
+    }
+
+    const track = ui.rect(68, dock.y + 52, dock.width - 136, 38);
+    if (file) {
+        var time_buffer: [24]u8 = undefined;
+        const elapsed = formatTime(&time_buffer, audio.timePlayed());
+        ui.label(elapsed, track.x - 12 - ui.textWidth(elapsed, 12), track.y + 12, 12, ui.secondary);
+        const total = formatTime(&time_buffer, audio.timeLength());
+        ui.label(total, track.x + track.width + 12, track.y + 12, 12, ui.muted);
+        drawWaveformScrubber(audio, track, false);
+    } else {
+        const empty = ui.rect(16, track.y, dock.width - 32, track.height);
+        ui.rounded(empty, 4, ui.background);
+        rl.DrawCircleV(.{ .x = empty.x + 16, .y = empty.y + empty.height / 2 }, 3, if (live) ui.accent else ui.faint);
+        ui.label(if (live) "Listening live. Drop a file to switch to playback." else "Drop an audio file anywhere to start listening.", empty.x + 28, empty.y + 12, 13, if (live) ui.secondary else ui.muted);
     }
 }
 
 fn drawCompactPlayer(audio: *AudioSession, dock: rl.Rectangle) void {
     const live = audio.captureActive();
     const file = audio.hasFile() and !live;
-    if (ui.button(ui.rect(dock.x + 8, dock.y + 6, 60, 30), if (audio.isFilePlaying()) "Pause" else "Play", file, file and !path_entry)) audio.togglePlayback();
-    if (ui.button(ui.rect(dock.x + 74, dock.y + 6, 64, 30), "Open", false, !path_entry)) openAudio(audio);
-    if (ui.button(ui.rect(dock.x + 144, dock.y + 6, 82, 30), if (live) "Stop live" else "Capture", live, builtin.os.tag != .emscripten and !path_entry)) audio.toggleCapture();
-    if (ui.button(ui.rect(dock.x + 232, dock.y + 6, 66, 30), "Devices", active_tab == .audio, builtin.os.tag != .emscripten and !path_entry)) onTabChange(.audio);
-    ui.label("Volume", dock.x + dock.width - 236, dock.y + 15, 12, ui.muted);
-    _ = slider(1001, ui.rect(dock.x + dock.width - 185, dock.y + 11, 105, 18), &config.Audio.volume, 0, 1, !path_entry, false);
-    if (ui.button(ui.rect(dock.x + dock.width - 64, dock.y + 6, 56, 30), "Hide", false, !path_entry)) config.Interface.show_player = false;
-    const lower = ui.rect(dock.x + 10, dock.y + 42, dock.width - 20, 28);
+    const row = dock.y + 8;
+    playButton(audio, ui.rect(dock.x + 10, row, 28, 28), file);
+    if (ui.button(ui.rect(dock.x + 46, row, 60, 28), "Open", false, !path_entry)) openAudio(audio);
+    if (ui.button(ui.rect(dock.x + 112, row, 80, 28), if (live) "Stop live" else "Capture", live, builtin.os.tag != .emscripten and !path_entry)) audio.toggleCapture();
+    if (ui.button(ui.rect(dock.x + 198, row, 70, 28), "Devices", active_tab == .audio, builtin.os.tag != .emscripten and !path_entry)) onTabChange(.audio);
+    if (ui.button(ui.rect(dock.x + dock.width - 62, row, 52, 28), "Hide", false, !path_entry)) config.Interface.show_player = false;
+    _ = drawVolume(dock.x + dock.width - 74, row, 84, !path_entry);
+    const lower = ui.rect(dock.x + 10, dock.y + 44, dock.width - 20, 28);
     if (audio.notice) |notice| {
         var buffer: [256]u8 = undefined;
-        ui.label(ui.fitted(notice, 12, lower.width - 66, &buffer), lower.x, lower.y + 7, 12, rl.GetColor(0xffd28aff));
+        ui.label(ui.fitted(notice, 12, lower.width - 66, &buffer), lower.x, lower.y + 7, 12, ui.warning);
         if (ui.button(ui.rect(lower.x + lower.width - 62, lower.y, 62, 28), "Dismiss", false, true)) audio.notice = null;
-    } else if (file) drawWaveformScrubber(audio, lower) else {
-        ui.label(if (live) "Listening to live audio" else "Open audio or capture a live source", lower.x + 4, lower.y + 7, 12, ui.muted);
+    } else if (file) drawWaveformScrubber(audio, lower, true) else {
+        ui.rounded(lower, 4, ui.background);
+        ui.label(if (live) "Listening to live audio" else "Open audio or capture a live source", lower.x + 10, lower.y + 8, 12, ui.muted);
     }
 }
 
-fn drawWaveformScrubber(audio: *AudioSession, bounds: rl.Rectangle) void {
+/// `timer` overlays elapsed and total time where there is no room beside it.
+fn drawWaveformScrubber(audio: *AudioSession, bounds: rl.Rectangle, timer: bool) void {
     const duration = audio.timeLength();
     const mouse = ui.mousePosition();
     const hovering = ui.hovered(bounds) and duration > 0;
@@ -814,36 +931,37 @@ fn drawWaveformScrubber(audio: *AudioSession, bounds: rl.Rectangle) void {
         audio.seekTo(duration * std.math.clamp((mouse.x - bounds.x) / bounds.width, 0, 1));
     }
     if (hovering or dragging_seek) ui.requestCursor(rl.MOUSE_CURSOR_POINTING_HAND);
-    ui.rounded(bounds, 6, ui.background);
+    ui.rounded(bounds, 4, ui.background);
     const waveform = audio.waveform();
     const played = std.math.clamp(audio.timePlayed() / @max(duration, 0.001), 0, 1);
     waveform_cache.draw(waveform, bounds, played);
     if (waveform.len == 0) {
-        ui.label(if (@import("audio/playback.zig").previewPending()) "Building waveform..." else "Waveform unavailable; seeking still works.", bounds.x + 8, bounds.y + 25, 11, ui.muted);
-        const center_y = bounds.y + bounds.height / 2;
-        rl.DrawLineEx(.{ .x = bounds.x, .y = center_y }, .{ .x = bounds.x + bounds.width, .y = center_y }, 1, ui.border);
+        ui.label(if (@import("audio/playback.zig").previewPending()) "Building waveform..." else "Waveform unavailable; seeking still works.", bounds.x + 8, bounds.y + bounds.height / 2 - 14, 11, ui.muted);
+        ui.hline(bounds.x, bounds.y + bounds.height / 2, bounds.width, ui.divider);
     }
     const playhead_x = bounds.x + bounds.width * played;
-    rl.DrawLineEx(.{ .x = playhead_x, .y = bounds.y + 2 }, .{ .x = playhead_x, .y = bounds.y + bounds.height - 2 }, 1, ui.text);
+    rl.DrawLineEx(.{ .x = playhead_x, .y = bounds.y }, .{ .x = playhead_x, .y = bounds.y + bounds.height }, 1.5, ui.text);
 
-    const elapsed: u32 = @intFromFloat(@max(0, audio.timePlayed()));
-    const total: u32 = @intFromFloat(@max(0, duration));
-    var timer_buffer: [48]u8 = undefined;
-    const timer = std.fmt.bufPrintZ(&timer_buffer, "{d}:{d:0>2} / {d}:{d:0>2}", .{ elapsed / 60, elapsed % 60, total / 60, total % 60 }) catch unreachable;
-    const timer_width = ui.textWidth(timer, 12) + 16;
-    const timer_bounds = ui.rect(bounds.x + bounds.width - timer_width - 4, bounds.y + 4, timer_width, 22);
-    ui.rounded(timer_bounds, 4, ui.surface);
-    ui.centered(timer, timer_bounds, 12, ui.text);
+    if (timer) {
+        var elapsed_buffer: [24]u8 = undefined;
+        var total_buffer: [24]u8 = undefined;
+        var timer_buffer: [48]u8 = undefined;
+        const value = std.fmt.bufPrintZ(&timer_buffer, "{s} / {s}", .{ formatTime(&elapsed_buffer, audio.timePlayed()), formatTime(&total_buffer, duration) }) catch unreachable;
+        const timer_width = ui.textWidth(value, 12) + 16;
+        const timer_bounds = ui.rect(bounds.x + bounds.width - timer_width - 3, bounds.y + 3, timer_width, bounds.height - 6);
+        ui.framed(timer_bounds, 3, ui.well, ui.divider);
+        ui.centered(value, timer_bounds, 12, ui.text);
+    }
     if (hovering) {
-        const seconds: u32 = @intFromFloat(duration * std.math.clamp((mouse.x - bounds.x) / bounds.width, 0, 1));
         var preview_buffer: [48]u8 = undefined;
-        const preview = std.fmt.bufPrintZ(&preview_buffer, "Seek to {d}:{d:0>2}", .{ seconds / 60, seconds % 60 }) catch unreachable;
+        var time_buffer: [24]u8 = undefined;
+        const preview = std.fmt.bufPrintZ(&preview_buffer, "Seek to {s}", .{formatTime(&time_buffer, duration * std.math.clamp((mouse.x - bounds.x) / bounds.width, 0, 1))}) catch unreachable;
         const preview_width = ui.textWidth(preview, 12) + 20;
         const preview_x = std.math.clamp(mouse.x - preview_width / 2, bounds.x, bounds.x + bounds.width - preview_width);
         rl.DrawLineEx(.{ .x = mouse.x, .y = bounds.y }, .{ .x = mouse.x, .y = bounds.y + bounds.height }, 1, ui.accent);
-        const preview_bounds = ui.rect(preview_x, bounds.y - 26, preview_width, 24);
-        ui.rounded(preview_bounds, 5, ui.accent_soft);
-        ui.centered(preview, preview_bounds, 12, ui.accent);
+        const preview_bounds = ui.rect(preview_x, bounds.y - 28, preview_width, 24);
+        ui.framed(preview_bounds, 4, ui.well, ui.accent);
+        ui.centered(preview, preview_bounds, 12, ui.text);
     }
 }
 
@@ -956,7 +1074,7 @@ test "the scene viewport starts right of the open panel and at the edge when hid
     for ([_]Tab{ .scalar, .settings }) |tab| {
         active_tab = tab;
         const p = panel();
-        try std.testing.expectEqual(p.x + p.width + 8, sceneLeft());
+        try std.testing.expectEqual(p.x + p.width, sceneLeft());
     }
 }
 

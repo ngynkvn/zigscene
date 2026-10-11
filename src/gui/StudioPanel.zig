@@ -86,17 +86,20 @@ pub fn presetsHeight() f32 {
 }
 pub fn drawPresets(scene: *Scene, view: rl.Rectangle, scroll: f32) void {
     var y = view.y - scroll;
-    ui.label("STARTER LOOKS", view.x + 4, y + 4, 11, ui.muted);
+    ui.heading("Starter looks", view.x + 4, y + 6, view.width - 8);
     y += 28;
-    inline for (std.meta.tags(Looks.Kind), 0..) |kind, i| {
+    const kinds = std.meta.tags(Looks.Kind);
+    inline for (kinds, 0..) |kind, i| {
         const look = Looks.preset(kind);
         const row = ui.rect(view.x, y, view.width, 68);
-        ui.rounded(row, 8, ui.background);
+        const over = visible(view, y, 68) and ui.hovered(row);
+        ui.rowFill(row, false, over);
+        if (i + 1 < kinds.len) ui.hline(view.x + 8, y + 72, view.width - 16, ui.divider);
         thumbnail(&look, ui.rect(row.x + 8, row.y + 8, 64, 52));
-        ui.label(Looks.names[i], row.x + 84, row.y + 12, 16, ui.text);
+        ui.label(Looks.names[i], row.x + 84, row.y + 15, 14, ui.text);
         var buffer: [256]u8 = undefined;
         ui.label(ui.fitted(Looks.descriptions[i], 11, row.width - 92, &buffer), row.x + 84, row.y + 37, 11, ui.muted);
-        if (visible(view, y, 68) and ui.hovered(row)) ui.requestCursor(rl.MOUSE_CURSOR_POINTING_HAND);
+        if (over) ui.requestCursor(rl.MOUSE_CURSOR_POINTING_HAND);
         if (ui.activate(row, Looks.names[i], visible(view, y, 68))) {
             look.apply(scene) catch {};
             selected_layer = switch (kind) {
@@ -110,7 +113,7 @@ pub fn drawPresets(scene: *Scene, view: rl.Rectangle, scroll: f32) void {
         y += 76;
     }
     y += 16;
-    ui.label("Name your look", view.x + 4, y, 12, ui.muted);
+    ui.heading("Name your look", view.x + 4, y, view.width - 8);
     textInput(view, y + 20, &name_buffer);
     const third = (view.width - 12) / 3;
     const typed_name = std.mem.trim(u8, std.mem.sliceTo(&name_buffer, 0), " \t\r\n");
@@ -171,12 +174,13 @@ pub fn drawPresets(scene: *Scene, view: rl.Rectangle, scroll: f32) void {
     for (Presets.store.items[0..Presets.store.len], 0..) |*item, i| {
         const row_y = y + 140 + @as(f32, @floatFromInt(i)) * 76;
         const bounds = ui.rect(view.x, row_y, view.width, 68);
-        ui.rounded(bounds, 8, if (selected_preset == i) ui.accent_soft else ui.background);
+        const over = visible(view, row_y, 68) and ui.hovered(bounds);
+        ui.rowFill(bounds, selected_preset == i, over);
         thumbnail(item, ui.rect(bounds.x + 8, bounds.y + 8, 64, 52));
         var name_fit: [256]u8 = undefined;
-        ui.label(ui.fitted(item.name(), 15, view.width - 92, &name_fit), bounds.x + 84, bounds.y + 14, 15, ui.text);
-        ui.label(if (item.example != null or item.path_buffer[0] != 0) "Lua scene" else "Built-in layers", bounds.x + 84, bounds.y + 38, 11, ui.muted);
-        if (visible(view, row_y, 68) and ui.hovered(bounds)) ui.requestCursor(rl.MOUSE_CURSOR_POINTING_HAND);
+        ui.label(ui.fitted(item.name(), 14, view.width - 92, &name_fit), bounds.x + 84, bounds.y + 15, 14, ui.text);
+        ui.label(if (item.example != null or item.path_buffer[0] != 0) "Lua scene" else "Built-in layers", bounds.x + 84, bounds.y + 37, 11, ui.muted);
+        if (over) ui.requestCursor(rl.MOUSE_CURSOR_POINTING_HAND);
         if (ui.activate(bounds, item.name(), visible(view, row_y, 68))) {
             item.apply(scene) catch {
                 notice = "Scene unavailable. Current look kept.";
@@ -201,7 +205,7 @@ pub fn thumbnail(look: *const Presets.Preset, bounds: rl.Rectangle) void {
             return rl.ColorFromHSV(get(preset, name ++ ".h"), get(preset, name ++ ".s"), get(preset, name ++ ".v"));
         }
     };
-    ui.rounded(bounds, 6, ui.background);
+    ui.framed(bounds, 4, ui.background, ui.hairline);
     const cx = bounds.x + bounds.width / 2;
     const cy = bounds.y + bounds.height * 0.43;
     if (value.get(look, "scene.halo") != 0) rl.DrawCircleLinesV(.{ .x = cx, .y = cy }, bounds.height * 0.28, rl.ColorFromHSV(value.get(look, "halo.hue"), value.get(look, "halo.saturation"), value.get(look, "halo.brightness")));
@@ -248,11 +252,20 @@ pub fn colorElementAt(view: rl.Rectangle, scroll: f32, mouse: rl.Vector2, draggi
 }
 pub fn drawColors(scene: *Scene, view: rl.Rectangle, scroll: f32, field: anytype) void {
     var y = view.y - scroll;
-    ui.label("Expand a color to edit hue, saturation and brightness", view.x + 4, y + 4, 10, ui.muted);
+    var hint: [256]u8 = undefined;
+    ui.label(ui.fitted("Expand a color to edit hue, saturation and brightness", 11, view.width - 8, &hint), view.x + 4, y + 4, 11, ui.muted);
     y += 28;
     for (colors, 0..) |entry, i| {
-        ui.rounded(ui.rect(view.x + 4, y + 4, 22, 22), 4, rl.ColorFromHSV(entry.h.*, entry.s.*, entry.v.*));
-        if (button(view, view.x + 32, y, view.width - 32, entry.name, expanded_color == i, true)) expanded_color = if (expanded_color == i) null else i;
+        const row = ui.rect(view.x, y, view.width, 30);
+        const shown = visible(view, y, 30);
+        const open = expanded_color == i;
+        const over = shown and ui.hovered(row);
+        ui.rowFill(row, open, over);
+        ui.framed(ui.rect(row.x + 7, row.y + 6, 18, 18), 3, rl.ColorFromHSV(entry.h.*, entry.s.*, entry.v.*), ui.hairline);
+        ui.label(entry.name, row.x + 35, row.y + 8, 13, ui.text);
+        ui.icon(if (open) .chevron_down else .chevron_right, .{ .x = row.x + row.width - 14, .y = row.y + 15 }, if (over or open) ui.text else ui.muted);
+        if (over) ui.requestCursor(rl.MOUSE_CURSOR_POINTING_HAND);
+        if (ui.activate(row, entry.name, shown)) expanded_color = if (open) null else i;
         y += 38;
         if (expanded_color != i) continue;
         const pointers = [_]*f32{ entry.h, entry.s, entry.v };
@@ -264,8 +277,9 @@ pub fn drawColors(scene: *Scene, view: rl.Rectangle, scroll: f32, field: anytype
         const size = (view.width - 8 * 4) / 8;
         for (Presets.store.swatches, 0..) |swatch, j| {
             const bounds = ui.rect(view.x + 4 + @as(f32, @floatFromInt(j)) * (size + 4), y + 22, size, 26);
-            ui.rounded(bounds, 4, rl.ColorFromHSV(swatch[0], swatch[1], swatch[2]));
-            if (!visible(view, bounds.y, bounds.height) or !ui.hovered(bounds)) continue;
+            const pointed = visible(view, bounds.y, bounds.height) and ui.hovered(bounds);
+            ui.framed(bounds, 3, rl.ColorFromHSV(swatch[0], swatch[1], swatch[2]), if (pointed) ui.text else ui.hairline);
+            if (!pointed) continue;
             ui.requestCursor(rl.MOUSE_CURSOR_POINTING_HAND);
             if (rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_RIGHT)) {
                 color_notice = "Swatch saved.";
@@ -332,13 +346,21 @@ pub fn selectLayer(element: Element) void {
 }
 pub fn drawInspector(scene: *Scene, view: rl.Rectangle, scroll: f32, field: anytype) void {
     var y = view.y - scroll;
-    if (button(view, view.x, y, 28, "<", false, true)) selected_layer = (selected_layer + layers.len - 1) % layers.len;
-    if (button(view, view.x + 34, y, view.width - 68, layers[selected_layer].name, true, true)) choosing_layer = !choosing_layer;
-    if (button(view, view.x + view.width - 28, y, 28, ">", false, true)) selected_layer = (selected_layer + 1) % layers.len;
+    const top_shown = visible(view, y, 28);
+    if (ui.iconButton(ui.rect(view.x, y, 28, 28), .chevron_left, "Previous layer", false, top_shown)) selected_layer = (selected_layer + layers.len - 1) % layers.len;
+    if (ui.dropdown(ui.rect(view.x + 34, y, view.width - 68, 28), layers[selected_layer].name, choosing_layer, top_shown)) choosing_layer = !choosing_layer;
+    if (ui.iconButton(ui.rect(view.x + view.width - 28, y, 28, 28), .chevron_right, "Next layer", false, top_shown)) selected_layer = (selected_layer + 1) % layers.len;
     y += 34;
     if (choosing_layer) {
         for (layers, 0..) |layer, i| {
-            if (button(view, view.x, y, view.width, layer.name, selected_layer == i, true)) {
+            const row = ui.rect(view.x + 34, y, view.width - 68, 28);
+            const shown = visible(view, y, 28);
+            const over = shown and ui.hovered(row);
+            ui.rowFill(row, selected_layer == i, over);
+            ui.label(layer.name, row.x + 10, row.y + 7, 13, ui.text);
+            if (selected_layer == i) ui.icon(.check, .{ .x = row.x + row.width - 14, .y = row.y + 14 }, ui.accent);
+            if (over) ui.requestCursor(rl.MOUSE_CURSOR_POINTING_HAND);
+            if (ui.activate(row, layer.name, shown)) {
                 selected_layer = i;
                 choosing_layer = false;
             }
@@ -356,14 +378,17 @@ pub fn drawInspector(scene: *Scene, view: rl.Rectangle, scroll: f32, field: anyt
     if (button(view, view.x + 2 * (third + 6), y, third, "Reset layer", false, true)) State.resetPrefix(layer.prefix, scene);
     y += 36;
     textInput(view, y, &search);
-    if (search[0] == 0 and !text_editing) ui.label("Search this layer...", view.x + 12, y + 7, 12, ui.muted);
+    if (search[0] == 0 and !text_editing) ui.label("Search this layer...", view.x + 12, y + 7, 12, ui.faint);
+    if (visible(view, y, 28)) ui.icon(.search, .{ .x = view.x + view.width - 18, .y = y + 14 }, ui.muted);
     y += 42;
     var count: usize = 0;
     for ([_][:0]const u8{ "Shape", "Color", "Global response" }, 0..) |label, group| {
-        if (button(view, view.x, y, view.width - 62, label, !collapsed[group] or search[0] != 0, true)) collapsed[group] = !collapsed[group];
-        if (button(view, view.x + view.width - 60, y, 60, "Reset", false, true)) {
+        const shown = visible(view, y, 28);
+        if (ui.disclosure(ui.rect(view.x, y, view.width - 62, 28), label, !collapsed[group] or search[0] != 0, shown)) collapsed[group] = !collapsed[group];
+        if (ui.ghostButton(ui.rect(view.x + view.width - 56, y + 2, 56, 24), "Reset", false, shown)) {
             for (settings.entries, 0..) |entry, i| if (matches(entry, group) and !scene.owned[i]) entry.set(State.defaults[i]);
         }
+        ui.hline(view.x, y + 31, view.width, ui.divider);
         y += 34;
         if (collapsed[group] and search[0] == 0) continue;
         for (settings.entries, 0..) |entry, i| {
@@ -374,5 +399,5 @@ pub fn drawInspector(scene: *Scene, view: rl.Rectangle, scroll: f32, field: anyt
             count += 1;
         }
     }
-    if (count == 0) ui.label("No matching controls. Try another search.", view.x + 4, y + 4, 12, ui.muted);
+    if (count == 0) ui.label("No matching controls. Try another search.", view.x + 4, y + 6, 12, ui.muted);
 }
