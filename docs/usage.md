@@ -161,8 +161,9 @@ save alongside presets on native builds. Spectrum tips and body have separate co
 
 Scroll with the wheel, scrollbar, or **Page Up / Page Down**. Tabs remember their
 scroll position within the session. The scene fits between the header, panel,
-and player. **Fit scene** restores the built-in camera after zooming or rotating;
-Lua scenes manage their own cameras. Opening or hiding the panel slides the scene.
+and player. Drag the scene with the left mouse button to turn the halo in any
+direction. **Fit scene** restores the built-in camera and halo after zooming,
+rotating, or turning; Lua scenes manage their own cameras. Opening or hiding the panel slides the scene.
 
 Choose 75%, 100%, 125%, or 150% UI size in **Settings**. Text, controls, and mouse
 targets scale together and fit smaller windows. Resize a panel by dragging its
@@ -210,6 +211,7 @@ for what those timings measure.
 | **Left / Right** | Rotate the built-in 3D scene when no UI control has keyboard focus |
 | Vertical wheel over the scene | Move the camera closer/farther (stops short of the scene center) |
 | Horizontal wheel over the scene | Rotate the built-in 3D scene |
+| Left-drag on the scene | Turn the halo in any direction |
 | Wheel over a panel | Scroll its controls |
 | **D** or click the FPS counter | Toggle diagnostics |
 

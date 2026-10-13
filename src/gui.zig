@@ -30,6 +30,7 @@ var path_entry = false;
 var path_buffer: [4096]u8 = @splat(0);
 var previous_tab: Tab = .inspector;
 var fit_requested = false;
+var welcome_open = false;
 pub fn takeFitRequest() bool {
     const fit = fit_requested;
     fit_requested = false;
@@ -117,6 +118,7 @@ fn viewport() rl.Rectangle {
 /// UI wheel gestures must not also move the scene camera.
 pub fn pointerOverUi() bool {
     return path_entry or ui.hovered(fitBounds()) or resize_mode != .none or @import("core/debug.zig").pointerOverUi() or
+        (welcome_open and ui.hovered(welcomeBounds())) or
         ui.hovered(headerBounds()) or ui.hovered(statusBounds()) or
         (config.Interface.show_player and ui.hovered(dockBounds())) or
         (active_tab != .none and ui.hovered(ui.rect(panel().x, panel().y, panel().width + 6, panel().height + 6)));
@@ -157,7 +159,8 @@ pub fn frame(audio: *AudioSession, script: *ScriptScene) void {
     drawPlayer(audio);
     drawStatusBar(audio, script);
     if ((audio.hasFile() or audio.captureActive()) and ui.button(fitBounds(), "Fit scene", false, script.usesBuiltin())) fit_requested = true;
-    if (!audio.hasFile() and !audio.captureActive()) drawWelcome(audio);
+    welcome_open = !audio.hasFile() and !audio.captureActive();
+    if (welcome_open) drawWelcome(audio);
     ui.blocked = false;
     if (path_entry) drawPathEntry(audio);
 }
@@ -174,11 +177,16 @@ pub fn openAudio(audio: *AudioSession) void {
     if (picked) |path| audio.playFile(path);
 }
 
-fn drawWelcome(audio: *AudioSession) void {
+fn welcomeBounds() rl.Rectangle {
     const scene = sceneBounds();
     const w = @min(360, scene.width - 32);
     const h: f32 = 214;
-    const box = ui.rect(scene.x + (scene.width - w) / 2, scene.y + @max(0, (scene.height - h) / 2), w, h);
+    return ui.rect(scene.x + (scene.width - w) / 2, scene.y + @max(0, (scene.height - h) / 2), w, h);
+}
+
+fn drawWelcome(audio: *AudioSession) void {
+    const box = welcomeBounds();
+    const w = box.width;
     ui.card(box);
     ui.centered("Bring your scene to life", ui.rect(box.x, box.y + 24, w, 24), 21, ui.text);
     ui.centered("Open a track or capture live audio.", ui.rect(box.x, box.y + 56, w, 18), 13, ui.muted);

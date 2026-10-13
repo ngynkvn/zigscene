@@ -9,11 +9,16 @@ pub const rl = @import("../raylib.zig");
 pub const Config = @import("config.zig");
 pub const debug = @import("debug.zig");
 pub const event = @import("event.zig");
+const Highlight = @import("../graphics/Highlight.zig");
+const Tilt = @import("../graphics/visualizers/halo.zig").Tilt;
 
 pub const Resize = struct { width: i32, height: i32 };
 
 pub const State = struct {
     rotation_offset: f32 = 0,
+    halo_tilt: Tilt = .{},
+    /// A left press on the scene keeps turning the halo until release.
+    halo_drag: bool = false,
     camera: rl.Camera3D = .{
         .position = Config.Camera.initial_position,
         .target = Config.Camera.initial_target,
@@ -106,6 +111,14 @@ pub fn process(state: *State, audio: *AudioSession, script: *ScriptScene) ?Resiz
         resize = .{ .width = rl.GetScreenWidth(), .height = rl.GetScreenHeight() };
     }
     if (pet.compact()) return resize;
+    // Turn only after the press frame, so the halo starts from where it was grabbed.
+    const left_down = rl.IsMouseButtonDown(rl.rl.MOUSE_BUTTON_LEFT);
+    if (state.halo_drag and left_down) {
+        const delta = rl.GetMouseDelta();
+        state.halo_tilt.drag(delta.x, delta.y);
+    }
+    if (rl.IsMouseButtonPressed(rl.rl.MOUSE_BUTTON_LEFT)) state.halo_drag = !gui.pointerOverUi() and script.usesBuiltin() and Highlight.Element.halo.visible();
+    if (!left_down) state.halo_drag = false;
     const wheelMove = rl.GetMouseWheelMoveV();
     if (@abs(wheelMove.x) > @abs(wheelMove.y)) {
         event.onSwipe(.horizontal, wheelMove.x);

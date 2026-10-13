@@ -211,7 +211,7 @@ fn renderBuiltin(self: *App, viewport: Viewport, center: rl.Vector2, focus: High
         rl.rlTranslatef(center.x, center.y, 0);
         rl.rl.rlScalef(fit, fit, 1);
         rl.rlTranslatef(-center.x, -center.y, 0);
-        self.halo.render(center, self.motion.energy, self.motion.pulse, focus);
+        self.halo.render(center, self.motion.energy, self.motion.pulse, focus, self.input.halo_tilt);
         rl.rl.rlPopMatrix();
     }
     const floor = viewport.height() - 6;

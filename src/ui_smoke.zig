@@ -27,6 +27,21 @@ fn click(app: *App, x: f32, y: f32) void {
     app.frame();
 }
 
+fn drag(app: *App, from: rl.Vector2, to: rl.Vector2) void {
+    rl.PlayAutomationEvent(.{ .type = 7, .params = .{ @intFromFloat(from.x), @intFromFloat(from.y), 0, 0 } });
+    rl.PlayAutomationEvent(.{ .type = 5, .params = .{ 0, 0, 0, 0 } });
+    app.frame();
+    rl.PlayAutomationEvent(.{ .type = 6, .params = .{ 0, 0, 0, 0 } });
+    app.frame();
+    for (1..9) |step| {
+        const t = @as(f32, @floatFromInt(step)) / 8;
+        rl.PlayAutomationEvent(.{ .type = 7, .params = .{ @intFromFloat(from.x + (to.x - from.x) * t), @intFromFloat(from.y + (to.y - from.y) * t), 0, 0 } });
+        app.frame();
+    }
+    rl.PlayAutomationEvent(.{ .type = 5, .params = .{ 0, 0, 0, 0 } });
+    app.frame();
+}
+
 fn screenshot(path: [*:0]const u8) !void {
     const pixels = rl.LoadImageFromScreen();
     defer rl.UnloadImage(pixels);
@@ -117,5 +132,16 @@ pub fn main() !void {
         try screenshot(filename.ptr);
         try Looks.preset(.calm).apply(&app.script);
     }
-    std.debug.print("Opaque startup, topmost default, file playback, keyboard focus, look undo, and 2D/3D/Lua layouts passed.\n", .{});
+    rl.SetWindowSize(1024, 768);
+    config.Interface.scale_percent = 100;
+    gui.onTabChange(.inspector);
+    for (0..4) |_| app.frame();
+    if (app.input.halo_tilt.w != 1) return error.HaloTiltFailed; // Canvas clicks alone must not turn it.
+    drag(&app, .{ .x = 640, .y = 420 }, .{ .x = 720, .y = 340 });
+    if (app.input.halo_tilt.w > 0.95 or app.input.halo_drag) return error.HaloTiltFailed;
+    try screenshot(".tmp/ui-review/halo-tilt.png");
+    click(&app, 970, 63); // Fit scene.
+    app.frame();
+    if (app.input.halo_tilt.w != 1) return error.HaloTiltFailed;
+    std.debug.print("Opaque startup, topmost default, file playback, keyboard focus, look undo, halo tilt, and 2D/3D/Lua layouts passed.\n", .{});
 }
