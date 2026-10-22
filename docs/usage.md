@@ -51,8 +51,8 @@ average signal level. Its colors show frequency bands:
 | Green | Mid: 250 Hz–4 kHz |
 | Blue | High: above 4 kHz |
 
-Colored thickness shows each band's relative RMS. Filters overlap around the
-crossovers. The preview uses the source file's sample rate and up to 8,192 bins,
+Colored thickness shows each band's relative RMS. Steep 24 dB-per-octave
+filters split the bands, so colors blend only near the crossovers. The preview uses the source file's sample rate and up to 8,192 bins,
 then combines bins for the display without skipping transients.
 
 Native MP3/WAV/OGG previews build in the background. A preview may take a moment

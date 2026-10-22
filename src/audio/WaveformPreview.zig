@@ -49,11 +49,36 @@ pub fn clear(self: *WaveformPreview) void {
     self.revision +%= 1;
 }
 
+/// Splits one channel into low, mid and high bands with 4th-order
+/// Linkwitz-Riley crossovers (each a Butterworth pair). Second-order slopes let
+/// a 700 Hz tone draw about a tenth of its height in the low band.
+const Crossover = struct {
+    low: [2]Biquad,
+    mid_low: [2]Biquad,
+    mid_high: [2]Biquad,
+    high: [2]Biquad,
+
+    fn init(sample_rate: u32) Crossover {
+        const low = Biquad.init(.lowpass, low_hz, sample_rate);
+        const mid_low = Biquad.init(.highpass, low_hz, sample_rate);
+        const mid_high = Biquad.init(.lowpass, high_hz, sample_rate);
+        const high = Biquad.init(.highpass, high_hz, sample_rate);
+        return .{ .low = .{ low, low }, .mid_low = .{ mid_low, mid_low }, .mid_high = .{ mid_high, mid_high }, .high = .{ high, high } };
+    }
+
+    fn cascade(pair: *[2]Biquad, value: f64) f64 {
+        return pair[1].process(pair[0].process(value));
+    }
+
+    fn process(self: *Crossover, value: f64) [3]f64 {
+        return .{ cascade(&self.low, value), cascade(&self.mid_high, cascade(&self.mid_low, value)), cascade(&self.high, value) };
+    }
+};
+
 /// Accumulates complete interleaved frames without retaining decoded audio.
 pub const Builder = struct {
-    const Filters = struct { low: Biquad, mid_low: Biquad, mid_high: Biquad, high: Biquad };
     preview: *WaveformPreview,
-    filters: []Filters,
+    filters: []Crossover,
     allocator: std.mem.Allocator,
     total_frames: u64,
     frames: u64 = 0,
@@ -62,13 +87,8 @@ pub const Builder = struct {
     pub fn init(preview: *WaveformPreview, allocator: std.mem.Allocator, total_frames: u64, channels: usize, sample_rate: u32) !Builder {
         preview.clear();
         if (total_frames == 0 or channels == 0 or sample_rate == 0) return error.InvalidFormat;
-        const filters = try allocator.alloc(Filters, channels);
-        for (filters) |*filter| filter.* = .{
-            .low = Biquad.init(.lowpass, low_hz, sample_rate),
-            .mid_low = Biquad.init(.highpass, low_hz, sample_rate),
-            .mid_high = Biquad.init(.lowpass, high_hz, sample_rate),
-            .high = Biquad.init(.highpass, high_hz, sample_rate),
-        };
+        const filters = try allocator.alloc(Crossover, channels);
+        for (filters) |*filter| filter.* = .init(sample_rate);
         preview.len = @intCast(@min(bin_count, total_frames));
         return .{ .preview = preview, .filters = filters, .allocator = allocator, .total_frames = total_frames };
     }
@@ -92,8 +112,7 @@ pub const Builder = struct {
                     const value: f64 = if (std.math.isFinite(raw)) raw else 0;
                     bin.peak = @max(bin.peak, @as(f32, @floatCast(@abs(value))));
                     bin.square_sum += value * value;
-                    const bands = [_]f64{ filter.low.process(value), filter.mid_high.process(filter.mid_low.process(value)), filter.high.process(value) };
-                    for (&bin.band_square_sum, bands) |*sum, band| sum.* += band * band;
+                    for (&bin.band_square_sum, filter.process(value)) |*sum, band| sum.* += band * band;
                 }
             }
             bin.sample_count += take * channels;
@@ -121,10 +140,7 @@ fn buildReference(self: *WaveformPreview, samples: []const f32, channels: usize,
     // Process channels independently: out-of-phase stereo must not disappear.
     // Filter state persists across bins, but never across channels or tracks.
     for (0..channels) |channel| {
-        var low = Biquad.init(.lowpass, low_hz, sample_rate);
-        var mid_low = Biquad.init(.highpass, low_hz, sample_rate);
-        var mid_high = Biquad.init(.lowpass, high_hz, sample_rate);
-        var high = Biquad.init(.highpass, high_hz, sample_rate);
+        var crossover: Crossover = .init(sample_rate);
         for (self.bins[0..self.len], 0..) |*bin, index| {
             const start = index * frame_count / self.len;
             const end = (index + 1) * frame_count / self.len;
@@ -133,8 +149,7 @@ fn buildReference(self: *WaveformPreview, samples: []const f32, channels: usize,
                 const value: f64 = if (std.math.isFinite(raw)) raw else 0;
                 bin.peak = @max(bin.peak, @as(f32, @floatCast(@abs(value))));
                 bin.square_sum += value * value;
-                const bands = [_]f64{ low.process(value), mid_high.process(mid_low.process(value)), high.process(value) };
-                for (&bin.band_square_sum, bands) |*sum, band| sum.* += band * band;
+                for (&bin.band_square_sum, crossover.process(value)) |*sum, band| sum.* += band * band;
             }
             bin.sample_count += end - start;
         }
@@ -235,6 +250,17 @@ test "frequency bands identify tones at source sample rates without stereo cance
             try std.testing.expect(energy[expected_band] / (energy[0] + energy[1] + energy[2]) > 0.95);
             try std.testing.expectApproxEqAbs(@as(f32, 0.35355), result.rms(), 0.001);
         }
+    }
+}
+
+test "band colors stay with a tone 1.5 octaves from either crossover" {
+    var preview: WaveformPreview = .{};
+    var samples: [44100]f32 = undefined;
+    for ([_]f64{ 110, 700, 11200 }, 0..) |frequency, expected_band| {
+        for (&samples, 0..) |*sample, frame| sample.* = @floatCast(0.5 * @sin(2 * std.math.pi * frequency * @as(f64, @floatFromInt(frame)) / 44100));
+        preview.build(&samples, 1, 44100);
+        // Drawn heights follow these weights; second-order slopes left 11-18% in a neighbor.
+        try std.testing.expect(preview.column(0, 1).bandWeights()[expected_band] > 0.95);
     }
 }
 
