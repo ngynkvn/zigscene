@@ -338,9 +338,9 @@ It uses a graphical system chooser, falling back to a path-entry dialog when no
 chooser is available. The browser uses an asynchronous HTML file input and adopts
 the selected virtual file on the next frame.
 
-Development builds retain Zig Debug checks while compiling raylib and Lua with
-ReleaseSafe optimization. This avoids per-vertex/backend work and interpreter
-work dominating development FPS. `-Draylib-optimize=Debug` opts into raylib's
+Development builds retain Zig debug checks while compiling raylib and Lua with
+`safe` optimization. This avoids per-vertex/backend work and interpreter
+work dominating development FPS. `-Draylib-optimize=debug` opts into raylib's
 unoptimized backend.
 
 ### Browser build

@@ -1,5 +1,5 @@
 //! Offline benchmark: no window, audio device, or sound output.
-//! zig run -O ReleaseSafe -mcpu=baseline --dep frame -Mroot=dev/audio_bench.zig -Mframe=src/audio/analysis/frame.zig
+//! zig run -O safe -mcpu=baseline --dep frame -Mroot=dev/audio_bench.zig -Mframe=src/audio/analysis/frame.zig
 const std = @import("std");
 const frame = @import("frame");
 const iterations = 100_000;

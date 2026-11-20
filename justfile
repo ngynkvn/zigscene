@@ -14,7 +14,7 @@ release-win32:
 
 # Build web version
 web-build:
-    zig build web -Dtarget=wasm32-emscripten --sysroot "$EMSDK/upstream/emscripten" --verbose --release=fast
+    zig build web -Dtarget=wasm32-emscripten --verbose --release=fast
 
 # Create flat copy of source files with paths encoded in filenames
 flat-copy:

@@ -3,7 +3,7 @@
 An audio visualizer built with Zig and raylib. Play an audio file or capture live
 audio, customize the built-in layers, or write a Lua scene.
 
-**Zig 0.16.0** · [Releases](https://github.com/ngynkvn/zigscene/releases) ·
+**Zig 0.17.1** · [Releases](https://github.com/ngynkvn/zigscene/releases) ·
 [Documentation](docs/README.md)
 
 ## Getting started
@@ -45,7 +45,7 @@ If macOS blocks a trusted download, see
 
 ### Build from source
 
-With Zig `0.16.0` on your `PATH`, run these commands from the repository root:
+With Zig `0.17.1` on your `PATH`, run these commands from the repository root:
 
 ```sh
 zig build run

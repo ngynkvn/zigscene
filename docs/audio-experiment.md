@@ -51,7 +51,7 @@ Floating-point reduction order changes slightly; RMS comparisons allow 1e-5.
 Run without opening the app, a window, or an audio device:
 
 ```sh
-zig run -O ReleaseSafe -mcpu=baseline --dep frame \
+zig run -O safe -mcpu=baseline --dep frame \
   -Mroot=dev/audio_bench.zig -Mframe=src/audio/analysis/frame.zig
 ```
 
@@ -69,7 +69,7 @@ checklist, see [Tests](development.md#tests).
 
 ```sh
 zig build check
-zig build test -Doptimize=ReleaseSafe
-zig build -Dtarget=x86_64-windows -Doptimize=ReleaseSafe \
+zig build test -Doptimize=safe
+zig build -Dtarget=x86_64-windows -Doptimize=safe \
   --prefix release/windows-experimental
 ```

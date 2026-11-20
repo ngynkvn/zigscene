@@ -3,7 +3,7 @@
 [Project home](../README.md) · [All docs](README.md) ·
 [Architecture](../ARCHITECTURE.md) · [Lua scenes](scripting.md)
 
-Use **Zig 0.16.0**. Run the commands below from the repository root.
+Use **Zig 0.17.1**. Run the commands below from the repository root.
 
 **On this page:** [Setup](#setup) · [Native builds](#native-builds) ·
 [Tests](#tests) · [Web build](#web-build) · [Release builds](#release-builds) ·
@@ -16,7 +16,7 @@ Clone the repository and check your Zig version:
 ```sh
 git clone https://github.com/ngynkvn/zigscene
 cd zigscene
-zig version # should print 0.16.0
+zig version # should print 0.17.1
 ```
 
 The build fetches its pinned dependencies; no separate Lua interpreter is needed.
@@ -46,13 +46,13 @@ See [CI](../.github/workflows/test.yml) for the current build environment.
 | `zig build run` | Build and launch |
 | `zig build run -- song.wav` | Launch with a track |
 | `zig build run -- --scene=src/scripting/examples/orbit.lua song.wav` | Launch with a Lua scene and track |
-| `zig build -Doptimize=ReleaseSafe` | Optimized application with safety checks |
-| `zig build run -Doptimize=ReleaseFast` | Build and run with ReleaseFast optimization |
+| `zig build -Doptimize=safe` | Optimized application with safety checks |
+| `zig build run -Doptimize=fast` | Build and run optimized for speed |
 | `zig build check` | Compile the native app and run both test roots |
 
 Debug builds retain application checks while compiling raylib and Lua with
-ReleaseSafe optimization. To debug raylib without that optimization, use
-`zig build -Draylib-optimize=Debug`.
+`safe` optimization. To debug raylib without that optimization, use
+`zig build -Draylib-optimize=debug`.
 
 ### Isolate preferences for manual checks
 
@@ -113,16 +113,15 @@ Install and activate the [Emscripten SDK](https://emscripten.org/docs/getting_st
 The repository's CI uses Emscripten `6.0.5`. With `EMSDK` set:
 
 ```sh
-zig build web -Dtarget=wasm32-emscripten -Doptimize=ReleaseSafe \
-  --sysroot "$EMSDK/upstream/emscripten"
+zig build web -Dtarget=wasm32-emscripten -Doptimize=safe
 
 # Build and serve locally with emrun
-zig build web-run -Dtarget=wasm32-emscripten -Doptimize=ReleaseSafe \
-  --sysroot "$EMSDK/upstream/emscripten"
+zig build web-run -Dtarget=wasm32-emscripten -Doptimize=safe
 ```
 
-The deployable bundle is written to `zig-out/web`. Serve it over HTTP rather than
-opening the HTML file directly.
+Use `-Demscripten-dir=/path/to/emscripten` to specify the directory containing
+`emcc` explicitly. The deployable bundle is written to `zig-out/web`. Serve the
+bundle over HTTP.
 
 After building, check browser startup, preset save/replace/duplicate,
 settings reset, the file chooser, dropped audio, and recovery from a rejected post shader:
@@ -148,7 +147,7 @@ WebAssembly page allocator bypasses those updates and breaks audio/file I/O.
 
 ## Release builds
 
-`zig build release-build` builds ReleaseSafe binaries for the host and
+`zig build release-build` builds binaries with `safe` optimization for the host and
 x86_64 Windows, under target-specific directories in `zig-out`. Additional Linux
 cross-targets are currently disabled because of the raylib display dependencies;
 the release workflow builds Linux natively.
@@ -171,7 +170,7 @@ track duration. On Linux, `/proc/self/status` exposes peak resident memory as
 `VmHWM`; its reported file length is zero, so read its contents rather than
 allocating from the file length.
 
-Use `zig build run -Dscene-bench=true -Doptimize=ReleaseSafe` to measure the
+Use `zig build run -Dscene-bench=true -Doptimize=safe` to measure the
 built-in scene with synthetic PCM and no audible output or preference changes.
 It reports mean, p95, and p99 frame times with the panel open and hidden, comparing
 one upload buffer against the native renderer's twelve buffers in alternating

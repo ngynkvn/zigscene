@@ -20,11 +20,11 @@ jobs:
       - name: Zig Setup
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.16.0
+          version: 0.17.1
 
       - name: Build
         run: |
-          zig build -Doptimize=ReleaseSafe
+          zig build -Doptimize=safe
           mv zig-out/bin/zigscene zig-out/bin/${{env.RELEASE_NAME}}
 
       - name: Package executable
@@ -59,11 +59,11 @@ jobs:
       - name: Zig Setup
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.16.0
+          version: 0.17.1
 
       - name: Build
         run: |
-          zig build -Doptimize=ReleaseSafe
+          zig build -Doptimize=safe
           mv zig-out/bin/zigscene zig-out/bin/${{env.RELEASE_NAME}}
 
       - name: Package executable
@@ -91,12 +91,12 @@ jobs:
       - name: Zig Setup
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.16.0
+          version: 0.17.1
 
       - name: Build
         shell: pwsh
         run: |
-          zig build -Doptimize=ReleaseSafe
+          zig build -Doptimize=safe
           New-Item -ItemType Directory -Path "zig-out/$env:RELEASE_NAME"
           Copy-Item "zig-out/bin/zigscene.exe" "zig-out/$env:RELEASE_NAME/zigscene.exe"
           Compress-Archive -Path "zig-out/$env:RELEASE_NAME" -DestinationPath "zig-out/$env:RELEASE_NAME.zip"
@@ -121,7 +121,7 @@ jobs:
       - name: Zig Setup
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.16.0
+          version: 0.17.1
 
       - name: Emscripten Setup
         uses: emscripten-core/setup-emsdk@v16
@@ -131,7 +131,7 @@ jobs:
 
       - name: Build
         run: |
-          zig build web -Dtarget=wasm32-emscripten -Doptimize=ReleaseSafe --sysroot "$EMSDK/upstream/emscripten"
+          zig build web -Dtarget=wasm32-emscripten -Doptimize=safe
           cd zig-out/web
           zip -r ../${{env.RELEASE_NAME}}.zip .
 
