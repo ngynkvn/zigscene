@@ -122,6 +122,17 @@ Beats and sharp increases in audio level react on the first analyzed frame.
 decay. Waveform smoothing preserves the leading edge of hits. Holding
 **Shift+Space** applies deliberately heavier waveform smoothing.
 
+### Marbling
+
+Open **Layers / 8**, select **Marbling**, and click **Hidden** to turn it on. The
+ink pattern flows behind the other layers. Click **Solo** for a full-field view.
+**Contour strength** sets how pronounced the bands are. **Dot coverage** at zero
+shows the smooth marbling, and higher values bring in warped rows of dots.
+Adjust **Film grain** for texture, or set **Flow speed** to zero to stop the flow.
+**Audio response** controls how much musical energy speeds up the flow and how
+much beats bend the pattern. Marbling follows **Background opacity** and its
+settings are included when you save a preset.
+
 ### Explore and save a look
 
 Open **Looks / 7** and try **Calm**, **Pulse**, or **Sculpture**. Each row shows a

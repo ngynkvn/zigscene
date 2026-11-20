@@ -1,7 +1,8 @@
 //! Transient drawing emphasis. Never changes scene visibility or saved colors.
 const std = @import("std");
 const rl = @import("../raylib.zig");
-const Scene = @import("../core/config.zig").Scene;
+const Config = @import("../core/config.zig");
+const Scene = Config.Scene;
 const Highlight = @This();
 
 pub var solo: ?Element = null;
@@ -12,6 +13,7 @@ pub const Element = enum {
     spectrum,
     bubble,
     halo,
+    marbling,
 
     pub fn visible(self: Element) bool {
         if (solo != null and solo != self) return false;
@@ -21,6 +23,7 @@ pub const Element = enum {
             .spectrum => Scene.spectrum,
             .bubble => Scene.bubble,
             .halo => Scene.halo,
+            .marbling => Config.Marbling.enabled,
         };
     }
 };

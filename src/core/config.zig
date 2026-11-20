@@ -73,6 +73,27 @@ pub const Shader = struct {
     };
 };
 
+pub const Marbling = struct {
+    pub var enabled = false;
+    pub var scale: f32 = 1;
+    pub var speed: f32 = 0.75;
+    pub var distortion: f32 = 0.9;
+    pub var contours: f32 = 0.85;
+    pub var dots: f32 = 0.35;
+    pub var grain: f32 = 0.16;
+    pub var response: f32 = 1;
+
+    pub const Scalars = [_]controls.Scalar{
+        .{ "Pattern scale", &scale, .{ 0.5, 2.5 } },
+        .{ "Flow speed", &speed, .{ 0, 2 } },
+        .{ "Distortion", &distortion, .{ 0, 1.5 } },
+        .{ "Contour strength", &contours, .{ 0, 1 } },
+        .{ "Dot coverage", &dots, .{ 0, 1 } },
+        .{ "Film grain", &grain, .{ 0, 0.35 } },
+        .{ "Audio response", &response, .{ 0, 2 } },
+    };
+};
+
 pub const Visualizer = struct {
     pub const WaveFormLine = struct {
         pub const Scalars = [_]controls.Scalar{

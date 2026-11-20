@@ -40,17 +40,33 @@ try {
     });
     await page.addInitScript(reject => {
       window.sceneDraws = 0;
+      window.marblingDraws = 0;
+      const marblingPrograms = new WeakSet();
+      const activePrograms = new WeakMap();
       for (const context of [WebGLRenderingContext, WebGL2RenderingContext]) {
         for (const name of ['drawArrays', 'drawElements']) {
           const original = context.prototype[name];
           context.prototype[name] = function (...args) {
             window.sceneDraws++;
+            if (marblingPrograms.has(activePrograms.get(this))) window.marblingDraws++;
             return original.apply(this, args);
           };
         }
+        const select = context.prototype.useProgram;
+        context.prototype.useProgram = function (program) {
+          activePrograms.set(this, program);
+          return select.call(this, program);
+        };
+        const locate = context.prototype.getUniformLocation;
+        context.prototype.getUniformLocation = function (program, name) {
+          const location = locate.call(this, program, name);
+          if (location && name === 'surfaceFinish') marblingPrograms.add(program);
+          return location;
+        };
         const source = context.prototype.shaderSource;
         context.prototype.shaderSource = function (shader, code) {
-          return source.call(this, shader, reject && code.includes('chromaFactor') ? 'invalid shader' : code);
+          const postEffect = code.includes('chromaFactor') || code.includes('surfaceFinish');
+          return source.call(this, shader, reject && postEffect ? 'invalid shader' : code);
         };
       }
     }, rejectShader);
@@ -92,25 +108,33 @@ try {
     await advance();
     // Save, replace and duplicate a preset: the old whole-library rollback
     // exhausted the web stack here even though compilation succeeded.
-    await page.keyboard.press('7');
-    await advance();
+    await click(238, 20); // Looks.
     await canvas.screenshot({ path: new URL(`presets-before-${rejectShader}.png`, artifacts).pathname });
-    await click(70, 474); // Save as.
-    await click(168, 474); // Replace.
-    await click(267, 474); // Duplicate.
+    await click(58, 425); // Save as.
+    await click(160, 425); // Replace.
+    await click(262, 425); // Duplicate.
     await canvas.screenshot({ path: new URL(`presets-after-${rejectShader}.png`, artifacts).pathname });
-    await page.keyboard.press('PageDown');
+    await click(120, 526); // Load the saved look.
+    assert.equal(await page.evaluate(() => window.marblingDraws), 0, 'marbling starts hidden');
+    await click(165, 20); // Layers.
+    await click(160, 96); // Open the layer list.
+    await click(160, 290); // Marbling.
+    await click(58, 130); // Hidden / Visible.
+    assert.equal(await page.evaluate(() => window.marblingDraws > 0), !rejectShader, 'enabled marbling draws when its shader is available');
+    await click(160, 130); // Solo.
+    await page.mouse.move(850, 385);
     await advance();
-    await click(120, 220); // Load the saved look.
-    await page.keyboard.press('6'); // Settings.
-    await advance();
-    await click(76, 286); // Change the FPS limit before resetting it.
-    await click(165, 146); // Reset all settings.
-    await advance();
+    await canvas.screenshot({ path: new URL(`marbling-${rejectShader}.png`, artifacts).pathname });
+    await click(974, 20); // Settings.
+    await click(160, 199); // Change the FPS limit before resetting it.
+    await click(165, 98); // Reset all settings.
     await canvas.screenshot({ path: new URL(`reset-${rejectShader}.png`, artifacts).pathname });
+    const marblingAfterReset = await page.evaluate(() => window.marblingDraws);
+    await advance();
+    assert.equal(await page.evaluate(() => window.marblingDraws), marblingAfterReset, 'reset hides marbling');
     // A real dropped PCM file also drives the analysis stack on the main loop.
     const chooser = page.waitForEvent('filechooser', { timeout: 15000 });
-    await canvas.click({ position: { x: 410, y: 680 }, delay: 100 });
+    await canvas.click({ position: { x: 665, y: 670 }, delay: 100 });
     await (await chooser).setFiles({ name: 'chosen.wav', mimeType: 'audio/wav', buffer: wav });
     await advance();
     assert.ok(messages.some(message => message.includes('chosen.wav') && message.includes('successfully')), messages.join('\n'));
@@ -136,10 +160,11 @@ try {
     await canvas.screenshot({ path: new URL(`audio-${rejectShader}.png`, artifacts).pathname });
     const fallback = messages.some(message => message.includes('post-processing shader unavailable'));
     assert.equal(fallback, rejectShader, 'the post shader should work, with a graceful fallback only when rejected');
+    assert.equal(messages.some(message => message.includes('marbling shader unavailable')), rejectShader);
     if (!rejectShader) assert.ok(!messages.some(message => /SHADER:.*(failed|error)/i.test(message)), messages.join('\n'));
     await writeFile(new URL(`console-${rejectShader}.log`, artifacts), messages.join('\n'));
     await page.close();
-    console.log(`Web startup, presets, reset, welcome/player file choosers and dropped audio passed (shader fallback: ${rejectShader}).`);
+    console.log(`Web startup, presets, marbling, reset, welcome/player file choosers and dropped audio passed (shader fallback: ${rejectShader}).`);
   }
 } finally {
   await browser?.close();

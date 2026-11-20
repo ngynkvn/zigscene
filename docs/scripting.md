@@ -277,7 +277,7 @@ These paths are valid for both `config` and `scene.get/set`. All ranges are
 inclusive. Fractional FPS values round to the nearest integer when applied.
 
 Jump to [window and interface](#window-and-interface), [audio and motion](#audio-and-motion),
-[scene and shader](#scene-and-shader), [layer geometry](#layer-geometry), or
+[scene and shader](#scene-and-shader), [marbling](#marbling), [layer geometry](#layer-geometry), or
 [HSV colors](#hsv-colors).
 
 ### Window and interface
@@ -314,6 +314,21 @@ Jump to [window and interface](#window-and-interface), [audio and motion](#audio
 | `shader.chroma_factor` | 0…0.01 |
 | `shader.noise_factor` | 0…0.5 |
 | `shader.alpha_factor` | 0…1; background opacity |
+
+### Marbling
+
+Marbling draws behind the built-in layers and Lua overlay scenes.
+
+| Path | Values |
+| --- | --- |
+| `marbling.enabled` | Boolean, default false |
+| `marbling.scale` | 0.5…2.5; larger values give larger ink pools |
+| `marbling.speed` | 0…2; zero holds the flow in place |
+| `marbling.distortion` | 0…1.5 |
+| `marbling.contours` | 0…1; strength of the contour bands |
+| `marbling.dots` | 0…1; coverage of the warped dot grid |
+| `marbling.grain` | 0…0.35 |
+| `marbling.response` | 0…2; flow and distortion response to audio |
 
 ### Layer geometry
 

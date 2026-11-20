@@ -717,6 +717,7 @@ const SceneItems = .{
     .{ "Spectrum", "Sound across the frequencies", &config.Scene.spectrum, Element.spectrum },
     .{ "3D bubble", "A sculptural, reactive core", &config.Scene.bubble, Element.bubble },
     .{ "Frequency halo", "A ring of spectral energy", &config.Scene.halo, Element.halo },
+    .{ "Marbling", "Flowing ink, dots, and grain", &config.Marbling.enabled, Element.marbling },
 };
 
 fn setLayerVisibility(pointer: *bool, value: bool, script: *const ScriptScene) void {

@@ -133,7 +133,7 @@ pub fn frame(self: *App) void {
     const focus = Highlight.init(if (pet.compact()) null else gui.hoveredElement());
     self.renderScene(viewport, center, focus);
     const scene_end = rl.rl.GetTime();
-    const ui_end = self.renderWindow();
+    const ui_end = self.renderWindow(viewport, focus);
     debug.record(.{ .audio = audio_end - frame_start, .scene = scene_end - audio_end, .ui = ui_end - scene_end, .present = rl.rl.GetTime() - ui_end });
     self.applyWindowOpacity();
     self.applyFpsLimit();
@@ -248,11 +248,16 @@ fn renderBuiltin(self: *App, viewport: Viewport, center: rl.Vector2, focus: High
     }
 }
 
-fn renderWindow(self: *App) f64 {
+fn renderWindow(self: *App, viewport: Viewport, focus: Highlight) f64 {
     rl.BeginDrawing();
     var background = @import("gui/theme.zig").background;
     background.a = if (pet.compact()) 0 else @intFromFloat(@round(Config.Shader.alpha_factor * 255));
     rl.ClearBackground(background);
+
+    if (!pet.compact() and self.script.usesBuiltin() and Highlight.Element.marbling.visible()) {
+        const tint = focus.tint(.marbling, .{ .r = 255, .g = 255, .b = 255, .a = background.a });
+        self.renderer.drawMarbling(viewport, self.motion, tint);
+    }
 
     rl.BeginShaderMode(self.renderer.program);
     const noise: f32 = if (pet.compact()) 0 else Config.Shader.noise_factor;
