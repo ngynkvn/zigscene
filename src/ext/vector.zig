@@ -16,7 +16,7 @@ pub const Vector2 = extern struct {
         return .{ .x = t.x, .y = t.y };
     }
     pub fn c(self: Vector2) rl.Vector2 {
-        return @bitCast(self);
+        return .{ .x = self.x, .y = self.y };
     }
     pub fn zero() Vector2 {
         return .{ .x = 0.0, .y = 0.0 };
@@ -603,15 +603,7 @@ pub const Vector3 = extern struct {
         return result;
     }
     pub fn toFloatV(v: Vector3) float3 {
-        var buffer: float3 = float3{
-            .v = [1]f32{
-                0,
-            } ++ [1]f32{0} ** 2,
-        };
-        buffer.v[0] = v.x;
-        buffer.v[1] = v.y;
-        buffer.v[2] = v.z;
-        return buffer;
+        return .{ .v = .{ v.x, v.y, v.z } };
     }
     pub fn clamp(v: Vector3, min_v: Vector3, max_v: Vector3) Vector3 {
         var result: Vector3 = Vector3{ .x = 0, .y = 0, .z = 0 };

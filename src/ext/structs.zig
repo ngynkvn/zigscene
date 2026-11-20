@@ -15,6 +15,6 @@ pub const Rectangle = extern struct {
         return .{ .x = self.x + dx, .y = self.y + dy, .width = self.width, .height = self.height };
     }
     pub fn into(self: Rectangle) rl.Rectangle {
-        return @bitCast(self);
+        return .{ .x = self.x, .y = self.y, .width = self.width, .height = self.height };
     }
 };

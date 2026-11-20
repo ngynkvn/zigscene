@@ -16,7 +16,7 @@ pub const Color = extern struct {
         return .{ .r = arr[0], .g = arr[1], .b = arr[2], .a = arr[3] };
     }
     pub fn into(self: Color) rl.Color {
-        return @bitCast(self);
+        return .{ .r = self.r, .g = self.g, .b = self.b, .a = self.a };
     }
     pub const hsv = struct {
         /// Convert from Vector3 as .{.x = hue, .y = saturation, .z = value}
