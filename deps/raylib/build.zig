@@ -3,17 +3,27 @@ const std = @import("std");
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+    const web = target.result.os.tag == .emscripten;
+    const emscripten_include = b.option([]const u8, "emscripten-include", "Path to Emscripten's sysroot headers");
+    const linux_display_backend = b.option(enum { X11, Wayland, Both }, "linux_display_backend", "Linux display backend to use") orelse .X11;
+
+    // The upstream web build installs its own SDK. Resolve the source through
+    // its desktop configuration so the web library can use our active SDK.
     const raylib = b.dependency("raylib", .{
-        .target = target,
-        .optimize = optimize,
-        .linux_display_backend = b.option(enum { X11, Wayland, Both }, "linux_display_backend", "Linux display backend to use") orelse .X11,
+        .target = if (web) b.resolveTargetQuery(.{}) else target,
+        .optimize = if (web) .safe else optimize,
+        .linux_display_backend = linux_display_backend,
     });
-    const libraylib = raylib.artifact("raylib");
+    const libraylib = if (web)
+        buildWebLibrary(b, raylib, target, optimize, emscripten_include orelse return error.MissingEmscriptenHeaders)
+    else
+        raylib.artifact("raylib");
     libraylib.step.name = "Compile Raylib";
+    b.addNamedLazyPath("miniaudio-include", raylib.path("src/external"));
 
     // The scene, shader and UI scissors flush several times per frame. Rotating
     // upload buffers avoids rewriting a VBO that the GPU is still consuming.
-    if (target.result.os.tag != .emscripten) libraylib.root_module.addCMacro("RL_DEFAULT_BATCH_BUFFERS", "12");
+    if (!web) libraylib.root_module.addCMacro("RL_DEFAULT_BATCH_BUFFERS", "12");
 
     b.installArtifact(libraylib);
     libraylib.root_module.addCMacro("SUPPORT_FILEFORMAT_FLAC", "1");
@@ -60,10 +70,7 @@ pub fn build(b: *std.Build) !void {
     translate_c.addIncludePath(raylib.path("src"));
     translate_c.addIncludePath(raygui.path("src"));
     translate_c.addIncludePath(raygui.path("styles/dark"));
-    if (target.result.cpu.arch.isWasm()) if (b.sysroot) |sysroot| {
-        const cache_include = b.pathResolve(&.{ sysroot, "cache", "sysroot", "include" });
-        translate_c.addIncludePath(.{ .cwd_relative = cache_include });
-    };
+    if (emscripten_include) |include| translate_c.addIncludePath(b.graph.cwdRelativePath(include));
 
     const module = translate_c.addModule("raylib");
     module.linkLibrary(libraylib);
@@ -71,4 +78,23 @@ pub fn build(b: *std.Build) !void {
     const check_step = b.step("check", "check build");
     check_step.dependOn(&libraylib.step);
     check_step.dependOn(&translate_c.step);
+}
+
+fn buildWebLibrary(
+    b: *std.Build,
+    raylib: *std.Build.Dependency,
+    target: std.Build.ResolvedTarget,
+    optimize: std.lang.Optimize,
+    emscripten_include: []const u8,
+) *std.Build.Step.Compile {
+    const module = b.createModule(.{ .target = target, .optimize = optimize, .link_libc = true });
+    module.addCMacro("PLATFORM_WEB", "");
+    module.addCMacro("GRAPHICS_API_OPENGL_ES2", "");
+    module.addIncludePath(b.graph.cwdRelativePath(emscripten_include));
+    module.addCSourceFiles(.{
+        .root = raylib.path("src"),
+        .files = &.{ "rcore.c", "rshapes.c", "rtextures.c", "rtext.c", "rmodels.c", "raudio.c" },
+        .flags = &.{"-std=gnu99"},
+    });
+    return b.addLibrary(.{ .name = "raylib", .linkage = .static, .root_module = module });
 }

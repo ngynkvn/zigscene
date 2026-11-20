@@ -6,9 +6,10 @@ const emcc = @import("deps/build/emcc.zig");
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    emcc.hookSysrootIfNeeded(b, target);
+    const emscripten_dir = if (target.result.os.tag == .emscripten) try emcc.sdkDir(b) else null;
+    const emscripten_include = if (emscripten_dir) |dir| b.pathJoin(&.{ dir, "cache", "sysroot", "include" }) else null;
 
-    const lua_lib = lua.build(b, target);
+    const lua_lib = lua.build(b, target, emscripten_include);
     const opts = b.addOptions();
     const tracy_enable = b.option(bool, "tracy_enable", "Enable Tracy integration. Supply path to Tracy source") orelse false;
     const enable_callstack = b.option(
@@ -33,18 +34,18 @@ pub fn build(b: *std.Build) !void {
 
     // Keep the graphics backend optimized while debugging the application's Zig
     // code. Its per-vertex C work otherwise dominates development frame times.
-    const raylib_optimize = b.option(std.builtin.OptimizeMode, "raylib-optimize", "Optimization mode for the graphics backend") orelse
-        (if (optimize == .Debug) .ReleaseSafe else optimize);
+    const raylib_optimize = b.option(std.lang.Optimize, "raylib-optimize", "Optimization mode for the graphics backend") orelse
+        (if (optimize == .debug) .safe else optimize);
     const raylib = b.dependency("raylib", .{
         .target = target,
         .optimize = raylib_optimize,
-        .linux_display_backend = .X11,
+        .@"emscripten-include" = emscripten_include,
     });
 
     const web_step = b.step("web", "Build the web application");
     const web_run_step = b.step("web-run", "Build and run the web application");
-    if (target.result.os.tag == .emscripten) {
-        const run_step = try emcc.runStep(b);
+    if (emscripten_dir) |dir| {
+        const run_step = emcc.runStep(b, dir);
         web_run_step.dependOn(&run_step.step);
 
         const exe_lib = b.addLibrary(.{
@@ -52,14 +53,13 @@ pub fn build(b: *std.Build) !void {
             .use_lld = if (target.result.os.tag == .linux) false else null,
             .root_module = b.createModule(.{ .root_source_file = b.path("src/main.zig"), .target = target, .optimize = optimize }),
         });
-        const cache_include = b.pathResolve(&.{ b.sysroot.?, "cache", "sysroot", "include" });
-        exe_lib.root_module.addIncludePath(.{ .cwd_relative = cache_include });
-        lua.attach(b, exe_lib.root_module, lua_lib);
+        exe_lib.root_module.addIncludePath(b.graph.cwdRelativePath(emscripten_include.?));
+        exe_lib.root_module.addImport("lua-scene", lua_lib.bindings);
         exe_lib.root_module.addOptions("options", opts);
         exe_lib.root_module.addImport("raylib", raylib.module("raylib"));
         exe_lib.root_module.addImport("tracy", tracy_mod);
         exe_lib.root_module.addCSourceFile(.{ .file = b.path("src/audio/picker.c") });
-        const link_step = try emcc.link(b, &[_]*std.Build.Step.Compile{ exe_lib, raylib.artifact("raylib"), lua_lib });
+        const link_step = emcc.link(b, dir, &.{ exe_lib, raylib.artifact("raylib"), lua_lib.artifact });
         web_step.dependOn(&link_step.step);
         run_step.step.dependOn(&link_step.step);
     }
@@ -69,7 +69,7 @@ pub fn build(b: *std.Build) !void {
         .use_lld = if (target.result.os.tag == .linux) false else null,
         .root_module = b.createModule(.{ .root_source_file = b.path(if (b.option(bool, "scene-bench", "Measure built-in scene frame times") orelse false) "src/scene_bench.zig" else if (b.option(bool, "ui-smoke", "Render editor screenshots for local visual QA") orelse false) "src/ui_smoke.zig" else if (b.option(bool, "pet-smoke", "Check desktop pet control transitions") orelse false) "src/pet_smoke.zig" else "src/main.zig"), .target = target, .optimize = optimize }),
     });
-    lua.attach(b, exe.root_module, lua_lib);
+    exe.root_module.addImport("lua-scene", lua_lib.bindings);
     exe.root_module.addOptions("options", opts);
 
     b.installArtifact(exe);
@@ -78,9 +78,7 @@ pub fn build(b: *std.Build) !void {
     if (target.result.os.tag != .emscripten) addCapture(b, exe.root_module, raylib);
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
-    if (b.args) |args| {
-        run_cmd.addArgs(args);
-    }
+    run_cmd.addPassthruArgs();
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
 
@@ -88,7 +86,7 @@ pub fn build(b: *std.Build) !void {
         .use_lld = if (target.result.os.tag == .linux) false else null,
         .root_module = b.createModule(.{ .root_source_file = b.path("src/main.zig"), .target = target, .optimize = optimize }),
     });
-    lua.attach(b, exe_unit_tests.root_module, lua_lib);
+    exe_unit_tests.root_module.addImport("lua-scene", lua_lib.bindings);
     exe_unit_tests.root_module.addImport("raylib", raylib.module("raylib"));
     exe_unit_tests.root_module.addImport("tracy", tracy_mod);
     exe_unit_tests.root_module.addOptions("options", opts);
@@ -127,7 +125,7 @@ fn addReleaseStep(b: *std.Build, opts: *std.Build.Step.Options) !void {
     const release_step = b.step("release-build", "Create set of releases for distribution");
     for (release_targets) |t| {
         const target = b.resolveTargetQuery(t);
-        const optimize = .ReleaseSafe;
+        const optimize: std.lang.Optimize = .safe;
         const tracy = b.dependency("tracy", .{
             .target = target,
             .optimize = optimize,
@@ -143,7 +141,7 @@ fn addReleaseStep(b: *std.Build, opts: *std.Build.Step.Options) !void {
             .use_lld = if (target.result.os.tag == .linux) false else null,
             .root_module = b.createModule(.{ .root_source_file = b.path("src/main.zig"), .target = target, .optimize = optimize }),
         });
-        lua.attach(b, release_exe.root_module, lua.build(b, target));
+        release_exe.root_module.addImport("lua-scene", lua.build(b, target, null).bindings);
         release_exe.root_module.addOptions("options", opts);
         release_exe.root_module.addImport("raylib", raylib.module("raylib"));
         release_exe.root_module.addImport("tracy", tracy_mod);
@@ -153,12 +151,11 @@ fn addReleaseStep(b: *std.Build, opts: *std.Build.Step.Options) !void {
 }
 
 fn addCapture(b: *std.Build, module: *std.Build.Module, raylib: *std.Build.Dependency) void {
-    const source = raylib.builder.dependency("raylib", .{});
-    module.addIncludePath(source.path("src/external"));
+    module.addIncludePath(raylib.namedLazyPath("miniaudio-include"));
     module.addCSourceFile(.{ .file = b.path("src/audio/capture.c") });
     module.addCSourceFile(.{ .file = b.path("src/audio/refill_worker.c") });
     module.addCSourceFile(.{ .file = b.path("src/audio/preview_decoder.c") });
-    const dialogs = b.addLibrary(.{ .name = "audio-dialogs", .root_module = b.createModule(.{ .target = module.resolved_target.?, .optimize = .ReleaseSafe, .link_libc = true }) });
+    const dialogs = b.addLibrary(.{ .name = "audio-dialogs", .root_module = b.createModule(.{ .target = module.resolved_target.?, .optimize = .safe, .link_libc = true }) });
     dialogs.root_module.addCSourceFile(.{ .file = b.path("deps/tinyfiledialogs/tinyfiledialogs.c"), .flags = &.{"-Wno-deprecated-declarations"} });
     module.linkLibrary(dialogs);
     if (module.resolved_target.?.result.os.tag == .windows) {

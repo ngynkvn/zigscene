@@ -75,10 +75,10 @@ pub fn onTabChange(next: Tab) void {
     StudioPanel.text_editing = false;
     active_slider = null;
     resize_mode = .none;
-    saved_scroll[@intCast(@intFromEnum(active_tab))] = scroll;
+    saved_scroll[@intCast(@backingInt(active_tab))] = scroll;
     active_tab = next;
     if (next != .none) previous_tab = next;
-    scroll = saved_scroll[@intCast(@intFromEnum(next))];
+    scroll = saved_scroll[@intCast(@backingInt(next))];
 }
 
 pub fn editingValue() bool {
@@ -406,13 +406,13 @@ fn drawStatusBar(audio: *AudioSession, script: *ScriptScene) void {
     var shown: usize = 0;
     inline for (SceneItems) |item| shown += @intFromBool(item[2].*);
     const segments = [_][:0]const u8{
-        std.fmt.bufPrintZ(&buffers[0], "UI {d:.0}%", .{ui.scale_factor * 100}) catch "",
+        std.mem.printSentinel(&buffers[0], "UI {d:.0}%", .{ui.scale_factor * 100}, 0) catch "",
         if (!script.usesBuiltin())
-            std.fmt.bufPrintZ(&buffers[1], "Lua  \u{b7}  {s}", .{script.name()}) catch ""
+            std.mem.printSentinel(&buffers[1], "Lua  \u{b7}  {s}", .{script.name()}, 0) catch ""
         else if (script.runtime != null)
-            std.fmt.bufPrintZ(&buffers[1], "Lua overlay  \u{b7}  {d} of {d} layers", .{ shown, SceneItems.len }) catch ""
+            std.mem.printSentinel(&buffers[1], "Lua overlay  \u{b7}  {d} of {d} layers", .{ shown, SceneItems.len }, 0) catch ""
         else
-            std.fmt.bufPrintZ(&buffers[1], "{d} of {d} layers visible", .{ shown, SceneItems.len }) catch "",
+            std.mem.printSentinel(&buffers[1], "{d} of {d} layers visible", .{ shown, SceneItems.len }, 0) catch "",
     };
     for (segments) |segment| {
         const w = ui.textWidth(segment, 12);
@@ -509,7 +509,7 @@ fn drawSettings(view: rl.Rectangle) void {
         const x = view.x + @as(f32, @floatFromInt(index % 3)) * (view.width + 6) / 3;
         const y = top + 38 + @as(f32, @floatFromInt(index / 3)) * 36;
         var buffer: [16]u8 = undefined;
-        const label = if (fps == 0) "Unlimited" else std.fmt.bufPrintZ(&buffer, "{d:.0} FPS", .{fps}) catch unreachable;
+        const label = if (fps == 0) "Unlimited" else std.mem.printSentinel(&buffer, "{d:.0} FPS", .{fps}, 0) catch unreachable;
         if (ui.button(ui.rect(x, y, (view.width - 12) / 3, 30), label, config.Window.fps_limit == fps, y >= view.y and y + 30 <= view.y + view.height)) {
             config.Window.fps_limit = fps;
             editing = null;
@@ -520,7 +520,7 @@ fn drawSettings(view: rl.Rectangle) void {
         const x = view.x + @as(f32, @floatFromInt(index)) * (view.width + 6) / 4;
         const y = top + 150;
         var buffer: [16]u8 = undefined;
-        const label = std.fmt.bufPrintZ(&buffer, "{d:.0}%", .{percent}) catch unreachable;
+        const label = std.mem.printSentinel(&buffer, "{d:.0}%", .{percent}, 0) catch unreachable;
         if (ui.button(ui.rect(x, y, (view.width - 18) / 4, 30), label, config.Interface.scale_percent == percent, y >= view.y and y + 30 <= view.y + view.height)) {
             config.Interface.scale_percent = percent;
             editing = null;
@@ -597,7 +597,7 @@ fn drawScalars(comptime groups: anytype, view: rl.Rectangle, offset: f32) void {
         y += geometry.group_height;
         inline for (group[1]) |scalar| {
             var label_buffer: [64]u8 = undefined;
-            const label = std.fmt.bufPrintZ(&label_buffer, "{s}", .{scalar[0]}) catch unreachable;
+            const label = std.mem.printSentinel(&label_buffer, "{s}", .{scalar[0]}, 0) catch unreachable;
             editorField(id, label, scalar[1], .{ scalar[2][0], scalar[2][1] }, view, y, false);
             y += geometry.row_height;
             id += 1;
@@ -630,9 +630,9 @@ fn editorField(id: usize, label: [:0]const u8, value: *f32, range: [2]f32, view:
     } else {
         var buf: [32]u8 = undefined;
         const number = if (locked) "Lua" else if (range[1] <= 2)
-            std.fmt.bufPrintZ(&buf, "{d:.3}", .{value.*}) catch unreachable
+            std.mem.printSentinel(&buf, "{d:.3}", .{value.*}, 0) catch unreachable
         else
-            std.fmt.bufPrintZ(&buf, "{d:.1}", .{value.*}) catch unreachable;
+            std.mem.printSentinel(&buf, "{d:.1}", .{value.*}, 0) catch unreachable;
         const over_box = row_enabled and ui.hovered(box);
         ui.framed(box, 3, ui.field, if (over_box) ui.muted else ui.divider);
         ui.label(number, box.x + box.width - 8 - ui.textWidth(number, 12), box.y + 6, 12, if (locked) ui.faint else ui.text);
@@ -641,14 +641,14 @@ fn editorField(id: usize, label: [:0]const u8, value: *f32, range: [2]f32, view:
             if (rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT)) {
                 editing = id;
                 @memset(&editing_buffer, 0);
-                _ = std.fmt.bufPrintZ(&editing_buffer, "{d:.3}", .{value.*}) catch unreachable;
+                _ = std.mem.printSentinel(&editing_buffer, "{d:.3}", .{value.*}, 0) catch unreachable;
             }
         }
     }
     if (focused and !was_editing and editing == null and rl.IsKeyPressed(rl.KEY_ENTER)) {
         editing = id;
         @memset(&editing_buffer, 0);
-        _ = std.fmt.bufPrintZ(&editing_buffer, "{d:.3}", .{value.*}) catch unreachable;
+        _ = std.mem.printSentinel(&editing_buffer, "{d:.3}", .{value.*}, 0) catch unreachable;
     }
     // The reset icon appears only once a value differs from its default.
     const reset = ui.rect(view.x + view.width - 28, y, 24, 24);
@@ -813,7 +813,7 @@ fn playButton(audio: *AudioSession, bounds: rl.Rectangle, file: bool) void {
 /// Speaker icon, slider and level; returns the left edge it used.
 fn drawVolume(right: f32, y: f32, slider_width: f32, enabled: bool) f32 {
     var volume_buffer: [16]u8 = undefined;
-    const volume = std.fmt.bufPrintZ(&volume_buffer, "{d}%", .{@as(u32, @intFromFloat(config.Audio.volume * 100))}) catch unreachable;
+    const volume = std.mem.printSentinel(&volume_buffer, "{d}%", .{@as(u32, @intFromFloat(config.Audio.volume * 100))}, 0) catch unreachable;
     const level_x = right - 34;
     ui.label(volume, level_x, y + 7, 12, ui.secondary);
     const track = ui.rect(level_x - 12 - slider_width, y + 5, slider_width, 18);
@@ -824,7 +824,7 @@ fn drawVolume(right: f32, y: f32, slider_width: f32, enabled: bool) f32 {
 
 fn formatTime(buffer: []u8, seconds: f32) [:0]const u8 {
     const whole: u32 = @intFromFloat(@max(0, seconds));
-    return std.fmt.bufPrintZ(buffer, "{d}:{d:0>2}", .{ whole / 60, whole % 60 }) catch unreachable;
+    return std.mem.printSentinel(buffer, "{d}:{d:0>2}", .{ whole / 60, whole % 60 }, 0) catch unreachable;
 }
 
 fn drawPlayer(audio: *AudioSession) void {
@@ -872,7 +872,7 @@ fn drawPlayer(audio: *AudioSession) void {
         ui.tooltip(ui.rect(title_x, row, title_w, 32), notice);
     } else {
         var name_buffer: [512]u8 = undefined;
-        const title: [:0]const u8 = if (live) "Live input" else if (file) (std.fmt.bufPrintZ(&name_buffer, "{s}", .{audio.filename()}) catch "Audio file") else "No audio loaded";
+        const title: [:0]const u8 = if (live) "Live input" else if (file) (std.mem.printSentinel(&name_buffer, "{s}", .{audio.filename()}, 0) catch "Audio file") else "No audio loaded";
         const status: [:0]const u8 = if (live) (if (audio.captureMode() == .system) "System audio" else "Input device") else if (!file) "Open a file or capture live audio" else if (audio.seeking) "Seeking" else if (audio.isFilePlaying()) "Playing" else "Paused";
         ui.label(ui.fitted(title, 14, title_w, &buffer), title_x, row + 1, 14, ui.text);
         ui.label(status, title_x, row + 20, 11, if (live) ui.accent else ui.muted);
@@ -954,7 +954,7 @@ fn drawWaveformScrubber(audio: *AudioSession, bounds: rl.Rectangle, timer: bool)
         var elapsed_buffer: [24]u8 = undefined;
         var total_buffer: [24]u8 = undefined;
         var timer_buffer: [48]u8 = undefined;
-        const value = std.fmt.bufPrintZ(&timer_buffer, "{s} / {s}", .{ formatTime(&elapsed_buffer, audio.timePlayed()), formatTime(&total_buffer, duration) }) catch unreachable;
+        const value = std.mem.printSentinel(&timer_buffer, "{s} / {s}", .{ formatTime(&elapsed_buffer, audio.timePlayed()), formatTime(&total_buffer, duration) }, 0) catch unreachable;
         const timer_width = ui.textWidth(value, 12) + 16;
         const timer_bounds = ui.rect(bounds.x + bounds.width - timer_width - 3, bounds.y + 3, timer_width, bounds.height - 6);
         ui.framed(timer_bounds, 3, ui.well, ui.divider);
@@ -963,7 +963,7 @@ fn drawWaveformScrubber(audio: *AudioSession, bounds: rl.Rectangle, timer: bool)
     if (hovering) {
         var preview_buffer: [48]u8 = undefined;
         var time_buffer: [24]u8 = undefined;
-        const preview = std.fmt.bufPrintZ(&preview_buffer, "Seek to {s}", .{formatTime(&time_buffer, duration * std.math.clamp((mouse.x - bounds.x) / bounds.width, 0, 1))}) catch unreachable;
+        const preview = std.mem.printSentinel(&preview_buffer, "Seek to {s}", .{formatTime(&time_buffer, duration * std.math.clamp((mouse.x - bounds.x) / bounds.width, 0, 1))}, 0) catch unreachable;
         const preview_width = ui.textWidth(preview, 12) + 20;
         const preview_x = std.math.clamp(mouse.x - preview_width / 2, bounds.x, bounds.x + bounds.width - preview_width);
         rl.DrawLineEx(.{ .x = mouse.x, .y = bounds.y }, .{ .x = mouse.x, .y = bounds.y + bounds.height }, 1, ui.accent);

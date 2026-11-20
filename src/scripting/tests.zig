@@ -215,7 +215,7 @@ test "all bundled scenes run with realistic audio frames" {
     context.spectrum_count = spectrum.len;
     context.playing = 1;
     for (Scene.examples, 0..) |_, i| {
-        scene.loadExample(@enumFromInt(i));
+        scene.loadExample(@fromBackingInt(@intCast(i)));
         for (0..60) |step| {
             context.time = @as(f32, @floatFromInt(step)) * context.dt;
             context.rms = 0.02 + 0.2 * @abs(@sin(context.time * 6));
@@ -242,7 +242,7 @@ test "bundled scenes respond to quiet audio and beats then settle when paused" {
     var scene: Scene = .{};
     defer scene.deinit();
     for (Scene.examples, 0..) |_, i| {
-        const example: Scene.Example = @enumFromInt(i);
+        const example: Scene.Example = @fromBackingInt(@intCast(i));
         scene.loadExample(example);
         var context = frame;
         scene.update(context);
@@ -318,7 +318,7 @@ test "bundled scene envelopes are consistent across frame rates and bounded at m
     defer scene.deinit();
     const spectrum: [512]f32 = @splat(10);
     for (Scene.examples, 0..) |_, i| {
-        const example: Scene.Example = @enumFromInt(i);
+        const example: Scene.Example = @fromBackingInt(@intCast(i));
         var reference: f32 = 0;
         for ([_]usize{ 30, 60, 144 }, 0..) |fps, run| {
             scene.loadExample(example);

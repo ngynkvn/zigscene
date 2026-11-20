@@ -74,7 +74,7 @@ pub var waveform: WaveformPreview = .{};
 
 pub fn loadFile(path: []const u8) bool {
     // Validate first: a bad drop must not destroy the active stream or preview.
-    const path_z = allocator.dupeZ(u8, path) catch return false;
+    const path_z = allocator.dupeSentinel(u8, path, 0) catch return false;
     defer allocator.free(path_z);
     const candidate = rl.LoadMusicStream(path_z.ptr);
     if (!rl.IsMusicValid(candidate)) return false;
@@ -201,7 +201,7 @@ fn startPreview(path: [:0]const u8) void {
 fn spawnPreview(path: [:0]const u8, build: *const fn ([*:0]const u8, *WaveformPreview, ?*const Cancellation) void) bool {
     abandonPreview();
     const request: PreviewRequest = .{
-        .path = allocator.dupeZ(u8, path) catch return false,
+        .path = allocator.dupeSentinel(u8, path, 0) catch return false,
         .build = build,
     };
     if (preview_job != null) {

@@ -18,13 +18,14 @@ const output_file = "index.html";
 // TODO: Add a parameter that allows a custom output directory.
 pub fn link(
     b: *std.Build,
+    sdk_dir: []const u8,
     itemsToLink: []const *std.Build.Step.Compile,
-) !*std.Build.Step.Run {
+) *std.Build.Step.Run {
     const emccExe = switch (builtin.os.tag) {
         .windows => "emcc.bat",
         else => "emcc",
     };
-    const emcc_path = b.pathJoin(&.{ b.sysroot.?, emccExe });
+    const emcc_path = b.pathJoin(&.{ sdk_dir, emccExe });
 
     // Create the output directory because emcc can't do it.
     const mkdir_command = b.addSystemCommand(&[_][]const u8{ "mkdir", "-p", output_dir });
@@ -52,25 +53,22 @@ pub fn link(
     return emcc_command;
 }
 
-pub fn runStep(b: *std.Build) !*std.Build.Step.Run {
+pub fn runStep(b: *std.Build, sdk_dir: []const u8) *std.Build.Step.Run {
     // If compiling on windows , use emrun.bat.
     const emrunExe = switch (builtin.os.tag) {
         .windows => "emrun.bat",
         else => "emrun",
     };
-    const emrun_path = b.pathJoin(&.{ b.sysroot.?, emrunExe });
+    const emrun_path = b.pathJoin(&.{ sdk_dir, emrunExe });
     const run_cmd = b.addSystemCommand(&[_][]const u8{ emrun_path, output_dir ++ output_file });
     return run_cmd;
 }
 
-pub fn hookSysrootIfNeeded(b: *std.Build, target: std.Build.ResolvedTarget) void {
-    if (target.result.os.tag != .emscripten) return;
-
-    b.sysroot = b.sysroot orelse r: {
-        if (b.graph.environ_map.get("EMSDK")) |p| {
-            const path = b.pathJoin(&.{ p, "/upstream/emscripten" });
-            break :r path;
-        }
-        @panic("Pass '--sysroot \"$EMSDK/upstream/emscripten\"' or set $EMSDK");
-    };
+pub fn sdkDir(b: *std.Build) ![]const u8 {
+    if (b.option([]const u8, "emscripten-dir", "Path to the Emscripten installation containing emcc")) |dir| {
+        return b.pathResolve(&.{dir});
+    }
+    if (b.graph.environ_map.get("EMSDK")) |dir| return b.pathJoin(&.{ dir, "upstream", "emscripten" });
+    std.log.err("Set EMSDK or pass -Demscripten-dir with the path to emcc's directory", .{});
+    return error.MissingEmscriptenSdk;
 }

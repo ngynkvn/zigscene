@@ -47,15 +47,16 @@ pub fn draw(scene: *Scene, view: rl.Rectangle, scroll: f32, slider: anytype) voi
     ui.label(if (scene.runtime == null) "Lua scenes" else if (scene.usesBuiltin()) "Lua overlay" else "Lua custom scene", view.x + 4, y + 21, 11, ui.accent);
     var caption_buffer: [256]u8 = undefined;
     const caption = if (scene.path().len > 0)
-        std.fmt.bufPrintZ(&caption_buffer, "File: {s}", .{std.fs.path.basename(scene.path())}) catch "External Lua file"
+        std.mem.printSentinel(&caption_buffer, "File: {s}", .{std.fs.path.basename(scene.path())}, 0) catch "External Lua file"
     else
         "Drop a .lua file here, or try an example.";
     ui.label(caption, view.x + 4, y + 39, 12, ui.muted);
     y += 58;
     const third = (view.width - 12) / 3;
     inline for (Scene.examples, 0..) |entry, i| {
-        if (button(view, view.x + @as(f32, @floatFromInt(i)) * (third + 6), y, third, entry.label, scene.example == @as(Scene.Example, @enumFromInt(i)), true)) {
-            scene.loadExample(@enumFromInt(i));
+        const example: Scene.Example = @fromBackingInt(@intCast(i));
+        if (button(view, view.x + @as(f32, @floatFromInt(i)) * (third + 6), y, third, entry.label, scene.example == example, true)) {
+            scene.loadExample(example);
             return; // A new parameter list is drawn on the next frame.
         }
     }
@@ -83,7 +84,7 @@ pub fn draw(scene: *Scene, view: rl.Rectangle, scroll: f32, slider: anytype) voi
     for (scene.params(), 0..) |*param, i| {
         ui.label(std.mem.span(@as([*:0]const u8, @ptrCast(&param.label))), view.x + 8, y + 5, 13, ui.secondary);
         var number: [32]u8 = undefined;
-        const value = std.fmt.bufPrintZ(&number, "{d:.2}", .{param.value}) catch "?";
+        const value = std.mem.printSentinel(&number, "{d:.2}", .{param.value}, 0) catch "?";
         ui.label(value, view.x + view.width - 8 - ui.textWidth(value, 12), y + 6, 12, ui.text);
         _ = slider(4000 + i, ui.rect(view.x + 8, y + geometry.slider_top, view.width - 16, geometry.slider_height), &param.value, param.min, param.max, y >= view.y and y + geometry.slider_top + geometry.slider_height <= view.y + view.height, false);
         if (y >= view.y and y + geometry.row_height <= view.y + view.height and ui.hovered(ui.rect(view.x, y, view.width, geometry.row_height)) and rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_RIGHT)) param.value = param.default_value;

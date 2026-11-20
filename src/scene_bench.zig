@@ -38,7 +38,7 @@ pub fn main() !void {
                 if (frame < 90) continue;
                 const t = debug.latest;
                 frames[frame - 90] = (t.audio + t.scene + t.ui + t.present) * 1000;
-                inline for (std.meta.fields(debug.Timings)) |field| @field(total, field.name) += @field(t, field.name) * 1000 / frames.len;
+                inline for (@typeInfo(debug.Timings).@"struct".field_names) |name| @field(total, name) += @field(t, name) * 1000 / frames.len;
             }
             std.mem.sort(f64, &frames, {}, std.sort.asc(f64));
             std.debug.print("tab={s} batch={s} mean={d:.2}ms p95={d:.2}ms p99={d:.2}ms update={d:.2} scene={d:.2} ui={d:.2} present={d:.2}\n", .{

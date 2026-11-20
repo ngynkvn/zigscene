@@ -19,7 +19,7 @@ fn hsv(look: *Presets.Preset, comptime prefix: []const u8, h: f64, s: f64, v: f6
 
 pub fn preset(kind: Kind) Presets.Preset {
     var result: Presets.Preset = .{ .values = State.defaults };
-    const name = names[@intFromEnum(kind)];
+    const name = names[@backingInt(kind)];
     @memcpy(result.name_buffer[0..name.len], name);
     for ([_][]const u8{ "scene.wave_lines", "scene.wave_bars", "scene.spectrum", "scene.bubble", "scene.halo" }) |key| set(&result, key, 0);
     set(&result, "shader.chroma_factor", 0);

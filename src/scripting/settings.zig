@@ -1,9 +1,7 @@
 //! Stable Lua names for host settings. All writes are validated in the C bridge.
 const std = @import("std");
 const Config = @import("../core/config.zig");
-pub const c = @cImport({
-    @cInclude("lua_scene.h");
-});
+pub const c = @import("lua-scene");
 pub const Target = union(enum) { scalar: *f32, boolean: *bool };
 pub const Setting = struct {
     name: [:0]const u8,

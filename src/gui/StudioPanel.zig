@@ -142,7 +142,7 @@ pub fn drawPresets(scene: *Scene, view: rl.Rectangle, scroll: f32) void {
             var unique = false;
             for (1..100) |i| {
                 var buffer: [64]u8 = @splat(0);
-                const label = std.fmt.bufPrintZ(&buffer, "{s:.40} copy {d}", .{ item.name(), i }) catch unreachable;
+                const label = std.mem.printSentinel(&buffer, "{s:.40} copy {d}", .{ item.name(), i }, 0) catch unreachable;
                 var exists = false;
                 for (Presets.store.items[0..Presets.store.len]) |*other| if (std.mem.eql(u8, other.name(), label)) {
                     exists = true;
@@ -305,24 +305,24 @@ fn category(entry: settings.Setting) usize {
 fn friendly(entry: settings.Setting, buffer: *[96]u8) [:0]const u8 {
     const groups = .{ &V.WaveFormLine.Scalars, &V.WaveFormBar.Scalars, &V.Bubble.Scalars, &V.Halo.Scalars, &V.Spectrum.Scalars, &config.Motion.Scalars, &config.Audio.Scalars };
     inline for (groups) |group| for (group) |scalar| if (entry.target == .scalar and entry.target.scalar == scalar[1]) {
-        return std.fmt.bufPrintZ(buffer, "{s}", .{scalar[0]}) catch unreachable;
+        return std.mem.printSentinel(buffer, "{s}", .{scalar[0]}, 0) catch unreachable;
     };
     for (colors) |entry_color| {
         for ([_]*f32{ entry_color.h, entry_color.s, entry_color.v }, [_][]const u8{ "hue", "saturation", "brightness" }) |pointer, suffix| {
             if (entry.target == .scalar and entry.target.scalar == pointer) {
                 const name = if (std.mem.indexOf(u8, entry_color.name, " / ")) |split| entry_color.name[split + 3 ..] else entry_color.name;
-                return std.fmt.bufPrintZ(buffer, "{s} {s}", .{ name, suffix }) catch unreachable;
+                return std.mem.printSentinel(buffer, "{s} {s}", .{ name, suffix }, 0) catch unreachable;
             }
         }
     }
-    return std.fmt.bufPrintZ(buffer, "{s}", .{entry.name}) catch unreachable;
+    return std.mem.printSentinel(buffer, "{s}", .{entry.name}, 0) catch unreachable;
 }
 fn matches(entry: settings.Setting, group: usize) bool {
     if (entry.target != .scalar or !entry.visual() or category(entry) != group) return false;
     if (group != 2 and !std.mem.startsWith(u8, entry.name, layers[selected_layer].prefix)) return false;
     var buffer: [96]u8 = undefined;
     const query = std.mem.sliceTo(&search, 0);
-    return query.len == 0 or std.ascii.indexOfIgnoreCase(entry.name, query) != null or std.ascii.indexOfIgnoreCase(friendly(entry, &buffer), query) != null;
+    return query.len == 0 or std.ascii.findIgnoreCase(entry.name, query) != null or std.ascii.findIgnoreCase(friendly(entry, &buffer), query) != null;
 }
 pub fn inspectorHeight() f32 {
     var height: f32 = 112 + (if (choosing_layer) @as(f32, 160) else 0);

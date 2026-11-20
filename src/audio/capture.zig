@@ -27,19 +27,19 @@ pub const Devices = struct {
 pub fn enumerate(kind: Mode) Devices {
     var result: Devices = .{};
     if (builtin.os.tag != .emscripten) {
-        result.count = c.zigscene_capture_list(@intFromEnum(kind), @ptrCast(&result.names), result.names.len, result.names[0].len);
+        result.count = c.zigscene_capture_list(@backingInt(kind), @ptrCast(&result.names), result.names.len, result.names[0].len);
     }
     return result;
 }
 
 pub fn selectDevice(kind: Mode, index: i32) bool {
     if (builtin.os.tag == .emscripten) return false;
-    return c.zigscene_capture_select(@intFromEnum(kind), index) != 0;
+    return c.zigscene_capture_select(@backingInt(kind), index) != 0;
 }
 
 pub fn selectedIndex(kind: Mode) i32 {
     if (builtin.os.tag == .emscripten) return -1;
-    return c.zigscene_capture_selected_index(@intFromEnum(kind));
+    return c.zigscene_capture_selected_index(@backingInt(kind));
 }
 
 pub fn startSelected(kind: Mode) !void {
@@ -56,7 +56,7 @@ fn onFrames(samples: [*]const f32, count: c_uint) callconv(.c) void {
 pub fn start(new_mode: Mode, device_index: i32) !void {
     if (builtin.os.tag == .emscripten) return error.CaptureUnsupported;
     if (active) stop();
-    const result = c.zigscene_capture_start(@intFromEnum(new_mode), device_index, AudioConfig.channels, AudioConfig.sample_rate, onFrames);
+    const result = c.zigscene_capture_start(@backingInt(new_mode), device_index, AudioConfig.channels, AudioConfig.sample_rate, onFrames);
     if (result != 0) {
         std.debug.print("Audio capture failed (miniaudio error {d}). Choose a device in Audio devices or use --list-audio-devices.\n", .{result});
         return error.CaptureFailed;

@@ -26,14 +26,14 @@ var elapsed: f64 = 0;
 /// Seconds measured on the CPU; presentation includes the frame-limit wait.
 pub fn record(timings: Timings) void {
     latest = timings;
-    inline for (std.meta.fields(Timings)) |field| {
-        @field(accumulated, field.name) += @field(timings, field.name);
+    inline for (@typeInfo(Timings).@"struct".field_names) |name| {
+        @field(accumulated, name) += @field(timings, name);
     }
     frame_count += 1;
     elapsed += timings.audio + timings.scene + timings.ui + timings.present;
     if (elapsed >= 0.25) {
-        inline for (std.meta.fields(Timings)) |field| {
-            @field(displayed, field.name) = @field(accumulated, field.name) * 1000 / @as(f64, @floatFromInt(frame_count));
+        inline for (@typeInfo(Timings).@"struct".field_names) |name| {
+            @field(displayed, name) = @field(accumulated, name) * 1000 / @as(f64, @floatFromInt(frame_count));
         }
         accumulated = .{};
         frame_count = 0;
@@ -63,7 +63,7 @@ pub fn render() void {
     const badge = badgeBounds();
     ui.card(badge);
     var counter_buffer: [64]u8 = undefined;
-    const counter = std.fmt.bufPrintZ(&counter_buffer, "{d} FPS   {d:.1} ms   / D", .{ rl.GetFPS(), rl.GetFrameTime() * 1000 }) catch return;
+    const counter = std.mem.printSentinel(&counter_buffer, "{d} FPS   {d:.1} ms   / D", .{ rl.GetFPS(), rl.GetFrameTime() * 1000 }, 0) catch return;
     if (ui.button(badge, counter, visible, true)) visible = !visible;
     if (!visible) return;
     const panel = panelBounds();
@@ -84,6 +84,6 @@ pub fn render() void {
 
 fn drawLine(panel: rl.Rectangle, y: f32, comptime format: []const u8, args: anytype) void {
     var buffer: [128]u8 = undefined;
-    const line = std.fmt.bufPrintZ(&buffer, format, args) catch return;
+    const line = std.mem.printSentinel(&buffer, format, args, 0) catch return;
     ui.label(line, panel.x + 12, panel.y + y, 12, ui.text);
 }

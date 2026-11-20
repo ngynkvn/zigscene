@@ -113,7 +113,7 @@ pub fn main() !void {
             gui.onTabChange(tab);
             for (0..4) |_| app.frame();
             var path: [256]u8 = undefined;
-            const filename = try std.fmt.bufPrintZ(&path, ".tmp/ui-review/{s}-{d}-{d}.png", .{ @tagName(tab), size[0], size[2] });
+            const filename = try std.mem.printSentinel(&path, ".tmp/ui-review/{s}-{d}-{d}.png", .{ @tagName(tab), size[0], size[2] }, 0);
             try screenshot(filename.ptr);
         }
         inline for (.{ Looks.Kind.pulse, Looks.Kind.sculpture }) |kind| {
@@ -121,14 +121,14 @@ pub fn main() !void {
             gui.onTabChange(.presets);
             for (0..8) |_| app.frame();
             var path: [256]u8 = undefined;
-            const filename = try std.fmt.bufPrintZ(&path, ".tmp/ui-review/{s}-{d}-{d}.png", .{ @tagName(kind), size[0], size[2] });
+            const filename = try std.mem.printSentinel(&path, ".tmp/ui-review/{s}-{d}-{d}.png", .{ @tagName(kind), size[0], size[2] }, 0);
             try screenshot(filename.ptr);
         }
         app.script.loadExample(.sculpture);
         gui.onTabChange(.scene);
         for (0..8) |_| app.frame();
         var path: [256]u8 = undefined;
-        const filename = try std.fmt.bufPrintZ(&path, ".tmp/ui-review/lua-{d}-{d}.png", .{ size[0], size[2] });
+        const filename = try std.mem.printSentinel(&path, ".tmp/ui-review/lua-{d}-{d}.png", .{ size[0], size[2] }, 0);
         try screenshot(filename.ptr);
         try Looks.preset(.calm).apply(&app.script);
     }

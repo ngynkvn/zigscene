@@ -114,7 +114,7 @@ pub fn loadExample(self: *Scene, example: Example) void {
     self.path_buffer[0] = 0;
     self.last_hash = null;
     self.example = example;
-    const entry = examples[@intFromEnum(example)];
+    const entry = examples[@backingInt(example)];
     _ = self.loadSource(entry.source, entry.label, false);
 }
 pub fn loadFile(self: *Scene, filename: []const u8) void {
@@ -170,7 +170,7 @@ fn readFile(self: *Scene, force: bool, preserve_params: bool) void {
 }
 pub fn reload(self: *Scene) void {
     if (self.path().len != 0) self.readFile(true, true) else if (self.example) |example| {
-        const entry = examples[@intFromEnum(example)];
+        const entry = examples[@backingInt(example)];
         _ = self.loadSource(entry.source, entry.label, true);
     }
 }
