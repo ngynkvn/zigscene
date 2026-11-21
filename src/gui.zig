@@ -66,7 +66,7 @@ pub fn resetWorkspace() void {
     scroll = 0;
     saved_scroll = @splat(0);
     scene_revision = null;
-    @import("graphics/Highlight.zig").solo = null;
+    Element.solo = null;
     StudioPanel.resetWorkspace();
 }
 
@@ -127,7 +127,7 @@ pub fn pointerOverUi() bool {
 
 pub fn prepareScene(script: *ScriptScene) void {
     if (scene_revision != script.revision) {
-        @import("graphics/Highlight.zig").solo = null;
+        Element.solo = null;
         scene_revision = script.revision;
     }
     scene_prefix = ScriptPanel.height(script, viewport().width);
@@ -257,7 +257,7 @@ fn contentHeight(tab: Tab) f32 {
         .color => StudioPanel.colorHeight(),
         .presets => StudioPanel.presetsHeight(),
         .inspector => StudioPanel.inspectorHeight(),
-        .scene => scene_prefix + geometry.scene_actions_height + SceneItems.len * geometry.scene_row_height,
+        .scene => scene_prefix + geometry.scene_actions_height + @as(f32, @floatFromInt(Element.all.len)) * geometry.scene_row_height,
         .audio => audio_content_height,
         .none => 0,
     };
@@ -283,8 +283,8 @@ fn elementAt(tab: Tab, view: rl.Rectangle, offset: f32, mouse: rl.Vector2, dragg
             if (!rl.CheckCollisionPointRec(mouse, view)) break :blk null;
             if (dragging != null) break :blk null;
             var y = view.y - offset + scene_prefix + geometry.scene_actions_height;
-            inline for (SceneItems) |item| {
-                if (rl.CheckCollisionPointRec(mouse, ui.rect(view.x, y, view.width, geometry.scene_card_height))) break :blk item[3];
+            for (Element.all) |layer| {
+                if (rl.CheckCollisionPointRec(mouse, ui.rect(view.x, y, view.width, geometry.scene_card_height))) break :blk layer;
                 y += geometry.scene_row_height;
             }
             break :blk null;
@@ -409,15 +409,15 @@ fn drawStatusBar(audio: *AudioSession, script: *ScriptScene) void {
     }
     var buffers: [2][128]u8 = undefined;
     var shown: usize = 0;
-    inline for (SceneItems) |item| shown += @intFromBool(item[2].*);
+    for (Element.all) |layer| shown += @intFromBool(layer.enabled().*);
     const segments = [_][:0]const u8{
         std.mem.printSentinel(&buffers[0], "UI {d:.0}%", .{ui.scale_factor * 100}, 0) catch "",
         if (!script.usesBuiltin())
             std.mem.printSentinel(&buffers[1], "Lua  \u{b7}  {s}", .{script.name()}, 0) catch ""
         else if (script.runtime != null)
-            std.mem.printSentinel(&buffers[1], "Lua overlay  \u{b7}  {d} of {d} layers", .{ shown, SceneItems.len }, 0) catch ""
+            std.mem.printSentinel(&buffers[1], "Lua overlay  \u{b7}  {d} of {d} layers", .{ shown, Element.all.len }, 0) catch ""
         else
-            std.mem.printSentinel(&buffers[1], "{d} of {d} layers visible", .{ shown, SceneItems.len }, 0) catch "",
+            std.mem.printSentinel(&buffers[1], "{d} of {d} layers visible", .{ shown, Element.all.len }, 0) catch "",
     };
     for (segments) |segment| {
         const w = ui.textWidth(segment, 12);
@@ -716,15 +716,6 @@ fn slider(id: usize, bounds: rl.Rectangle, value: *f32, min: f32, max: f32, enab
     return dragging;
 }
 
-const SceneItems = .{
-    .{ "Waveform lines", "The outline of your audio", &config.Scene.wave_lines, Element.wave_lines },
-    .{ "Waveform bars", "Rhythm with a trailing glow", &config.Scene.wave_bars, Element.wave_bars },
-    .{ "Spectrum", "Sound across the frequencies", &config.Scene.spectrum, Element.spectrum },
-    .{ "3D bubble", "A sculptural, reactive core", &config.Scene.bubble, Element.bubble },
-    .{ "Frequency halo", "A ring of spectral energy", &config.Scene.halo, Element.halo },
-    .{ "Marbling", "Flowing ink, dots, and grain", &config.Marbling.enabled, Element.marbling },
-};
-
 fn setLayerVisibility(pointer: *bool, value: bool, script: *const ScriptScene) void {
     const settings = @import("scripting/settings.zig");
     for (settings.entries, script.owned) |entry, owned| {
@@ -739,28 +730,30 @@ fn drawScene(view: rl.Rectangle, script: *ScriptScene) void {
     const actions_enabled = y >= view.y and y + 36 <= view.y + view.height;
     groupHeading("Built-in layers", view, y + 2, 136);
     if (ui.ghostButton(ui.rect(view.x + view.width - 136, y + 5, 66, 24), "Show all", false, actions_enabled)) {
-        inline for (SceneItems) |item| setLayerVisibility(item[2], true, script);
+        for (Element.all) |layer| setLayerVisibility(layer.enabled(), true, script);
     }
     if (ui.ghostButton(ui.rect(view.x + view.width - 66, y + 5, 66, 24), "Hide all", false, actions_enabled)) {
-        inline for (SceneItems) |item| setLayerVisibility(item[2], false, script);
+        for (Element.all) |layer| setLayerVisibility(layer.enabled(), false, script);
     }
     y += geometry.scene_actions_height;
     // Rows read like an editor's layers list: visibility first, then the name.
-    inline for (SceneItems, 0..) |item, i| {
+    for (Element.all, 0..) |layer, i| {
+        const info = layer.info();
+        const shown = layer.enabled().*;
         const bounds = ui.rect(view.x, y, view.width, geometry.scene_card_height);
         const visible = y >= view.y and y + geometry.scene_card_height <= view.y + view.height;
         const body = ui.rect(bounds.x + 40, bounds.y, bounds.width - 40, bounds.height);
         const over = visible and ui.hovered(bounds);
         ui.rowFill(bounds, false, over);
-        if (i + 1 < SceneItems.len) ui.hline(view.x + 8, y + geometry.scene_card_height + 4, view.width - 16, ui.divider);
+        if (i + 1 < Element.all.len) ui.hline(view.x + 8, y + geometry.scene_card_height + 4, view.width - 16, ui.divider);
         const eye = ui.rect(bounds.x + 6, bounds.y + 15, 28, 28);
-        if (ui.iconButton(eye, if (item[2].*) .eye else .eye_off, "Show or hide this layer", false, visible)) setLayerVisibility(item[2], !item[2].*, script);
-        ui.label(item[0], body.x + 4, y + 11, 14, if (item[2].*) ui.text else ui.muted);
-        ui.label(item[1], body.x + 4, y + 32, 11, ui.muted);
+        if (ui.iconButton(eye, if (shown) .eye else .eye_off, "Show or hide this layer", false, visible)) setLayerVisibility(layer.enabled(), !shown, script);
+        ui.label(info.title, body.x + 4, y + 11, 14, if (shown) ui.text else ui.muted);
+        ui.label(info.summary, body.x + 4, y + 32, 11, ui.muted);
         ui.icon(.chevron_right, .{ .x = bounds.x + bounds.width - 16, .y = y + geometry.scene_card_height / 2 }, if (over) ui.text else ui.faint);
         if (visible and ui.hovered(body)) ui.requestCursor(rl.MOUSE_CURSOR_POINTING_HAND);
-        if (ui.activate(body, item[0], visible)) {
-            StudioPanel.selectLayer(item[3]);
+        if (ui.activate(body, info.title, visible)) {
+            StudioPanel.selectLayer(layer);
             onTabChange(.inspector);
         }
         y += geometry.scene_row_height;

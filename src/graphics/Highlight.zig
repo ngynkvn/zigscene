@@ -5,28 +5,7 @@ const Config = @import("../core/config.zig");
 const Scene = Config.Scene;
 const Highlight = @This();
 
-pub var solo: ?Element = null;
-
-pub const Element = enum {
-    wave_lines,
-    wave_bars,
-    spectrum,
-    bubble,
-    halo,
-    marbling,
-
-    pub fn visible(self: Element) bool {
-        if (solo != null and solo != self) return false;
-        return switch (self) {
-            .wave_lines => Scene.wave_lines,
-            .wave_bars => Scene.wave_bars,
-            .spectrum => Scene.spectrum,
-            .bubble => Scene.bubble,
-            .halo => Scene.halo,
-            .marbling => Config.Marbling.enabled,
-        };
-    }
-};
+pub const Element = @import("layer.zig").Layer;
 
 target: ?Element = null,
 

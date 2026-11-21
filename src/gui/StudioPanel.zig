@@ -16,7 +16,7 @@ pub var text_editing = false;
 var name_buffer: [64]u8 = initName();
 var search: [64]u8 = @splat(0);
 var selected_preset: ?usize = null;
-var selected_layer: usize = 4;
+var selected_layer: Element = .halo;
 var expanded_color: ?usize = 0;
 var collapsed: [3]bool = .{ false, true, true };
 var choosing_layer = false;
@@ -28,7 +28,7 @@ pub fn resetWorkspace() void {
     name_buffer = initName();
     search = @splat(0);
     selected_preset = null;
-    selected_layer = 4;
+    selected_layer = .halo;
     expanded_color = 0;
     collapsed = .{ false, true, true };
     choosing_layer = false;
@@ -36,14 +36,12 @@ pub fn resetWorkspace() void {
     color_notice = "";
 }
 
-const layers = [_]struct { name: [:0]const u8, prefix: []const u8, element: Element, enabled: *bool }{
-    .{ .name = "Lines", .prefix = "wave_lines.", .element = .wave_lines, .enabled = &config.Scene.wave_lines },
-    .{ .name = "Bars", .prefix = "wave_bars.", .element = .wave_bars, .enabled = &config.Scene.wave_bars },
-    .{ .name = "Spectrum", .prefix = "spectrum.", .element = .spectrum, .enabled = &config.Scene.spectrum },
-    .{ .name = "Bubble", .prefix = "bubble.", .element = .bubble, .enabled = &config.Scene.bubble },
-    .{ .name = "Halo", .prefix = "halo.", .element = .halo, .enabled = &config.Scene.halo },
-    .{ .name = "Marbling", .prefix = "marbling.", .element = .marbling, .enabled = &config.Marbling.enabled },
-};
+/// The inspector's previous/next buttons wrap around the layer list.
+fn neighbor(layer: Element, forward: bool) Element {
+    const count = Element.all.len;
+    const index = std.mem.indexOfScalar(Element, Element.all, layer).?;
+    return Element.all[(index + (if (forward) 1 else count - 1)) % count];
+}
 const V = config.Visualizer;
 const Color = struct { name: [:0]const u8, h: *f32, s: *f32, v: *f32, element: Element };
 fn color(name: [:0]const u8, vector: *@import("../ext/vector.zig").Vector3, element: Element) Color {
@@ -104,12 +102,12 @@ pub fn drawPresets(scene: *Scene, view: rl.Rectangle, scroll: f32) void {
         if (ui.activate(row, Looks.names[i], visible(view, y, 68))) {
             look.apply(scene) catch {};
             selected_layer = switch (kind) {
-                .calm => 4,
-                .pulse => 0,
-                .sculpture => 3,
+                .calm => .halo,
+                .pulse => .wave_lines,
+                .sculpture => .bubble,
             };
             selected_preset = null;
-            Highlight.solo = null;
+            Element.solo = null;
         }
         y += 76;
     }
@@ -191,7 +189,7 @@ pub fn drawPresets(scene: *Scene, view: rl.Rectangle, scroll: f32) void {
             name_buffer = item.name_buffer;
             notice = "Loaded. Undo returns to your previous look.";
             text_editing = false;
-            Highlight.solo = null;
+            Element.solo = null;
         }
     }
 }
@@ -320,7 +318,7 @@ fn friendly(entry: settings.Setting, buffer: *[96]u8) [:0]const u8 {
 }
 fn matches(entry: settings.Setting, group: usize) bool {
     if (entry.target != .scalar or !entry.visual() or category(entry) != group) return false;
-    if (group != 2 and !std.mem.startsWith(u8, entry.name, layers[selected_layer].prefix)) return false;
+    if (group != 2 and !std.mem.startsWith(u8, entry.name, selected_layer.prefix())) return false;
     var buffer: [96]u8 = undefined;
     const query = std.mem.sliceTo(&search, 0);
     return query.len == 0 or std.ascii.findIgnoreCase(entry.name, query) != null or std.ascii.findIgnoreCase(friendly(entry, &buffer), query) != null;
@@ -337,46 +335,46 @@ pub fn inspectorHeight() f32 {
     return height + 24;
 }
 pub fn inspectorElement() Element {
-    return layers[selected_layer].element;
+    return selected_layer;
 }
 pub fn selectLayer(element: Element) void {
-    for (layers, 0..) |layer, i| if (layer.element == element) {
-        selected_layer = i;
-    };
+    selected_layer = element;
     search = @splat(0);
 }
 pub fn drawInspector(scene: *Scene, view: rl.Rectangle, scroll: f32, field: anytype) void {
     var y = view.y - scroll;
     const top_shown = visible(view, y, 28);
-    if (ui.iconButton(ui.rect(view.x, y, 28, 28), .chevron_left, "Previous layer", false, top_shown)) selected_layer = (selected_layer + layers.len - 1) % layers.len;
-    if (ui.dropdown(ui.rect(view.x + 34, y, view.width - 68, 28), layers[selected_layer].name, choosing_layer, top_shown)) choosing_layer = !choosing_layer;
-    if (ui.iconButton(ui.rect(view.x + view.width - 28, y, 28, 28), .chevron_right, "Next layer", false, top_shown)) selected_layer = (selected_layer + 1) % layers.len;
+    if (ui.iconButton(ui.rect(view.x, y, 28, 28), .chevron_left, "Previous layer", false, top_shown)) selected_layer = neighbor(selected_layer, false);
+    if (ui.dropdown(ui.rect(view.x + 34, y, view.width - 68, 28), selected_layer.info().short, choosing_layer, top_shown)) choosing_layer = !choosing_layer;
+    if (ui.iconButton(ui.rect(view.x + view.width - 28, y, 28, 28), .chevron_right, "Next layer", false, top_shown)) selected_layer = neighbor(selected_layer, true);
     y += 34;
     if (choosing_layer) {
-        for (layers, 0..) |layer, i| {
+        for (Element.all) |candidate| {
+            const name = candidate.info().short;
             const row = ui.rect(view.x + 34, y, view.width - 68, 28);
             const shown = visible(view, y, 28);
             const over = shown and ui.hovered(row);
-            ui.rowFill(row, selected_layer == i, over);
-            ui.label(layer.name, row.x + 10, row.y + 7, 13, ui.text);
-            if (selected_layer == i) ui.icon(.check, .{ .x = row.x + row.width - 14, .y = row.y + 14 }, ui.accent);
+            ui.rowFill(row, selected_layer == candidate, over);
+            ui.label(name, row.x + 10, row.y + 7, 13, ui.text);
+            if (selected_layer == candidate) ui.icon(.check, .{ .x = row.x + row.width - 14, .y = row.y + 14 }, ui.accent);
             if (over) ui.requestCursor(rl.MOUSE_CURSOR_POINTING_HAND);
-            if (ui.activate(row, layer.name, shown)) {
-                selected_layer = i;
+            if (ui.activate(row, name, shown)) {
+                selected_layer = candidate;
                 choosing_layer = false;
             }
             y += 32;
         }
     }
     const third = (view.width - 12) / 3;
-    const layer = layers[selected_layer];
+    const layer = selected_layer;
+    const enabled = layer.enabled();
     const owned = blk: {
-        for (settings.entries, scene.owned) |entry, owns| if (entry.target == .boolean and entry.target.boolean == layer.enabled) break :blk owns;
+        for (settings.entries, scene.owned) |entry, owns| if (entry.target == .boolean and entry.target.boolean == enabled) break :blk owns;
         break :blk false;
     };
-    if (button(view, view.x, y, third, if (owned) "Lua owns" else if (layer.enabled.*) "Visible" else "Hidden", layer.enabled.*, !owned)) layer.enabled.* = !layer.enabled.*;
-    if (button(view, view.x + third + 6, y, third, "Solo", Highlight.solo == layer.element, scene.usesBuiltin())) Highlight.solo = if (Highlight.solo == layer.element) null else layer.element;
-    if (button(view, view.x + 2 * (third + 6), y, third, "Reset layer", false, true)) State.resetPrefix(layer.prefix, scene);
+    if (button(view, view.x, y, third, if (owned) "Lua owns" else if (enabled.*) "Visible" else "Hidden", enabled.*, !owned)) enabled.* = !enabled.*;
+    if (button(view, view.x + third + 6, y, third, "Solo", Element.solo == layer, scene.usesBuiltin())) Element.solo = if (Element.solo == layer) null else layer;
+    if (button(view, view.x + 2 * (third + 6), y, third, "Reset layer", false, true)) State.resetPrefix(layer.prefix(), scene);
     y += 36;
     textInput(view, y, &search);
     if (search[0] == 0 and !text_editing) ui.label("Search this layer...", view.x + 12, y + 7, 12, ui.faint);

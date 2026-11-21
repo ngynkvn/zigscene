@@ -79,6 +79,7 @@ test "root" {
     _ = @import("graphics.zig");
     _ = @import("shader/shader.zig");
     _ = @import("graphics/Highlight.zig");
+    _ = @import("graphics/layer.zig");
     _ = @import("graphics/Viewport.zig");
     _ = @import("graphics/visualizers/spectrum.zig");
     _ = @import("graphics/visualizers/halo.zig");
