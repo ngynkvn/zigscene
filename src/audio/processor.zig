@@ -37,6 +37,9 @@ var beat_cooldown: usize = 0;
 var previous_block_rms: f32 = 0;
 /// Peak block RMS since the previous render frame, so short hits survive batching.
 pub var rms_energy: f32 = 0;
+/// Recent peak across both input channels, before visual gain and smoothing.
+pub var input_peak: f32 = 0;
+pub var clip_seconds_remaining: f32 = 0;
 const audio_hold_seconds: f32 = 0.12;
 var seconds_since_audio: f32 = 0;
 /// Space holds maximum smoothing for analysis only. It never writes the
@@ -60,6 +63,7 @@ pub fn submitCapture(buffer: []const f32) void {
 pub fn selectSource(source: SampleQueue.Source) void {
     samples.selectSource(source);
     seconds_since_audio = 0;
+    clip_seconds_remaining = 0;
     clearAnalysis();
 }
 
@@ -69,6 +73,7 @@ fn clearAnalysis() void {
     @memset(&fft_buffer, .init(0, 0));
     @memset(&magnitudes, 0);
     rms_energy = 0;
+    input_peak = 0;
     on_beat = false;
     beat_cooldown = 0;
     previous_block_rms = 0;
@@ -80,8 +85,11 @@ pub fn update(dt: f32) bool {
     var blocks: [max_blocks_per_frame][N * channels]f32 = undefined;
     const count = samples.popLatestBlocks(&blocks);
     on_beat = false;
+    const elapsed = @max(0, dt);
+    clip_seconds_remaining = @max(0, clip_seconds_remaining - elapsed);
+    input_peak *= @exp(-4 * elapsed);
     if (count == 0) {
-        seconds_since_audio += @max(0, dt);
+        seconds_since_audio += elapsed;
         // Capture can stop delivering callbacks altogether. Expire waveform,
         // spectrum and Lua RMS together instead of freezing their last values.
         if (seconds_since_audio >= audio_hold_seconds) clearAnalysis();
@@ -89,11 +97,15 @@ pub fn update(dt: f32) bool {
     }
     seconds_since_audio = 0;
     var peak_rms: f32 = 0;
+    var peak_sample: f32 = 0;
     for (blocks[0..count]) |*block| {
-        processBuffer(block);
-        peak_rms = @max(peak_rms, rms_energy);
+        const levels = processBuffer(block);
+        peak_rms = @max(peak_rms, levels.rms);
+        peak_sample = @max(peak_sample, levels.peak);
     }
     rms_energy = peak_rms;
+    input_peak = @min(1, @max(input_peak, peak_sample));
+    if (peak_sample >= 1) clip_seconds_remaining = 1;
     transform();
     return true;
 }
@@ -106,27 +118,47 @@ fn transform() void {
     for (&magnitudes, fft_buffer[0..magnitudes.len]) |*magnitude, bin| magnitude.* = bin.magnitude() / @as(f32, N);
 }
 
-fn processBuffer(buffer: []const f32) void {
+fn processBuffer(buffer: []const f32) frame_analysis.Levels {
     std.debug.assert(buffer.len == N * channels);
     const curr_len = buffer.len / channels;
 
-    processFrame(buffer, curr_len);
+    const levels = processFrame(buffer, curr_len);
     const detected = beat.process(buffer);
     if (beat_cooldown > 0) beat_cooldown -= 1;
     const hit = detected and beat_cooldown == 0;
     if (hit) beat_cooldown = beat_retrigger_blocks;
     on_beat = on_beat or hit;
+    return levels;
 }
 
-fn processFrame(buffer: []const f32, len: usize) void {
+fn processFrame(buffer: []const f32, len: usize) frame_analysis.Levels {
     const blend = if (smoothing_held) held_blend else Config.Audio.wave_blend;
-    rms_energy = frame_analysis.analyze(true, buffer, raw_sample[0..len], audio_buffer[0..len], fft_buffer[0..len], blend, Config.Audio.wave_gain);
+    const levels = frame_analysis.analyze(true, buffer, raw_sample[0..len], audio_buffer[0..len], fft_buffer[0..len], blend, Config.Audio.wave_gain);
     // Preserve the front edge of a hit instead of blending it through several
     // previous blocks. Holding Space explicitly requests the slower response.
-    if (!smoothing_held and response.isOnset(rms_energy, previous_block_rms)) {
+    if (!smoothing_held and response.isOnset(levels.rms, previous_block_rms)) {
         for (audio_buffer[0..len], raw_sample[0..len]) |*value, raw| value.* = std.math.clamp(raw * Config.Audio.wave_gain, -2, 2);
     }
-    previous_block_rms = rms_energy;
+    previous_block_rms = levels.rms;
+    return levels;
+}
+
+test "one full-scale stereo sample holds the clip indicator across quiet blocks" {
+    selectSource(.capture);
+    defer selectSource(.none);
+    var block: [N * channels]f32 = @splat(0);
+    block[1] = -1;
+    submitCapture(&block);
+    block[1] = 0;
+    submitCapture(&block);
+    try std.testing.expect(update(0.01));
+    try std.testing.expectEqual(@as(f32, 1), input_peak);
+    try std.testing.expectEqual(@as(f32, 1), clip_seconds_remaining);
+    try std.testing.expect(!update(0.5));
+    try std.testing.expectEqual(@as(f32, 0), input_peak);
+    try std.testing.expectEqual(@as(f32, 0.5), clip_seconds_remaining);
+    selectSource(.file);
+    try std.testing.expectEqual(@as(f32, 0), clip_seconds_remaining);
 }
 
 test "a render stall catches up to the newest complete audio block" {

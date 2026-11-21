@@ -5,6 +5,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const rl = @import("raylib");
 const AudioSession = @import("../audio/Session.zig");
+const processor = @import("../audio/processor.zig");
 const config = @import("../core/config.zig");
 const fields = @import("fields.zig");
 const geometry = @import("geometry.zig");
@@ -137,11 +138,12 @@ fn drawWide(audio: *AudioSession, dock: rl.Rectangle) void {
         const total = formatTime(&time_buffer, audio.timeLength());
         ui.label(total, track.x + track.width + 12, track.y + 12, 12, ui.muted);
         drawWaveformScrubber(audio, track, false);
+    } else if (live) {
+        drawInputMeter(ui.rect(16, track.y, dock.width - 32, track.height));
     } else {
         const empty = ui.rect(16, track.y, dock.width - 32, track.height);
         ui.rounded(empty, 4, ui.background);
-        rl.DrawCircleV(.{ .x = empty.x + 16, .y = empty.y + empty.height / 2 }, 3, if (live) ui.accent else ui.faint);
-        ui.label(if (live) "Listening live. Drop a file to switch to playback." else "Drop an audio file anywhere to start listening.", empty.x + 28, empty.y + 12, 13, if (live) ui.secondary else ui.muted);
+        ui.label("Drop an audio file anywhere to start listening.", empty.x + 12, empty.y + 12, 13, ui.muted);
     }
 }
 
@@ -160,10 +162,30 @@ fn drawCompact(audio: *AudioSession, dock: rl.Rectangle) void {
         var buffer: [256]u8 = undefined;
         ui.label(ui.fitted(notice, 12, lower.width - 66, &buffer), lower.x, lower.y + 7, 12, ui.warning);
         if (ui.button(ui.rect(lower.x + lower.width - 62, lower.y, 62, 28), "Dismiss", false, true)) audio.notice = null;
-    } else if (file) drawWaveformScrubber(audio, lower, true) else {
+    } else if (file) {
+        drawWaveformScrubber(audio, lower, true);
+    } else if (live) {
+        drawInputMeter(lower);
+    } else {
         ui.rounded(lower, 4, ui.background);
-        ui.label(if (live) "Listening to live audio" else "Open audio or capture a live source", lower.x + 10, lower.y + 8, 12, ui.muted);
+        ui.label("Open audio or capture a live source", lower.x + 10, lower.y + 8, 12, ui.muted);
     }
+}
+
+fn drawInputMeter(bounds: rl.Rectangle) void {
+    const db = 20 * @log10(@max(0.001, processor.input_peak));
+    const clipped = processor.clip_seconds_remaining > 0;
+    const color = if (clipped) rl.RED else if (db >= -6) ui.warning else ui.accent;
+    var buffer: [32]u8 = undefined;
+    const label: [:0]const u8 = if (clipped) "Input clipping" else if (db <= -60) "No input signal" else std.mem.printSentinel(&buffer, "Peak {d:.0} dBFS", .{db}, 0) catch unreachable;
+    ui.rounded(bounds, 4, ui.background);
+    const middle = bounds.y + bounds.height / 2;
+    ui.label(label, bounds.x + 10, middle - 7, 12, if (clipped) ui.warning else ui.secondary);
+    const bar = ui.rect(bounds.x + 128, middle - 3, bounds.width - 140, 6);
+    ui.fill(bar, ui.divider);
+    const level = std.math.clamp((db + 60) / 60, 0, 1);
+    if (level > 0) ui.fill(ui.rect(bar.x, bar.y, bar.width * level, bar.height), color);
+    ui.tooltip(bounds, "Captured stereo peak, from -60 to 0 dBFS");
 }
 
 /// `timer` overlays elapsed and total time where there is no room beside it.
