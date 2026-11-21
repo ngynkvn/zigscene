@@ -469,7 +469,7 @@ test "seeking after playback resets the buffer cursor and preserves pause" {
     try std.testing.expectEqual(@as(f32, 0), processor.rms_energy);
     try std.testing.expect(!processor.update(0));
     for (processor.curr_buffer) |value| try std.testing.expectEqual(@as(f32, 0), value);
-    for (processor.curr_fft) |value| try std.testing.expectEqual(@as(f32, 0), value.magnitude());
+    for (processor.spectrum) |value| try std.testing.expectEqual(@as(f32, 0), value);
     try std.testing.expect(!IsMusicStreamPlaying());
     try std.testing.expectApproxEqAbs(@as(f32, 4), GetMusicTimePlayed(), 0.001);
     seek(2);

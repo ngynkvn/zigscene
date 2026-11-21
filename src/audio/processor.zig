@@ -20,12 +20,16 @@ var audio_buffer = std.mem.zeroes([N]f32);
 /// Unsmoothed mono samples written by frame analysis.
 var raw_sample = std.mem.zeroes([N]f32);
 
-// Buffer states
-pub var curr_buffer: []f32 = &audio_buffer;
-pub var curr_fft: []fft.ComplexF32 = &fft_buffer;
+/// Smoothed mono samples of the latest analyzed block.
+pub const curr_buffer: []const f32 = &audio_buffer;
 
-/// Currently loaded buffer for fft data
+/// FFT scratch: frame analysis writes the block here, `transform` replaces it.
 var fft_buffer = std.mem.zeroes([N]fft.ComplexF32);
+var magnitudes = std.mem.zeroes([N / 2]f32);
+/// Magnitudes of the latest block's positive frequencies (DC up to, excluding,
+/// Nyquist), divided by the block length. Every visual and Lua read this one
+/// array, so the transform and its square roots run once per analyzed frame.
+pub const spectrum: []const f32 = &magnitudes;
 
 // Analysis
 pub var on_beat = false;
@@ -63,6 +67,7 @@ fn clearAnalysis() void {
     @memset(&audio_buffer, 0);
     @memset(&raw_sample, 0);
     @memset(&fft_buffer, .init(0, 0));
+    @memset(&magnitudes, 0);
     rms_energy = 0;
     on_beat = false;
     beat_cooldown = 0;
@@ -89,7 +94,16 @@ pub fn update(dt: f32) bool {
         peak_rms = @max(peak_rms, rms_energy);
     }
     rms_energy = peak_rms;
+    transform();
     return true;
+}
+
+/// Only the newest block is displayed, so catching up after a slow frame costs
+/// one transform rather than one per block.
+fn transform() void {
+    fft.window(&fft_buffer);
+    fft.fft(&fft_buffer);
+    for (&magnitudes, fft_buffer[0..magnitudes.len]) |*magnitude, bin| magnitude.* = bin.magnitude() / @as(f32, N);
 }
 
 fn processBuffer(buffer: []const f32) void {
@@ -97,16 +111,11 @@ fn processBuffer(buffer: []const f32) void {
     const curr_len = buffer.len / channels;
 
     processFrame(buffer, curr_len);
-    fft.window(fft_buffer[0..curr_len]);
-    fft.fft(fft_buffer[0..curr_len]);
     const detected = beat.process(buffer);
     if (beat_cooldown > 0) beat_cooldown -= 1;
     const hit = detected and beat_cooldown == 0;
     if (hit) beat_cooldown = beat_retrigger_blocks;
     on_beat = on_beat or hit;
-
-    curr_buffer = audio_buffer[0..curr_len];
-    curr_fft = fft_buffer[0..curr_len];
 }
 
 fn processFrame(buffer: []const f32, len: usize) void {
@@ -157,8 +166,30 @@ test "missing callbacks expire all analysis exposed to visuals" {
     try std.testing.expect(!update(audio_hold_seconds));
     try std.testing.expectEqual(@as(f32, 0), rms_energy);
     for (curr_buffer) |value| try std.testing.expectEqual(@as(f32, 0), value);
-    for (curr_fft) |value| try std.testing.expectEqual(@as(f32, 0), value.magnitude());
+    for (spectrum) |value| try std.testing.expectEqual(@as(f32, 0), value);
     try std.testing.expect(!on_beat);
+}
+
+test "the spectrum describes the newest block of a batch, normalized by its length" {
+    selectSource(.capture);
+    defer selectSource(.none);
+    // Bin 64 of a 1,024-frame block; the older block is a different tone.
+    var old: [N * channels]f32 = undefined;
+    var recent: [N * channels]f32 = undefined;
+    for (0..N) |i| {
+        const phase = std.math.tau * @as(f32, @floatFromInt(i)) / N;
+        old[i * 2] = @sin(phase * 200);
+        old[i * 2 + 1] = old[i * 2];
+        recent[i * 2] = 0.5 * @sin(phase * 64);
+        recent[i * 2 + 1] = recent[i * 2];
+    }
+    submitCapture(&old);
+    submitCapture(&recent);
+    try std.testing.expect(update(0));
+    // Left + right doubles the amplitude; the scaled Hann window keeps the peak.
+    try std.testing.expectApproxEqAbs(@as(f32, 0.5), spectrum[64], 0.01);
+    try std.testing.expect(spectrum[200] < 0.001);
+    try std.testing.expectEqual(N / 2, spectrum.len);
 }
 
 test "a fresh hit reaches waveform and motion on its first analyzed frame" {

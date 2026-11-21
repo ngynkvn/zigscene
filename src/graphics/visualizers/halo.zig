@@ -2,7 +2,6 @@ const Highlight = @import("../Highlight.zig");
 const std = @import("std");
 const rl = @import("../../raylib.zig");
 const Config = @import("../../core/config.zig").Visualizer.Halo;
-const Complex = @import("../../audio/analysis/fft.zig").ComplexF32;
 const hsv = @import("../../ext/color.zig").Color.hsv.vec3;
 
 const Vec3 = @Vector(3, f32);
@@ -70,7 +69,8 @@ pub const Halo = struct {
     levels: [bands]f32 = @splat(0),
     phase: f32 = 0,
 
-    pub fn update(self: *Halo, dt_seconds: f32, spectrum: []const Complex) void {
+    /// `spectrum` holds normalized magnitudes (see `processor.spectrum`).
+    pub fn update(self: *Halo, dt_seconds: f32, spectrum: []const f32) void {
         const dt = std.math.clamp(dt_seconds, 0, max_frame_dt_seconds);
         self.phase = @mod(self.phase + dt * Config.spin, std.math.tau);
         const attack = 1 - @exp(-dt / level_attack_seconds);
@@ -78,7 +78,7 @@ pub const Halo = struct {
         for (&self.levels, 0..) |*level, i| {
             const bin = first_fft_bin + i * fft_bins_per_band;
             if (bin >= spectrum.len) break;
-            const magnitude = spectrum[bin].magnitude() / @as(f32, @floatFromInt(spectrum.len));
+            const magnitude = spectrum[bin];
             const target = std.math.clamp(@sqrt(magnitude) / (1 + @sqrt(magnitude)), 0, 1);
             level.* += (target - level.*) * (if (target > level.*) attack else release);
         }
@@ -114,14 +114,14 @@ pub const Halo = struct {
 
 test "halo reaches a hit promptly and retains a smooth decay" {
     var halo: Halo = .{};
-    var spectrum: [1024]Complex = @splat(.init(0, 0));
-    spectrum[2] = .init(1024, 0);
+    var spectrum: [512]f32 = @splat(0);
+    spectrum[2] = 1;
     halo.update(0.016, &spectrum);
     halo.update(0.016, &spectrum);
     // Target is 0.5: at least 90% within 32 ms, instead of over 200 ms.
     try std.testing.expect(halo.levels[0] >= 0.45);
     const peak = halo.levels[0];
-    spectrum[2] = .init(0, 0);
+    spectrum[2] = 0;
     halo.update(0.016, &spectrum);
     try std.testing.expect(halo.levels[0] < peak and halo.levels[0] > peak * 0.8);
 }

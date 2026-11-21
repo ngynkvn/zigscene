@@ -25,7 +25,6 @@ preferences_path: ?[]const u8 = null,
 input: input_mod.State = .{},
 audio: AudioSession = .{},
 script: ScriptScene = .{},
-spectrum: [Config.Audio.buffer_size / 2]f32 = @splat(0),
 renderer: Renderer,
 elapsed: f32 = 0,
 /// Animated left inset of the scene viewport, in window pixels.
@@ -95,7 +94,6 @@ pub fn frame(self: *App) void {
     if (input_mod.process(&self.input, &self.audio, &self.script)) |size| self.renderer.resize(size.width, size.height);
     _ = processor.update(dt);
     self.motion.update(dt, processor.rms_energy, processor.on_beat);
-    for (&self.spectrum, processor.curr_fft[0..self.spectrum.len]) |*value, frequency| value.* = frequency.magnitude() / @as(f32, @floatFromInt(Config.Audio.buffer_size));
     const viewport = self.updateViewport(dt);
     const mouse = rl.GetMousePosition();
     const over_ui = pet.compact() or gui.pointerOverUi();
@@ -113,8 +111,8 @@ pub fn frame(self: *App) void {
         .progress = if (self.audio.hasFile() and !self.audio.captureActive() and self.audio.timeLength() > 0) std.math.clamp(self.audio.timePlayed() / self.audio.timeLength(), 0, 1) else 0,
         .samples = processor.curr_buffer.ptr,
         .sample_count = processor.curr_buffer.len,
-        .spectrum = &self.spectrum,
-        .spectrum_count = self.spectrum.len,
+        .spectrum = processor.spectrum.ptr,
+        .spectrum_count = processor.spectrum.len,
         .mouse_x = mouse.x - viewport.left,
         .mouse_y = mouse.y - viewport.top,
         .wheel = if (over_ui) 0 else rl.GetMouseWheelMoveV().y,
@@ -122,7 +120,7 @@ pub fn frame(self: *App) void {
     });
     gui.prepareScene(&self.script);
     if (self.script.usesBuiltin()) {
-        self.halo.update(dt, processor.curr_fft);
+        self.halo.update(dt, processor.spectrum);
         self.wave_bars.advance(dt);
     }
     const center = viewport.center();
@@ -225,21 +223,19 @@ fn renderBuiltin(self: *App, viewport: Viewport, center: rl.Vector2, focus: High
         const bar_style = graphics.WaveFormBar.Style.init(focus);
         // The shorter bars stand in front of the spectrum unless it is hovered.
         const spectrum_on_top = focus.selected(.spectrum);
-        if (Highlight.Element.spectrum.visible() and !spectrum_on_top) graphics.FFTSpectrum.render(floor, width, processor.curr_fft, focus);
-        if (lines or bars) for (processor.curr_buffer, processor.curr_fft, 0..) |value, frequency, i| {
+        if (Highlight.Element.spectrum.visible() and !spectrum_on_top) graphics.FFTSpectrum.render(floor, width, processor.spectrum, focus);
+        const last_bin = processor.spectrum.len - 1;
+        if (lines or bars) for (processor.curr_buffer, 0..) |value, i| {
             if (lines) {
                 graphics.WaveFormLine.render(.{ .y = center.y - 80 }, width, i, value, line_style);
-                graphics.WaveFormLine.render(
-                    .{ .y = center.y * 2 },
-                    width,
-                    i,
-                    frequency.magnitude() / @as(f32, @floatFromInt(processor.curr_fft.len)) * 1.2,
-                    line_style,
-                );
+                // The lower line spans the whole transform: a real signal's
+                // upper half mirrors its lower half.
+                const bin = @min(i, processor.curr_buffer.len - i, last_bin);
+                graphics.WaveFormLine.render(.{ .y = center.y * 2 }, width, i, processor.spectrum[bin] * 1.2, line_style);
             }
             if (bars) self.wave_bars.render(floor, width, i, value, bar_style);
         };
-        if (Highlight.Element.spectrum.visible() and spectrum_on_top) graphics.FFTSpectrum.render(floor, width, processor.curr_fft, focus);
+        if (Highlight.Element.spectrum.visible() and spectrum_on_top) graphics.FFTSpectrum.render(floor, width, processor.spectrum, focus);
     }
     {
         const context = tracy.traceNamed(@src(), "3d");

@@ -1,6 +1,5 @@
 const Highlight = @import("../Highlight.zig");
 const std = @import("std");
-const Complex = @import("../../audio/analysis/fft.zig").ComplexF32;
 const rl = @import("../../raylib.zig");
 const Config = @import("../../core/config.zig").Visualizer.Spectrum;
 
@@ -13,11 +12,10 @@ pub const FFTSpectrum = struct {
     /// Lowest plotted bin; bin 0 is the DC offset, not a frequency.
     const first_bin: f32 = 1;
 
-    /// Log-frequency analyzer across `width`, standing on `floor`.
-    pub fn render(floor: f32, width: f32, spectrum: []const Complex, focus: Highlight) void {
-        // A real signal's upper half mirrors the lower half.
-        const bins = spectrum.len / 2;
-        if (bins < 2) return;
+    /// Log-frequency analyzer across `width`, standing on `floor`. `bins`
+    /// holds normalized magnitudes (see `processor.spectrum`).
+    pub fn render(floor: f32, width: f32, bins: []const f32, focus: Highlight) void {
+        if (bins.len < 2) return;
         const columns: usize = @intFromFloat(@max(1, width / column_spacing));
         const bar_width = @max(1, width / @as(f32, @floatFromInt(columns)) - 1);
         const hsv = @import("../../ext/color.zig").Color.hsv.vec3;
@@ -25,8 +23,7 @@ pub const FFTSpectrum = struct {
         const body = focus.tint(.spectrum, hsv(Config.color2).into());
         for (0..columns) |column| {
             const x = @as(f32, @floatFromInt(column)) * width / @as(f32, @floatFromInt(columns));
-            const magnitude = columnMagnitude(spectrum[0..bins], column, columns);
-            const raw = @sqrt(@max(0, magnitude) / @as(f32, @floatFromInt(spectrum.len))) * Config.gain;
+            const raw = @sqrt(@max(0, columnMagnitude(bins, column, columns))) * Config.gain;
             const y = Config.height * (raw / (1 + raw));
             const py = floor - y - 5;
             rl.DrawRectangleRec(.{ .x = x, .y = py, .width = bar_width, .height = 2 }, tips);
@@ -36,7 +33,7 @@ pub const FFTSpectrum = struct {
 
     /// Peak magnitude of the bins a column covers. Columns narrower than one
     /// bin (low frequencies) interpolate between neighbours instead of stepping.
-    fn columnMagnitude(bins: []const Complex, column: usize, columns: usize) f32 {
+    fn columnMagnitude(bins: []const f32, column: usize, columns: usize) f32 {
         const last: f32 = @floatFromInt(bins.len - 1);
         const start = binAt(column, columns, last);
         const end = binAt(column + 1, columns, last);
@@ -44,10 +41,10 @@ pub const FFTSpectrum = struct {
             const center = (start + end) / 2;
             const index: usize = @intFromFloat(center);
             const next = @min(index + 1, bins.len - 1);
-            return std.math.lerp(bins[index].magnitude(), bins[next].magnitude(), center - @floor(center));
+            return std.math.lerp(bins[index], bins[next], center - @floor(center));
         }
         var peak: f32 = 0;
-        for (bins[@intFromFloat(@ceil(start)) .. @as(usize, @intFromFloat(@floor(end))) + 1]) |bin| peak = @max(peak, bin.magnitude());
+        for (bins[@intFromFloat(@ceil(start)) .. @as(usize, @intFromFloat(@floor(end))) + 1]) |bin| peak = @max(peak, bin);
         return peak;
     }
 
@@ -58,15 +55,15 @@ pub const FFTSpectrum = struct {
 };
 
 test "columns cover the lower half of the spectrum in rising order" {
-    var spectrum: [1024]Complex = undefined;
-    for (&spectrum, 0..) |*bin, i| bin.* = .init(@floatFromInt(if (i < 512) i else 1024 - i), 0);
+    var spectrum: [512]f32 = undefined;
+    for (&spectrum, 0..) |*bin, i| bin.* = @floatFromInt(i);
     var previous: f32 = 0;
     for (0..256) |column| {
-        const magnitude = FFTSpectrum.columnMagnitude(spectrum[0..512], column, 256);
+        const magnitude = FFTSpectrum.columnMagnitude(&spectrum, column, 256);
         try std.testing.expect(magnitude >= previous);
         previous = magnitude;
     }
     // The lowest column starts at bin 1 (not DC) and the highest reaches the last bin.
-    try std.testing.expectApproxEqAbs(@as(f32, 1), FFTSpectrum.columnMagnitude(spectrum[0..512], 0, 256), 0.05);
-    try std.testing.expectApproxEqAbs(@as(f32, 511), FFTSpectrum.columnMagnitude(spectrum[0..512], 255, 256), 1);
+    try std.testing.expectApproxEqAbs(@as(f32, 1), FFTSpectrum.columnMagnitude(&spectrum, 0, 256), 0.05);
+    try std.testing.expectApproxEqAbs(@as(f32, 511), FFTSpectrum.columnMagnitude(&spectrum, 255, 256), 1);
 }
