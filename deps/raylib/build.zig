@@ -20,6 +20,7 @@ pub fn build(b: *std.Build) !void {
         raylib.artifact("raylib");
     libraylib.step.name = "Compile Raylib";
     b.addNamedLazyPath("miniaudio-include", raylib.path("src/external"));
+    if (target.result.os.tag == .macos) try useMacFrameTimer(b, libraylib.root_module);
 
     // The scene, shader and UI scissors flush several times per frame. Rotating
     // upload buffers avoids rewriting a VBO that the GPU is still consuming.
@@ -78,6 +79,20 @@ pub fn build(b: *std.Build) !void {
     const check_step = b.step("check", "check build");
     check_step.dependOn(&libraylib.step);
     check_step.dependOn(&translate_c.step);
+}
+
+fn useMacFrameTimer(b: *std.Build, module: *std.Build.Module) !void {
+    // Raylib's pinned build lists rcore.c first in the C source group. Wrap only
+    // that translation unit and keep the compiler flags supplied by Raylib.
+    for (module.link_objects.items) |object| {
+        if (object != .c_source_files) continue;
+        const sources = object.c_source_files;
+        if (sources.files.len == 0 or !std.mem.eql(u8, sources.files[0], "src/rcore.c")) continue;
+        sources.files = sources.files[1..];
+        module.addCSourceFile(.{ .file = b.path("src/rcore_macos.c"), .flags = sources.flags, .language = sources.language });
+        return;
+    }
+    return error.RaylibCoreSourceMissing;
 }
 
 fn buildWebLibrary(
