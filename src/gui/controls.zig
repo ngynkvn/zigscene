@@ -1,15 +1,16 @@
 //! Configurables. These are picked up and set in the UI
 const std = @import("std");
 
-/// name, value, range
-pub const Scalar = struct { []const u8, *f32, struct { f32, f32 } };
+/// label, value, range. The range is f64 so the settings registry, which
+/// validates script writes in doubles, sees the bounds exactly as written.
+pub const Scalar = struct { [:0]const u8, *f32, struct { f64, f64 } };
 pub fn constrainScalar(scalar: Scalar) void {
     const value = scalar[1];
     const range = scalar[2];
     value.* = if (std.math.isFinite(value.*))
-        std.math.clamp(value.*, range[0], range[1])
+        std.math.clamp(value.*, @as(f32, @floatCast(range[0])), @as(f32, @floatCast(range[1])))
     else
-        range[0];
+        @floatCast(range[0]);
 }
 pub const Color = struct { []const u8, *f32 };
 

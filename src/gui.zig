@@ -601,9 +601,7 @@ fn drawScalars(comptime groups: anytype, view: rl.Rectangle, offset: f32) void {
         }
         y += geometry.group_height;
         inline for (group[1]) |scalar| {
-            var label_buffer: [64]u8 = undefined;
-            const label = std.mem.printSentinel(&label_buffer, "{s}", .{scalar[0]}, 0) catch unreachable;
-            editorField(id, label, scalar[1], .{ scalar[2][0], scalar[2][1] }, view, y, false);
+            editorField(id, scalar[0], scalar[1], .{ @floatCast(scalar[2][0]), @floatCast(scalar[2][1]) }, view, y, false);
             y += geometry.row_height;
             id += 1;
         }

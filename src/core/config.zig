@@ -109,7 +109,7 @@ pub const Visualizer = struct {
     };
 
     pub const WaveFormBar = struct {
-        pub var Scalars = [_]controls.Scalar{
+        pub const Scalars = [_]controls.Scalar{
             .{ "Amplitude", &amplitude, .{ 0, 100 } },
             .{ "Base height", &base_h, .{ 0, 100 } },
             .{ "Trail decay (s)", &trail_decay, .{ 0.05, 2.0 } },
@@ -156,7 +156,7 @@ pub const Visualizer = struct {
     };
 
     pub const Bubble = struct {
-        pub var Scalars = [_]controls.Scalar{
+        pub const Scalars = [_]controls.Scalar{
             // zig fmt: off
             .{ "Ring radius",     &ring_radius,             .{ 0.1, 8 } },
             .{ "Sphere radius",   &sphere_radius,           .{ 0.1, 4 } },

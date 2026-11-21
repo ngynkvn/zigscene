@@ -302,10 +302,7 @@ fn category(entry: settings.Setting) usize {
     return 0;
 }
 fn friendly(entry: settings.Setting, buffer: *[96]u8) [:0]const u8 {
-    const groups = .{ &V.WaveFormLine.Scalars, &V.WaveFormBar.Scalars, &V.Bubble.Scalars, &V.Halo.Scalars, &V.Spectrum.Scalars, &config.Motion.Scalars, &config.Audio.Scalars, &config.Marbling.Scalars };
-    inline for (groups) |group| for (group) |scalar| if (entry.target == .scalar and entry.target.scalar == scalar[1]) {
-        return std.mem.printSentinel(buffer, "{s}", .{scalar[0]}, 0) catch unreachable;
-    };
+    if (entry.label) |label| return label;
     for (colors) |entry_color| {
         for ([_]*f32{ entry_color.h, entry_color.s, entry_color.v }, [_][]const u8{ "hue", "saturation", "brightness" }) |pointer, suffix| {
             if (entry.target == .scalar and entry.target.scalar == pointer) {
