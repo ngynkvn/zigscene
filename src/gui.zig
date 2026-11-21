@@ -6,8 +6,8 @@ const Direction = @import("core/event.zig").Direction;
 const geometry = @import("gui/geometry.zig");
 const State = @import("editor/State.zig");
 const StudioPanel = @import("gui/StudioPanel.zig");
-var current_script: ?*ScriptScene = null;
 const controls = @import("gui/controls.zig");
+const fields = @import("gui/fields.zig");
 const ui = @import("gui/theme.zig");
 const rl = @import("raylib");
 const WaveformCache = @import("gui/WaveformCache.zig");
@@ -39,12 +39,8 @@ pub fn takeFitRequest() bool {
 }
 var scroll: f32 = 0;
 var saved_scroll: [9]f32 = @splat(0);
-var active_slider: ?usize = null;
-var editing: ?usize = null;
-var editing_buffer: [128]u8 = @splat(0);
 var dragging_seek = false;
 var settings_reset_requested = false;
-const seek_id = 1000;
 const resize_id = 3000;
 const ResizeMode = enum { none, width, height, both };
 var resize_mode: ResizeMode = .none;
@@ -59,8 +55,8 @@ pub fn takeSettingsReset() bool {
 }
 
 pub fn resetWorkspace() void {
-    editing = null;
-    active_slider = null;
+    fields.editing = null;
+    fields.active_slider = null;
     dragging_seek = false;
     resize_mode = .none;
     scroll = 0;
@@ -72,9 +68,9 @@ pub fn resetWorkspace() void {
 
 pub fn onTabChange(next: Tab) void {
     if (active_tab == next) return;
-    editing = null;
+    fields.editing = null;
     StudioPanel.text_editing = false;
-    active_slider = null;
+    fields.active_slider = null;
     resize_mode = .none;
     saved_scroll[@intCast(@backingInt(active_tab))] = scroll;
     active_tab = next;
@@ -83,16 +79,16 @@ pub fn onTabChange(next: Tab) void {
 }
 
 pub fn editingValue() bool {
-    return editing != null or StudioPanel.text_editing or path_entry;
+    return fields.editing != null or StudioPanel.text_editing or path_entry;
 }
 
 /// End transient UI gestures before entering the desktop pet's compact view.
 pub fn cancelInteraction(audio: *AudioSession, script: *ScriptScene) void {
     audio.endSeek();
     dragging_seek = false;
-    editing = null;
+    fields.editing = null;
     StudioPanel.text_editing = false;
-    active_slider = null;
+    fields.active_slider = null;
     resize_mode = .none;
     State.history.record(script);
 }
@@ -135,7 +131,7 @@ pub fn prepareScene(script: *ScriptScene) void {
 
 pub fn frame(audio: *AudioSession, script: *ScriptScene) void {
     ui.blocked = path_entry;
-    current_script = script;
+    fields.script = script;
     State.history.sync(script);
     defer {
         if (!rl.IsMouseButtonDown(rl.MOUSE_BUTTON_LEFT) and !editingValue()) State.history.record(script);
@@ -145,15 +141,15 @@ pub fn frame(audio: *AudioSession, script: *ScriptScene) void {
     if (!rl.IsMouseButtonDown(rl.MOUSE_BUTTON_LEFT)) {
         if (dragging_seek) audio.endSeek();
         dragging_seek = false;
-        active_slider = null;
+        fields.active_slider = null;
         resize_mode = .none;
     }
-    if (dragging_seek and (!config.Interface.show_player or !audio.seeking or active_slider != seek_id or audio.captureActive() or !audio.hasFile())) {
+    if (dragging_seek and (!config.Interface.show_player or !audio.seeking or fields.active_slider != fields.seek_id or audio.captureActive() or !audio.hasFile())) {
         audio.endSeek();
         dragging_seek = false;
-        if (active_slider == seek_id) active_slider = null;
+        if (fields.active_slider == fields.seek_id) fields.active_slider = null;
     }
-    if (!config.Interface.show_player and active_slider == 1001) active_slider = null;
+    if (!config.Interface.show_player and fields.active_slider == fields.volume_id) fields.active_slider = null;
     resizePanel();
     drawHeader();
     if (active_tab != .none) drawPanel(script, audio);
@@ -167,8 +163,8 @@ pub fn frame(audio: *AudioSession, script: *ScriptScene) void {
 }
 
 pub fn openAudio(audio: *AudioSession) void {
-    editing = null;
-    active_slider = null;
+    fields.editing = null;
+    fields.active_slider = null;
     StudioPanel.text_editing = false;
     const picked = @import("audio/Picker.zig").open() catch {
         path_entry = true;
@@ -268,7 +264,7 @@ pub fn hoveredElement() ?Element {
     if (resize_mode != .none or path_entry) return null;
     const view = viewport();
     const offset = std.math.clamp(scroll, 0, @max(0, contentHeight(active_tab) - view.height));
-    const dragging = if (rl.IsMouseButtonDown(rl.MOUSE_BUTTON_LEFT)) active_slider else null;
+    const dragging = if (rl.IsMouseButtonDown(rl.MOUSE_BUTTON_LEFT)) fields.active_slider else null;
     if (dragging == null and !rl.IsCursorOnScreen()) return null;
     return elementAt(active_tab, view, offset, ui.mousePosition(), dragging);
 }
@@ -346,11 +342,11 @@ fn drawPanel(script: *ScriptScene, audio: *AudioSession) void {
     scroll = std.math.clamp(scroll, 0, max_scroll);
     // The scrollbar is draggable as well as wheel-controlled.
     const track = ui.rect(p.x + p.width - 14, view.y, 8, view.height);
-    if (max_scroll > 0 and active_slider == null and ui.hovered(track) and rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT)) {
-        active_slider = 2000;
-        editing = null;
+    if (max_scroll > 0 and fields.active_slider == null and ui.hovered(track) and rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT)) {
+        fields.active_slider = 2000;
+        fields.editing = null;
     }
-    if (max_scroll > 0 and active_slider == 2000) {
+    if (max_scroll > 0 and fields.active_slider == 2000) {
         const thumb_h = @max(24, view.height * view.height / content_h);
         scroll = std.math.clamp((ui.mousePosition().y - view.y - thumb_h / 2) / (view.height - thumb_h), 0, 1) * max_scroll;
     }
@@ -360,16 +356,16 @@ fn drawPanel(script: *ScriptScene, audio: *AudioSession) void {
         .motion => drawScalars(MotionFields, view, 0),
         .settings => drawSettings(view),
         .audio => drawAudioDevices(view, audio),
-        .color => StudioPanel.drawColors(script, view, scroll, editorField),
+        .color => StudioPanel.drawColors(script, view, scroll),
         .presets => StudioPanel.drawPresets(script, view, scroll),
-        .inspector => StudioPanel.drawInspector(script, view, scroll, editorField),
+        .inspector => StudioPanel.drawInspector(script, view, scroll),
         .scene => drawScene(view, script),
         .none => unreachable,
     }
     rl.EndScissorMode();
     if (max_scroll > 0) {
         const thumb_h = @max(24, view.height * view.height / content_h);
-        const lit = active_slider == 2000 or ui.hovered(track);
+        const lit = fields.active_slider == 2000 or ui.hovered(track);
         ui.rounded(ui.rect(p.x + p.width - 8, view.y + (view.height - thumb_h) * scroll / max_scroll, 4, thumb_h), 2, if (lit) ui.muted else ui.selection);
     }
     for (0..2) |i| {
@@ -390,13 +386,13 @@ fn drawStatusBar(audio: *AudioSession, script: *ScriptScene) void {
     const y = bar.y + 3;
     const h = bar.height - 6;
     if (ui.ghostButton(ui.rect(6, y, 44, h), "Undo", false, State.history.position > 0)) {
-        editing = null;
-        active_slider = null;
+        fields.editing = null;
+        fields.active_slider = null;
         State.history.undo(script);
     }
     if (ui.ghostButton(ui.rect(52, y, 44, h), "Redo", false, State.history.position + 1 < State.history.len)) {
-        editing = null;
-        active_slider = null;
+        fields.editing = null;
+        fields.active_slider = null;
         State.history.redo(script);
     }
     ui.vline(102, y + 2, h - 4, ui.divider);
@@ -438,14 +434,14 @@ fn drawAudioDevices(view: rl.Rectangle, audio: *AudioSession) void {
     const live = audio.captureActive();
     const supported = builtin.os.tag != .emscripten;
     const capture = @import("audio/capture.zig");
-    const enabled = supported and !live and active_slider == null;
+    const enabled = supported and !live and fields.active_slider == null;
     groupHeading("Capture source", view, top, 0);
     const half = (view.width - 8) / 2;
     if (ui.button(ui.rect(view.x, top + 38, half, 30), "System audio", audio.selected_capture_mode == .system, enabled and buttonVisible(top + 38, view))) audio.selectCaptureMode(.system);
     if (ui.button(ui.rect(view.x + half + 8, top + 38, half, 30), "Input", audio.selected_capture_mode == .input, enabled and buttonVisible(top + 38, view))) audio.selectCaptureMode(.input);
     const hint: [:0]const u8 = if (!supported) "Live capture requires the native app." else if (live) "Stop capture to change the source." else if (audio.selected_capture_mode == .input) "Choose a microphone or audio input." else if (builtin.os.tag == .macos) "Choose a loopback input (e.g. BlackHole)." else if (builtin.os.tag == .windows) "Choose the output you want to capture." else "Choose a system-audio monitor input.";
     ui.label(hint, view.x + 4, top + 78, 11, ui.muted);
-    if (ui.button(ui.rect(view.x, top + 102, view.width, 30), "Refresh devices", false, supported and active_slider == null and buttonVisible(top + 102, view))) audio.refreshCaptureDevices();
+    if (ui.button(ui.rect(view.x, top + 102, view.width, 30), "Refresh devices", false, supported and fields.active_slider == null and buttonVisible(top + 102, view))) audio.refreshCaptureDevices();
     const selected = audio.selectedCaptureDevice();
     ui.label(if (selected == -2) "Selected device disconnected. Choose another." else if (audio.capture_devices.count == 0) "No devices found. Connect one and refresh." else "Selection is kept until you close the app.", view.x + 4, top + 140, 11, if (selected == -2) ui.warning else ui.muted);
     const automatic: [:0]const u8 = if (audio.selected_capture_mode == capture.Mode.input) "Default input" else "Automatic system audio";
@@ -517,7 +513,7 @@ fn drawSettings(view: rl.Rectangle) void {
         const label = if (fps == 0) "Unlimited" else std.mem.printSentinel(&buffer, "{d:.0} FPS", .{fps}, 0) catch unreachable;
         if (ui.button(ui.rect(x, y, (view.width - 12) / 3, 30), label, config.Window.fps_limit == fps, y >= view.y and y + 30 <= view.y + view.height)) {
             config.Window.fps_limit = fps;
-            editing = null;
+            fields.editing = null;
         }
     }
     groupHeading("Interface size", view, top + 112, 0);
@@ -528,7 +524,7 @@ fn drawSettings(view: rl.Rectangle) void {
         const label = std.mem.printSentinel(&buffer, "{d:.0}%", .{percent}, 0) catch unreachable;
         if (ui.button(ui.rect(x, y, (view.width - 18) / 4, 30), label, config.Interface.scale_percent == percent, y >= view.y and y + 30 <= view.y + view.height)) {
             config.Interface.scale_percent = percent;
-            editing = null;
+            fields.editing = null;
         }
     }
     ui.label("Automatically fits smaller windows", view.x + 4, top + 186, 11, ui.muted);
@@ -541,7 +537,7 @@ fn drawSettings(view: rl.Rectangle) void {
         config.Interface.panel_width = 320;
         config.Interface.panel_height = 0;
         scroll = 0;
-        editing = null;
+        fields.editing = null;
     }
 }
 
@@ -557,10 +553,10 @@ fn resizePanel() void {
     const p = panel();
     const mouse = ui.mousePosition();
     const hover_mode = resizeModeAt(p, mouse);
-    if (hover_mode != .none and active_slider == null and rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT)) {
+    if (hover_mode != .none and fields.active_slider == null and rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT)) {
         resize_mode = hover_mode;
-        active_slider = resize_id;
-        editing = null;
+        fields.active_slider = resize_id;
+        fields.editing = null;
         resize_origin = mouse;
         resize_size = .{ .width = p.width, .height = p.height };
     }
@@ -569,7 +565,7 @@ fn resizePanel() void {
         if (resize_mode == .width or resize_mode == .both) config.Interface.panel_width = size.width;
         if (resize_mode == .height or resize_mode == .both) config.Interface.panel_height = size.height;
     }
-    const cursor_mode = if (resize_mode != .none) resize_mode else if (active_slider == null) hover_mode else .none;
+    const cursor_mode = if (resize_mode != .none) resize_mode else if (fields.active_slider == null) hover_mode else .none;
     switch (cursor_mode) {
         .width => ui.requestCursor(rl.MOUSE_CURSOR_RESIZE_EW),
         .height => ui.requestCursor(rl.MOUSE_CURSOR_RESIZE_NS),
@@ -587,131 +583,21 @@ fn scalarHeight(comptime groups: anytype) f32 {
 fn groupHeading(name: [:0]const u8, view: rl.Rectangle, y: f32, reserve: f32) void {
     ui.heading(name, view.x + 4, y + 8, view.width - 4 - (if (reserve > 0) reserve + 8 else 4));
 }
-fn rowVisible(y: f32, view: rl.Rectangle) bool {
-    return y >= view.y and y + geometry.slider_top + geometry.slider_height <= view.y + view.height;
-}
-
 fn drawScalars(comptime groups: anytype, view: rl.Rectangle, offset: f32) void {
     var y = view.y - scroll + offset;
     var id: usize = 0;
     inline for (groups) |group| {
         groupHeading(group[0], view, y, 50);
         if (ui.ghostButton(ui.rect(view.x + view.width - 50, y + 3, 50, 22), "Reset", false, y >= view.y and y + 24 <= view.y + view.height)) {
-            if (current_script) |script| for (group[1]) |scalar| State.reset(scalar[1], script);
+            if (fields.script) |script| for (group[1]) |scalar| State.reset(scalar[1], script);
         }
         y += geometry.group_height;
         inline for (group[1]) |scalar| {
-            editorField(id, scalar[0], scalar[1], .{ @floatCast(scalar[2][0]), @floatCast(scalar[2][1]) }, view, y, false);
+            fields.field(id, scalar[0], scalar[1], .{ @floatCast(scalar[2][0]), @floatCast(scalar[2][1]) }, view, y, false);
             y += geometry.row_height;
             id += 1;
         }
     }
-}
-
-fn editorField(id: usize, label: [:0]const u8, value: *f32, range: [2]f32, view: rl.Rectangle, y: f32, hue: bool) void {
-    const was_editing = editing == id;
-    const locked = if (current_script) |script| State.locked(value, script) else false;
-    const row_enabled = rowVisible(y, view) and !locked;
-    if (!row_enabled and editing == id) editing = null;
-    if (locked and active_slider == id) active_slider = null;
-    var fitted_buffer: [256]u8 = undefined;
-    ui.label(ui.fitted(label, 13, view.width - 116, &fitted_buffer), view.x + 8, y + 5, 13, if (locked) ui.faint else ui.secondary);
-    if (row_enabled) ui.tooltip(ui.rect(view.x, y, view.width - 106, 24), label);
-    if (!locked and State.changed(value)) rl.DrawCircleV(.{ .x = view.x + 2, .y = y + 11 }, 2, ui.accent);
-    const box = ui.rect(view.x + view.width - 98, y, 64, 24);
-    const focused = ui.focusable(0x10000000 + id, box, row_enabled);
-    if (focused and editing == null) {
-        const step = (range[1] - range[0]) / (if (rl.IsKeyDown(rl.KEY_LEFT_SHIFT) or rl.IsKeyDown(rl.KEY_RIGHT_SHIFT)) @as(f32, 1000) else 100);
-        if (rl.IsKeyPressed(rl.KEY_LEFT) or rl.IsKeyPressedRepeat(rl.KEY_LEFT)) value.* -= step;
-        if (rl.IsKeyPressed(rl.KEY_RIGHT) or rl.IsKeyPressedRepeat(rl.KEY_RIGHT)) value.* += step;
-        if (rl.IsKeyPressed(rl.KEY_HOME)) value.* = range[0];
-        if (rl.IsKeyPressed(rl.KEY_END)) value.* = range[1];
-    }
-    if (editing == id) {
-        if (ui.valueBox(box, &editing_buffer, value) or rl.IsKeyPressed(rl.KEY_TAB) or
-            (rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT) and !ui.hovered(box))) editing = null;
-    } else {
-        var buf: [32]u8 = undefined;
-        const number = if (locked) "Lua" else if (range[1] <= 2)
-            std.mem.printSentinel(&buf, "{d:.3}", .{value.*}, 0) catch unreachable
-        else
-            std.mem.printSentinel(&buf, "{d:.1}", .{value.*}, 0) catch unreachable;
-        const over_box = row_enabled and ui.hovered(box);
-        ui.framed(box, 3, ui.field, if (over_box) ui.muted else ui.divider);
-        ui.label(number, box.x + box.width - 8 - ui.textWidth(number, 12), box.y + 6, 12, if (locked) ui.faint else ui.text);
-        if (over_box) {
-            ui.requestCursor(rl.MOUSE_CURSOR_IBEAM);
-            if (rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT)) {
-                editing = id;
-                @memset(&editing_buffer, 0);
-                _ = std.mem.printSentinel(&editing_buffer, "{d:.3}", .{value.*}, 0) catch unreachable;
-            }
-        }
-    }
-    if (focused and !was_editing and editing == null and rl.IsKeyPressed(rl.KEY_ENTER)) {
-        editing = id;
-        @memset(&editing_buffer, 0);
-        _ = std.mem.printSentinel(&editing_buffer, "{d:.3}", .{value.*}, 0) catch unreachable;
-    }
-    // The reset icon appears only once a value differs from its default.
-    const reset = ui.rect(view.x + view.width - 28, y, 24, 24);
-    if (row_enabled and State.changed(value) and ui.iconButton(reset, .reset, "Reset this value to its default", false, true)) {
-        if (current_script) |script| State.reset(value, script);
-    }
-    if (row_enabled) {
-        ui.tooltip(box, "Enter a value; arrow keys adjust; Shift for finer steps");
-        ui.tooltip(reset, "Reset this value to its default");
-    }
-    if (row_enabled and ui.hovered(ui.rect(view.x, y, view.width, geometry.row_height)) and rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_RIGHT)) {
-        if (current_script) |script| State.reset(value, script);
-        editing = null;
-    }
-    _ = slider(id, ui.rect(view.x + 8, y + geometry.slider_top, view.width - 16, geometry.slider_height), value, range[0], range[1], row_enabled, hue);
-    controls.constrainScalar(.{ label, value, .{ range[0], range[1] } });
-}
-
-/// A generous hit area around a slim track; drag ownership survives leaving it.
-fn slider(id: usize, bounds: rl.Rectangle, value: *f32, min: f32, max: f32, enabled: bool, hue: bool) bool {
-    // Host fields already register their numeric box. Standalone sliders
-    // (volume and Lua parameters) need their own keyboard target.
-    if ((id == 1001 or (id >= 4000 and id < 5000)) and ui.focusable(0x20000000 + id, bounds, enabled) and !ui.typing) {
-        const step = (max - min) / (if (rl.IsKeyDown(rl.KEY_LEFT_SHIFT) or rl.IsKeyDown(rl.KEY_RIGHT_SHIFT)) @as(f32, 1000) else 100);
-        if (rl.IsKeyPressed(rl.KEY_LEFT) or rl.IsKeyPressedRepeat(rl.KEY_LEFT)) value.* -= step;
-        if (rl.IsKeyPressed(rl.KEY_RIGHT) or rl.IsKeyPressedRepeat(rl.KEY_RIGHT)) value.* += step;
-        if (rl.IsKeyPressed(rl.KEY_HOME)) value.* = min;
-        if (rl.IsKeyPressed(rl.KEY_END)) value.* = max;
-        value.* = std.math.clamp(value.*, min, max);
-    }
-    const over = enabled and ui.hovered(bounds);
-    if (over and rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT) and active_slider == null) {
-        active_slider = id;
-        editing = null;
-    }
-    const dragging = active_slider == id;
-    if (dragging and rl.IsMouseButtonDown(rl.MOUSE_BUTTON_LEFT)) {
-        value.* = min + std.math.clamp((ui.mousePosition().x - bounds.x) / bounds.width, 0, 1) * (max - min);
-    }
-    if (over or dragging) ui.requestCursor(rl.MOUSE_CURSOR_POINTING_HAND);
-    const ratio = if (max > min) std.math.clamp((value.* - min) / (max - min), 0, 1) else 0;
-    const cy = bounds.y + bounds.height / 2;
-    if (hue) {
-        for (0..6) |i| {
-            const x = bounds.x + @as(f32, @floatFromInt(i)) * bounds.width / 6;
-            const a = rl.ColorFromHSV(@as(f32, @floatFromInt(i)) * 60, 0.7, 0.92);
-            const b = rl.ColorFromHSV(@as(f32, @floatFromInt(i + 1)) * 60, 0.7, 0.92);
-            rl.DrawRectangleGradientEx(ui.rect(x, cy - 2, bounds.width / 6 + 1, 4), a, a, b, b);
-        }
-    } else {
-        ui.rounded(ui.rect(bounds.x, cy - 1.5, bounds.width, 3), 1.5, ui.selection);
-        if (ratio > 0) ui.rounded(ui.rect(bounds.x, cy - 1.5, @max(3, bounds.width * ratio), 3), 1.5, if (enabled) ui.accent else ui.faint);
-    }
-    // A white knob with a dark ring stays legible over both track colors.
-    const center = rl.Vector2{ .x = bounds.x + ratio * bounds.width, .y = cy };
-    const radius: f32 = if (over or dragging) 6.5 else 5.5;
-    if (dragging) rl.DrawCircleV(center, 11, rl.Fade(ui.accent, 0.2));
-    rl.DrawCircleV(center, radius + 1, ui.hairline);
-    rl.DrawCircleV(center, radius, if (enabled or dragging) ui.text else ui.muted);
-    return dragging;
 }
 
 fn setLayerVisibility(pointer: *bool, value: bool, script: *const ScriptScene) void {
@@ -723,7 +609,7 @@ fn setLayerVisibility(pointer: *bool, value: bool, script: *const ScriptScene) v
 }
 
 fn drawScene(view: rl.Rectangle, script: *ScriptScene) void {
-    ScriptPanel.draw(script, view, scroll, slider);
+    ScriptPanel.draw(script, view, scroll);
     var y = view.y - scroll + scene_prefix;
     const actions_enabled = y >= view.y and y + 36 <= view.y + view.height;
     groupHeading("Built-in layers", view, y + 2, 136);
@@ -764,8 +650,8 @@ pub fn onSwipe(dir: Direction, amount: f32) void {
 }
 
 fn applyScroll(dir: Direction, amount: f32, pointer_over_panel: bool) void {
-    if (dir == .vertical and amount != 0 and pointer_over_panel and active_slider == null) {
-        editing = null;
+    if (dir == .vertical and amount != 0 and pointer_over_panel and fields.active_slider == null) {
+        fields.editing = null;
         scroll -= amount * 28;
     }
 }
@@ -814,7 +700,7 @@ fn drawVolume(right: f32, y: f32, slider_width: f32, enabled: bool) f32 {
     const level_x = right - 34;
     ui.label(volume, level_x, y + 7, 12, ui.secondary);
     const track = ui.rect(level_x - 12 - slider_width, y + 5, slider_width, 18);
-    _ = slider(1001, track, &config.Audio.volume, 0, 1, enabled, false);
+    _ = fields.slider(fields.volume_id, track, &config.Audio.volume, 0, 1, enabled, false);
     ui.icon(.volume, .{ .x = track.x - 22, .y = y + 14 }, ui.muted);
     return track.x - 34;
 }
@@ -926,10 +812,10 @@ fn drawWaveformScrubber(audio: *AudioSession, bounds: rl.Rectangle, timer: bool)
     const duration = audio.timeLength();
     const mouse = ui.mousePosition();
     const hovering = ui.hovered(bounds) and duration > 0;
-    if (hovering and rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT) and active_slider == null) {
-        active_slider = seek_id;
+    if (hovering and rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_LEFT) and fields.active_slider == null) {
+        fields.active_slider = fields.seek_id;
         dragging_seek = true;
-        editing = null;
+        fields.editing = null;
         audio.beginSeek();
     }
     if (dragging_seek and rl.IsMouseButtonDown(rl.MOUSE_BUTTON_LEFT)) {
@@ -972,53 +858,53 @@ fn drawWaveformScrubber(audio: *AudioSession, bounds: rl.Rectangle, timer: bool)
 
 test "idle wheel input preserves numeric editing and only panel scrolling consumes it" {
     const original_scroll = scroll;
-    const original_editing = editing;
-    const original_slider = active_slider;
+    const original_editing = fields.editing;
+    const original_slider = fields.active_slider;
     defer {
         scroll = original_scroll;
-        editing = original_editing;
-        active_slider = original_slider;
+        fields.editing = original_editing;
+        fields.active_slider = original_slider;
     }
     scroll = 80;
-    editing = 2;
-    active_slider = null;
+    fields.editing = 2;
+    fields.active_slider = null;
     applyScroll(.vertical, 0, true);
-    try std.testing.expectEqual(@as(?usize, 2), editing);
+    try std.testing.expectEqual(@as(?usize, 2), fields.editing);
     applyScroll(.vertical, 1, false);
     applyScroll(.horizontal, 1, true);
     try std.testing.expectEqual(@as(f32, 80), scroll);
-    try std.testing.expectEqual(@as(?usize, 2), editing);
-    active_slider = 2;
+    try std.testing.expectEqual(@as(?usize, 2), fields.editing);
+    fields.active_slider = 2;
     applyScroll(.vertical, 1, true);
     try std.testing.expectEqual(@as(f32, 80), scroll);
-    active_slider = null;
+    fields.active_slider = null;
     applyScroll(.vertical, 1, true);
     try std.testing.expectEqual(@as(f32, 52), scroll);
-    try std.testing.expectEqual(@as(?usize, null), editing);
+    try std.testing.expectEqual(@as(?usize, null), fields.editing);
 }
 
 test "tab navigation restores scroll position and releases field editing" {
     const original_tab = active_tab;
     const original_scroll = scroll;
     const original_saved = saved_scroll;
-    const original_editing = editing;
-    const original_slider = active_slider;
+    const original_editing = fields.editing;
+    const original_slider = fields.active_slider;
     defer {
         active_tab = original_tab;
         scroll = original_scroll;
         saved_scroll = original_saved;
-        editing = original_editing;
-        active_slider = original_slider;
+        fields.editing = original_editing;
+        fields.active_slider = original_slider;
     }
     active_tab = .scalar;
     saved_scroll = @splat(0);
     scroll = 120;
-    editing = 3;
-    active_slider = 4;
+    fields.editing = 3;
+    fields.active_slider = 4;
     onTabChange(.motion);
     try std.testing.expectEqual(@as(f32, 0), scroll);
-    try std.testing.expectEqual(@as(?usize, null), editing);
-    try std.testing.expectEqual(@as(?usize, null), active_slider);
+    try std.testing.expectEqual(@as(?usize, null), fields.editing);
+    try std.testing.expectEqual(@as(?usize, null), fields.active_slider);
     scroll = 48;
     onTabChange(.scalar);
     try std.testing.expectEqual(@as(f32, 120), scroll);

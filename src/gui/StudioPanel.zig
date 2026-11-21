@@ -2,6 +2,7 @@
 const std = @import("std");
 const rl = @import("raylib");
 const ui = @import("theme.zig");
+const fields = @import("fields.zig");
 const geometry = @import("geometry.zig");
 const config = @import("../core/config.zig");
 const settings = @import("../scripting/settings.zig");
@@ -249,7 +250,7 @@ pub fn colorElementAt(view: rl.Rectangle, scroll: f32, mouse: rl.Vector2, draggi
     }
     return null;
 }
-pub fn drawColors(scene: *Scene, view: rl.Rectangle, scroll: f32, field: anytype) void {
+pub fn drawColors(scene: *Scene, view: rl.Rectangle, scroll: f32) void {
     var y = view.y - scroll;
     var hint: [256]u8 = undefined;
     ui.label(ui.fitted("Expand a color to edit hue, saturation and brightness", 11, view.width - 8, &hint), view.x + 4, y + 4, 11, ui.muted);
@@ -269,7 +270,7 @@ pub fn drawColors(scene: *Scene, view: rl.Rectangle, scroll: f32, field: anytype
         if (expanded_color != i) continue;
         const pointers = [_]*f32{ entry.h, entry.s, entry.v };
         for (pointers, [_][:0]const u8{ "Hue", "Saturation", "Brightness" }, 0..) |pointer, label, j| {
-            field(100 + i * 3 + j, label, pointer, .{ 0, if (j == 0) 359 else 1 }, view, y, j == 0);
+            fields.field(100 + i * 3 + j, label, pointer, .{ 0, if (j == 0) 359 else 1 }, view, y, j == 0);
             y += geometry.row_height;
         }
         ui.label("Swatches: click to apply, right-click to save", view.x + 4, y + 2, 11, ui.muted);
@@ -338,7 +339,7 @@ pub fn selectLayer(element: Element) void {
     selected_layer = element;
     search = @splat(0);
 }
-pub fn drawInspector(scene: *Scene, view: rl.Rectangle, scroll: f32, field: anytype) void {
+pub fn drawInspector(scene: *Scene, view: rl.Rectangle, scroll: f32) void {
     var y = view.y - scroll;
     const top_shown = visible(view, y, 28);
     if (ui.iconButton(ui.rect(view.x, y, 28, 28), .chevron_left, "Previous layer", false, top_shown)) selected_layer = neighbor(selected_layer, false);
@@ -390,7 +391,7 @@ pub fn drawInspector(scene: *Scene, view: rl.Rectangle, scroll: f32, field: anyt
         for (settings.entries, 0..) |entry, i| {
             if (!matches(entry, group)) continue;
             var buffer: [96]u8 = undefined;
-            field(5000 + i, friendly(entry, &buffer), entry.target.scalar, .{ @floatCast(entry.min), @floatCast(entry.max) }, view, y, false);
+            fields.field(5000 + i, friendly(entry, &buffer), entry.target.scalar, .{ @floatCast(entry.min), @floatCast(entry.max) }, view, y, false);
             y += geometry.row_height;
             count += 1;
         }

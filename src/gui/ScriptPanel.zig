@@ -1,5 +1,6 @@
 const std = @import("std");
 const rl = @import("raylib");
+const fields = @import("fields.zig");
 const geometry = @import("geometry.zig");
 const ui = @import("theme.zig");
 const Scene = @import("../scripting/Scene.zig");
@@ -41,7 +42,7 @@ pub fn height(scene: *Scene, width: f32) f32 {
 fn button(view: rl.Rectangle, x: f32, y: f32, width: f32, label: [:0]const u8, selected: bool, enabled: bool) bool {
     return ui.button(ui.rect(x, y, width, 30), label, selected, enabled and y >= view.y and y + 30 <= view.y + view.height);
 }
-pub fn draw(scene: *Scene, view: rl.Rectangle, scroll: f32, slider: anytype) void {
+pub fn draw(scene: *Scene, view: rl.Rectangle, scroll: f32) void {
     var y = view.y - scroll;
     ui.label(scene.name(), view.x + 4, y, 15, ui.text);
     ui.label(if (scene.runtime == null) "Lua scenes" else if (scene.usesBuiltin()) "Lua overlay" else "Lua custom scene", view.x + 4, y + 21, 11, ui.accent);
@@ -86,7 +87,7 @@ pub fn draw(scene: *Scene, view: rl.Rectangle, scroll: f32, slider: anytype) voi
         var number: [32]u8 = undefined;
         const value = std.mem.printSentinel(&number, "{d:.2}", .{param.value}, 0) catch "?";
         ui.label(value, view.x + view.width - 8 - ui.textWidth(value, 12), y + 6, 12, ui.text);
-        _ = slider(4000 + i, ui.rect(view.x + 8, y + geometry.slider_top, view.width - 16, geometry.slider_height), &param.value, param.min, param.max, y >= view.y and y + geometry.slider_top + geometry.slider_height <= view.y + view.height, false);
+        _ = fields.slider(4000 + i, ui.rect(view.x + 8, y + geometry.slider_top, view.width - 16, geometry.slider_height), &param.value, param.min, param.max, y >= view.y and y + geometry.slider_top + geometry.slider_height <= view.y + view.height, false);
         if (y >= view.y and y + geometry.row_height <= view.y + view.height and ui.hovered(ui.rect(view.x, y, view.width, geometry.row_height)) and rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_RIGHT)) param.value = param.default_value;
         y += geometry.row_height;
     }
