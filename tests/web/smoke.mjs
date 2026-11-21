@@ -97,9 +97,19 @@ try {
     for (let i = 0; i < 88200; i++) wav.writeInt16LE(Math.round(2000 * Math.sin(i * Math.PI * 2 * 440 / 44100)), 44 + i * 2);
     await advance();
     await canvas.screenshot({ path: new URL(`welcome-${rejectShader}.png`, artifacts).pathname });
-    const welcomeChooser = page.waitForEvent('filechooser', { timeout: 15000 });
-    await canvas.click({ position: { x: 676, y: 344 }, delay: 100 });
-    await (await welcomeChooser).setFiles({ name: 'initial.wav', mimeType: 'audio/wav', buffer: wav });
+    if (!rejectShader) {
+      let chooserOpened = false;
+      const recordChooser = () => { chooserOpened = true; };
+      page.on('filechooser', recordChooser);
+      await click(832, 253); // Close the welcome dialog.
+      await click(676, 344); // The welcome dialog's Open audio button is gone.
+      page.off('filechooser', recordChooser);
+      assert.equal(chooserOpened, false, 'the welcome dialog stays closed without audio');
+    }
+    const initialChooser = page.waitForEvent('filechooser', { timeout: 15000 });
+    const openAudio = rejectShader ? { x: 676, y: 344 } : { x: 665, y: 670 };
+    await canvas.click({ position: openAudio, delay: 100 });
+    await (await initialChooser).setFiles({ name: 'initial.wav', mimeType: 'audio/wav', buffer: wav });
     await advance();
     assert.ok(messages.some(message => message.includes('initial.wav') && message.includes('successfully')), messages.join('\n'));
     await page.keyboard.press('Space'); // Pause/resume must leave rendering alive.

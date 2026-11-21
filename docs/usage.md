@@ -16,6 +16,8 @@ Choose **Open audio** (or **Ctrl/Cmd+O**) to browse for an MP3, WAV, or OGG, or
 drop one onto the window. On minimal Linux desktops without a graphical
 chooser, Open audio provides a full-path entry instead.
 
+Click **×** on the welcome dialog to dismiss it for the current session.
+
 Opening or dropping a new file switches back
 from live capture to file playback. If you drop several audio files at once,
 only the last one loads. FLAC support is disabled in the bundled raylib build.

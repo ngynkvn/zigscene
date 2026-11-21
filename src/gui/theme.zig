@@ -298,7 +298,7 @@ fn buttonLabel(value: [:0]const u8, bounds: rl.Rectangle, size: f32, ink: rl.Col
     centered(fitted(value, size, bounds.width - 8, &label_buffer), bounds, size, ink);
 }
 
-pub const Icon = enum { reset, chevron_left, chevron_right, chevron_down, eye, eye_off, search, volume, check, play, pause };
+pub const Icon = enum { reset, chevron_left, chevron_right, chevron_down, eye, eye_off, search, volume, check, play, pause, close };
 
 /// raylib culls clockwise triangles; accept either winding.
 fn triangle(a: rl.Vector2, b: rl.Vector2, c: rl.Vector2, color: rl.Color) void {
@@ -350,6 +350,10 @@ pub fn icon(kind: Icon, c: rl.Vector2, color: rl.Color) void {
         .pause => {
             rounded(rect(c.x - 4.5, c.y - 5.5, 3, 11), 1, color);
             rounded(rect(c.x + 1.5, c.y - 5.5, 3, 11), 1, color);
+        },
+        .close => {
+            rl.DrawLineEx(at(c, -4, -4), at(c, 4, 4), 1.8, color);
+            rl.DrawLineEx(at(c, -4, 4), at(c, 4, -4), 1.8, color);
         },
     }
 }

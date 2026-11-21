@@ -31,6 +31,7 @@ var path_buffer: [4096]u8 = @splat(0);
 var previous_tab: Tab = .inspector;
 var fit_requested = false;
 var welcome_open = false;
+var welcome_dismissed = false;
 pub fn takeFitRequest() bool {
     const fit = fit_requested;
     fit_requested = false;
@@ -159,7 +160,7 @@ pub fn frame(audio: *AudioSession, script: *ScriptScene) void {
     drawPlayer(audio);
     drawStatusBar(audio, script);
     if ((audio.hasFile() or audio.captureActive()) and ui.button(fitBounds(), "Fit scene", false, script.usesBuiltin())) fit_requested = true;
-    welcome_open = !audio.hasFile() and !audio.captureActive();
+    welcome_open = !welcome_dismissed and !audio.hasFile() and !audio.captureActive();
     if (welcome_open) drawWelcome(audio);
     ui.blocked = false;
     if (path_entry) drawPathEntry(audio);
@@ -188,13 +189,17 @@ fn drawWelcome(audio: *AudioSession) void {
     const box = welcomeBounds();
     const w = box.width;
     ui.card(box);
-    ui.centered("Bring your scene to life", ui.rect(box.x, box.y + 24, w, 24), 21, ui.text);
-    ui.centered("Open a track or capture live audio.", ui.rect(box.x, box.y + 56, w, 18), 13, ui.muted);
+    ui.centered("Bring your scene to life", ui.rect(box.x, box.y + 30, w, 24), 21, ui.text);
+    ui.centered("Open a track or capture live audio.", ui.rect(box.x, box.y + 58, w, 18), 13, ui.muted);
     if (ui.primaryButton(ui.rect(box.x + 28, box.y + 90, w - 56, 34), "Open audio", !path_entry)) openAudio(audio);
     if (ui.secondaryButton(ui.rect(box.x + 28, box.y + 132, w - 56, 34), "Capture system audio", !path_entry and builtin.os.tag != .emscripten)) {
         audio.startCapture(.system, -1) catch onTabChange(.audio);
     }
     ui.centered("You can also drop an MP3, WAV or OGG.", ui.rect(box.x, box.y + 182, w, 18), 11, ui.muted);
+    if (ui.iconButton(ui.rect(box.x + w - 34, box.y + 4, 28, 28), .close, "Close welcome dialog", false, !path_entry)) {
+        welcome_dismissed = true;
+        welcome_open = false;
+    }
 }
 
 // A path fallback keeps Open usable on minimal Linux desktops without a chooser.
