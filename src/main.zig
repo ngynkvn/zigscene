@@ -69,6 +69,7 @@ test "capture selection survives device reorder and detects removal" {
 
 test "root" {
     _ = @import("ext/vector.zig");
+    _ = @import("ext/color.zig");
     _ = @import("editor/State.zig");
     _ = @import("editor/Presets.zig");
     _ = @import("editor/Looks.zig");
@@ -86,6 +87,7 @@ test "root" {
     _ = @import("gui.zig");
     _ = @import("gui/Cursor.zig");
     _ = @import("gui/Focus.zig");
+    _ = @import("gui/controls.zig");
     _ = @import("core/debug.zig");
     _ = @import("core/config.zig");
     _ = @import("core/input.zig");

@@ -98,7 +98,7 @@ test "fromHSV conversion" {
 }
 
 test "fromHSV = HsvToColor" {
-    const ColorFromHSV = @import("../raylib.zig").ColorFromHSV;
+    const ColorFromHSV = @import("../raylib.zig").rl.ColorFromHSV;
     for (0..36) |x| {
         for (0..10) |y| {
             for (0..10) |z| {
