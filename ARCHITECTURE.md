@@ -95,11 +95,15 @@ native buffer configuration with a single buffer while preserving scene detail.
 
 | Area | Responsibility |
 | --- | --- |
-| [`src/graphics.zig`](src/graphics.zig) | Built-in visualizer exports |
+| [`src/graphics.zig`](src/graphics.zig) | Built-in visualizer state and draw order |
+| [`src/graphics/Frame.zig`](src/graphics/Frame.zig) | Shared audio, motion, viewport and focus inputs to visualizers |
+| [`src/graphics/layer.zig`](src/graphics/layer.zig) | Layer names, visibility toggles and setting prefixes |
 | [`src/graphics/Viewport.zig`](src/graphics/Viewport.zig) | Available canvas: 2D offset, fitted 3D projection, slide easing |
 | [`src/graphics/Motion.zig`](src/graphics/Motion.zig) | Frame-rate independent energy/beat envelope |
 | [`src/shader/shader.zig`](src/shader/shader.zig) | Scene texture and embedded GLSL shader lifetime |
-| [`src/gui.zig`](src/gui.zig) | Tabs, panel scrolling/resizing, controls, player and seeking |
+| [`src/gui.zig`](src/gui.zig) | Tabs, panel scrolling and resizing, and dialog coordination |
+| [`src/gui/Player.zig`](src/gui/Player.zig) | Player dock, volume and seek waveform |
+| [`src/gui/fields.zig`](src/gui/fields.zig) | Shared sliders, value rows and edit state |
 | [`src/gui/theme.zig`](src/gui/theme.zig) | Palette, font atlases, logical UI scale and matching hit coordinates |
 | [`src/core/debug.zig`](src/core/debug.zig) | FPS/frame timing and CPU-stage diagnostics |
 
@@ -134,11 +138,11 @@ blocks when it falls behind and preserving partial blocks for the next frame. Ov
 retain only the newest queue-capacity frames; wrapped copies use at most two
 contiguous segments on submission and consumption.
 
-The live waveform and FFT describe the latest analyzed block. The FFT input is
-Hann-windowed (scaled by 2 to keep tone peaks) so block edges do not smear
-energy across the spectrum. RMS is the peak
-block RMS in the current render frame's batch so brief hits are not overwritten
-by a quieter block. Beat events accumulate across that batch and trigger on
+The live waveform and spectrum describe the latest analyzed block. The processor
+runs one FFT per render frame with new audio and shares its normalized magnitudes
+with the built-in layers and Lua. A Hann window scaled by 2 keeps tone peaks.
+RMS is the highest block RMS in the current frame's batch, so brief hits are
+preserved even when a quieter block follows. Beat events accumulate across that batch and trigger on
 threshold crossings, with a cooldown, rather than repeatedly during sustained
 loud passages. Seeking clears queued PCM and analysis history. If callbacks stop,
 waveform, FFT, RMS and beat history expire together after 120 ms.
@@ -373,9 +377,11 @@ or browser smoke test.
 
 1. Add storage and any built-in control metadata to
    [`core/config.zig`](src/core/config.zig).
-2. Register its stable name, pointer, type, and range in
-   [`scripting/settings.zig`](src/scripting/settings.zig). Native preferences use
-   the same registry.
+2. Add sliders to their config group's `Scalars` list. The registry in
+   [`scripting/settings.zig`](src/scripting/settings.zig) derives each slider's
+   name from the group prefix and variable name. Register toggles, colors, and
+   settings without sliders in the registry directly. Lua and native preferences
+   use the same names.
 3. Update the [settings reference](docs/scripting.md#settings-reference) and
    relevant tests. Keep names stable for saved scripts and preference files.
 
