@@ -39,6 +39,7 @@ pub fn takeFitRequest() bool {
 var scroll: f32 = 0;
 var saved_scroll: [9]f32 = @splat(0);
 var settings_reset_requested = false;
+var performance_requested = false;
 const resize_id = 3000;
 const ResizeMode = enum { none, width, height, both };
 var resize_mode: ResizeMode = .none;
@@ -49,6 +50,12 @@ var resize_size: geometry.Size = .{ .width = 320, .height = 500 };
 pub fn takeSettingsReset() bool {
     const requested = settings_reset_requested;
     settings_reset_requested = false;
+    return requested;
+}
+
+pub fn takePerformanceRequest() bool {
+    const requested = performance_requested;
+    performance_requested = false;
     return requested;
 }
 
@@ -80,7 +87,7 @@ pub fn editingValue() bool {
     return fields.editing != null or StudioPanel.text_editing or path_entry;
 }
 
-/// End transient UI gestures before entering the desktop pet's compact view.
+/// End transient UI gestures before hiding the editor.
 pub fn cancelInteraction(audio: *AudioSession, script: *ScriptScene) void {
     audio.endSeek();
     Player.seeking = false;
@@ -396,6 +403,13 @@ fn drawStatusBar(audio: *AudioSession, script: *ScriptScene) void {
     ui.vline(102, y + 2, h - 4, ui.divider);
     // Segments are placed from the right edge; the hint takes what is left.
     var right = bar.width - 8;
+    if (@import("core/Performance.zig").supported and !@import("core/desktop_pet.zig").enabled) {
+        right -= 66;
+        const bounds = ui.rect(right, y, 66, h);
+        if (ui.ghostButton(bounds, "Present", false, true)) performance_requested = true;
+        ui.tooltip(bounds, "F11 Present / Esc Return / B Blackout / 1-4 Cues");
+        right -= 8;
+    }
     if (!config.Interface.show_player) {
         right -= 104;
         if (ui.ghostButton(ui.rect(right, y, 104, h), "Expand player", audio.notice != null, true)) config.Interface.show_player = true;
@@ -792,8 +806,11 @@ test "the scene viewport starts right of the open panel and at the edge when hid
     }
 }
 
+pub const cueShortcuts = StudioPanel.cueShortcuts;
+
 pub fn editorShortcuts(script: *ScriptScene) void {
     if (editingValue()) return;
+    cueShortcuts(script, false);
     if (active_tab != .none) {
         if (rl.IsKeyPressed(rl.KEY_PAGE_DOWN)) scroll += viewport().height * 0.75;
         if (rl.IsKeyPressed(rl.KEY_PAGE_UP)) scroll -= viewport().height * 0.75;

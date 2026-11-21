@@ -7,6 +7,7 @@ Use zigscene with a track or live audio, then adjust the scene from the tabs.
 For installation, start with [Getting started](../README.md#getting-started).
 
 **On this page:** [Playback](#play-a-track) · [Capture](#capture-live-audio) ·
+[Live performance](#live-performance) ·
 [Customization](#customize-the-scene) · [Shortcuts](#shortcuts) ·
 [Saved settings](#saved-settings) · [Troubleshooting](#troubleshooting)
 
@@ -75,6 +76,12 @@ hardware. The button and **M** reuse your selection for the rest of the session.
 When capture stops, the previous file resumes if it was playing before capture
 started.
 
+During capture, the player shows the louder channel's sample peak in dBFS. Check
+the meter with the mixer playing at the level you expect during the set. **No input
+signal** means the peak is below −60 dBFS. **Input clipping** holds for one second
+after a captured sample reaches full scale. Adjust the mixer or interface gain
+upstream of zigscene to leave headroom.
+
 ### Platform setup
 
 | Platform | System audio source |
@@ -100,6 +107,29 @@ zig build run -- --system-audio --audio-device=0
 
 For a downloaded binary, pass the same flags directly to the executable.
 Command-line selections also appear in the **Devices** panel.
+
+## Live performance
+
+1. In **Devices**, choose the input receiving your mix, start capture, and confirm
+   that the meter responds. Choose **Input** for a mixer feed through an audio
+   interface or **System audio** for a loopback feed from your DJ software.
+2. In **Looks / 7**, save the looks you want during the set. Select a saved look
+   and click a cue slot (**F1–F4**) above the saved looks. Right-click a slot to
+   clear it. The assignments save with your native preset library. Press each
+   function key in the editor to rehearse it.
+3. With the projector connected as an extended display, move the zigscene window
+   onto it. Click **Present** in the status bar or press **F11**. The native window
+   fills its current display with the scene and hides the editor and cursor.
+4. With zigscene focused, press **1–4** or **F1–F4** to launch cues. Press **B** to
+   black out the screen or bring the visuals back. You can change cues under
+   blackout while audio and scene animation continue. Press **Esc** or **F11**
+   to return to the editor.
+
+Presentation uses one window. Leave presentation to adjust capture or edit looks.
+Transport shortcuts, file drops, mouse interaction with the scene, and automatic
+Lua file reload pause in presentation. A cue with a missing or invalid Lua source
+keeps the current look. Keep any referenced scene files available locally during
+the set.
 
 ## Customize the scene
 
@@ -219,6 +249,11 @@ for what those timings measure.
 | **M** | Start/stop the selected capture source |
 | Hold **Shift+Space** | Temporarily apply heavier waveform smoothing |
 | **F5** | Reload the selected Lua scene |
+| **F1–F4** | Launch an assigned saved look |
+| **1–4** in presentation | Launch an assigned saved look |
+| **F11**, or **Present** in the status bar | Enter presentation on the current display in the native editor |
+| **B** | Toggle blackout in presentation |
+| **Esc / F11** | Return from presentation to the editor |
 | **F** | Toggle borderless window mode |
 | **C** | Switch the built-in camera between perspective and orthographic |
 | **Left / Right** | Rotate the built-in 3D scene when no UI control has keyboard focus |

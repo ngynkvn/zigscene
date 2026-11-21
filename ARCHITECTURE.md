@@ -76,6 +76,7 @@ native buffer configuration with a single buffer while preserving scene detail.
 | [`src/core/preferences.zig`](src/core/preferences.zig) | Native settings file loading, validation and saving |
 | [`src/core/cli.zig`](src/core/cli.zig) | Audio/capture flags and `--scene=path` parsing |
 | [`src/core/desktop_pet.zig`](src/core/desktop_pet.zig) | Compact overlay, dragging and transitions to full controls |
+| [`src/core/Performance.zig`](src/core/Performance.zig) | Session-only fullscreen presentation, cursor and exit key |
 | [`src/core/input.zig`](src/core/input.zig) | Keyboard shortcuts, Lua/audio drop routing, resize, camera gestures |
 | [`src/core/event.zig`](src/core/event.zig) | Direct tab/swipe dispatch helpers |
 | [`src/core/init.zig`](src/core/init.zig) | Window/audio startup and alpha-compositing setup |
@@ -146,6 +147,9 @@ preserved even when a quieter block follows. Beat events accumulate across that 
 threshold crossings, with a cooldown, rather than repeatedly during sustained
 loud passages. Seeking clears queued PCM and analysis history. If callbacks stop,
 waveform, FFT, RMS and beat history expire together after 120 ms.
+The capture meter folds absolute sample peaks across both channels and across
+that batch. Its level decays between updates and clears when callbacks expire.
+A full-scale sample holds the clipping indicator for one second.
 Sharp RMS increases bypass waveform and motion attack smoothing on their first
 analyzed frame, including before beat history has warmed up. Near-silent noise
 does not open this attack path; holding Shift+Space keeps the requested heavy waveform
@@ -271,6 +275,13 @@ alpha uses separate RGB/alpha blend factors, preserving an opaque destination
 when background opacity is 1. Window opacity remains a separate OS-level control.
 
 ## UI and window settings
+
+Native presentation fills the display occupied by the editor window. `App`
+uses the full scene viewport and opaque output, suspends the editor input and
+Lua file watch, and draws blackout after compositing the scene. Audio and scene
+updates continue. Leaving restores the prior window mode. Cue assignments live
+in the preset library and resolve by saved name on load. They use the same
+transactional preset application as the editor.
 
 Native `--desktop-pet` mode defaults to system-audio capture (or plays a supplied
 audio file) in a 400 × 400 transparent, undecorated window. Right-click opens

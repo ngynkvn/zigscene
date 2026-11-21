@@ -6,9 +6,15 @@ const State = @import("State.zig");
 const Scene = @import("../scripting/Scene.zig");
 const allocator = @import("../core/memory.zig").allocator;
 pub const capacity = 24;
+pub const cue_count = 4;
 const Pair = struct { name: []const u8, value: f64 };
 const Record = struct { name: []const u8, scene: []const u8 = "", example: ?Scene.Example = null, values: []const Pair, params: []const Pair = &.{} };
-const Document = struct { version: u32 = 1, presets: []const Record, swatches: [8][3]f32 = initial_swatches };
+const Document = struct {
+    version: u32 = 1,
+    presets: []const Record,
+    swatches: [8][3]f32 = initial_swatches,
+    cues: [cue_count]?[]const u8 = @splat(null),
+};
 const initial_swatches = [8][3]f32{ .{ 190, 0.8, 1 }, .{ 280, 0.7, 1 }, .{ 20, 0.85, 1 }, .{ 140, 0.7, 0.9 }, .{ 330, 0.6, 1 }, .{ 55, 0.8, 1 }, .{ 220, 0.7, 0.8 }, .{ 0, 0, 1 } };
 
 pub const Preset = struct {
@@ -97,6 +103,7 @@ pub const Store = struct {
     items: [capacity]Preset = undefined,
     len: usize = 0,
     swatches: [8][3]f32 = initial_swatches,
+    cues: [cue_count]?usize = @splat(null),
 
     pub fn find(self: *const Store, label: []const u8) ?usize {
         for (self.items[0..self.len], 0..) |*item, i| {
@@ -131,7 +138,11 @@ pub const Store = struct {
             for (0..item.param_count) |i| params[index][i] = .{ .name = std.mem.sliceTo(&item.param_ids[i], 0), .value = item.param_values[i] };
             records[index] = .{ .name = item.name(), .scene = item.path(), .example = item.example, .values = values[index][0..count], .params = params[index][0..item.param_count] };
         }
-        return std.json.Stringify.valueAlloc(gpa, Document{ .presets = records[0..self.len], .swatches = self.swatches }, .{ .whitespace = .indent_2 });
+        var doc: Document = .{ .presets = records[0..self.len], .swatches = self.swatches };
+        for (self.cues, &doc.cues) |cue, *label| {
+            if (cue) |index| label.* = self.items[index].name();
+        }
+        return std.json.Stringify.valueAlloc(gpa, doc, .{ .whitespace = .indent_2 });
     }
 
     pub fn decode(self: *Store, source: []const u8) !void {
@@ -165,6 +176,9 @@ pub const Store = struct {
             if (!std.math.isFinite(value) or value < 0 or value > (if (i == 0) @as(f32, 359) else 1)) return error.InvalidLibrary;
         };
         next.swatches = doc.swatches;
+        for (doc.cues, &next.cues) |label, *cue| {
+            if (label) |name| cue.* = next.find(name);
+        }
         self.* = next;
     }
 };
@@ -232,6 +246,13 @@ pub fn saveSwatch(index: usize, color: [3]f32) !void {
     };
 }
 
+pub fn saveCue(slot: usize, preset_index: ?usize) !void {
+    const previous = store.cues[slot];
+    store.cues[slot] = preset_index;
+    errdefer store.cues[slot] = previous;
+    try save();
+}
+
 test "preset file round trip preserves names, visual settings and parameters" {
     const before = settings.snapshot();
     defer for (settings.entries, before) |entry, value| entry.set(value.value);
@@ -241,13 +262,14 @@ test "preset file round trip preserves names, visual settings and parameters" {
     scene.loadExample(.orbit);
     scene.params()[0].value = 210;
     var library: Store = .{};
-    _ = try library.put(try Preset.capture(&scene, "My orbit"), false);
+    library.cues[2] = try library.put(try Preset.capture(&scene, "My orbit"), false);
     const source = try library.encode(std.testing.allocator);
     defer std.testing.allocator.free(source);
     try std.testing.expect(std.mem.indexOf(u8, source, "audio.volume") == null);
     try std.testing.expect(std.mem.indexOf(u8, source, "window.opacity") == null);
     var restored: Store = .{};
     try restored.decode(source);
+    try std.testing.expectEqual(library.cues, restored.cues);
     var tmp = std.testing.tmpDir(.{});
     defer tmp.cleanup();
     try write(tmp.dir, std.testing.io, "presets.json", &restored);
@@ -259,6 +281,14 @@ test "preset file round trip preserves names, visual settings and parameters" {
     try std.testing.expectEqualStrings("My orbit", restored.items[0].name());
     try std.testing.expectEqual(@as(f32, 210), scene.params()[0].value);
     try std.testing.expectApproxEqAbs(@as(f64, 0.23), volume.get(), 1e-6);
+}
+
+test "old libraries have empty cues and stale cues keep valid looks" {
+    var library: Store = .{};
+    try library.decode("{\"presets\":[{\"name\":\"Keep\",\"values\":[]}]}");
+    try std.testing.expectEqual(@as([cue_count]?usize, @splat(null)), library.cues);
+    try library.decode("{\"presets\":[{\"name\":\"Keep\",\"values\":[]}],\"cues\":[\"Missing\",\"Keep\",null,null]}");
+    try std.testing.expectEqual(@as([cue_count]?usize, .{ null, 0, null, null }), library.cues);
 }
 
 test "invalid libraries and missing scenes preserve existing data" {

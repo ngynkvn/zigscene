@@ -94,8 +94,7 @@ pub const Renderer = struct {
     }
 
     /// Per-frame post-effect uniforms. Call inside `BeginShaderMode(program)`.
-    pub fn setUniforms(self: *const Renderer, time: f32, noise_factor: f32) void {
-        const background_alpha = std.math.clamp(Config.Shader.alpha_factor, 0, 1);
+    pub fn setUniforms(self: *const Renderer, time: f32, noise_factor: f32, background_alpha: f32) void {
         const wrapped_time = @mod(time, 1000);
         rl.SetShaderValue(self.program, self.chroma_factor_location, &Config.Shader.chroma_factor, rl.RL_SHADER_UNIFORM_FLOAT);
         rl.SetShaderValue(self.program, self.noise_factor_location, &noise_factor, rl.RL_SHADER_UNIFORM_FLOAT);

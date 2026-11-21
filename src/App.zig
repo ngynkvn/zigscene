@@ -9,6 +9,8 @@ const cli = @import("core/cli.zig");
 const debug = @import("core/debug.zig");
 const init = @import("core/init.zig");
 const input_mod = @import("core/input.zig");
+const Performance = @import("core/Performance.zig");
+const ui = @import("gui/theme.zig");
 const pet = @import("core/desktop_pet.zig");
 const graphics = @import("graphics.zig");
 const gui = @import("gui.zig");
@@ -23,6 +25,7 @@ const viewport_slide_seconds: f32 = 0.12;
 
 preferences_path: ?[]const u8 = null,
 input: input_mod.State = .{},
+performance: Performance = .{},
 audio: AudioSession = .{},
 script: ScriptScene = .{},
 renderer: Renderer,
@@ -83,19 +86,27 @@ pub fn frame(self: *App) void {
     const frame_start = rl.rl.GetTime();
     const dt = rl.GetFrameTime();
     self.audio.update();
-    @import("gui/theme.zig").updateScale();
+    ui.updateScale();
     if (pet.process(!pet.compact() and gui.pointerOverUi())) {
         gui.cancelInteraction(&self.audio, &self.script);
         processor.smoothing_held = false;
-        if (pet.compact()) @import("gui/theme.zig").resetCursor();
-        @import("gui/theme.zig").updateScale();
+        if (pet.compact()) ui.resetCursor();
+        ui.updateScale();
     }
-    if (input_mod.process(&self.input, &self.audio, &self.script)) |size| self.renderer.resize(size.width, size.height);
+    const performance_changed = self.processPerformance();
+    input_mod.processDrops(&self.audio, &self.script, !self.performance.active and !performance_changed);
+    if (!self.performance.active and !performance_changed) input_mod.process(&self.input, &self.audio, &self.script);
+    const width = rl.GetScreenWidth();
+    const height = rl.GetScreenHeight();
+    if (width > 0 and height > 0 and (width != self.renderer.scene_texture.texture.width or height != self.renderer.scene_texture.texture.height)) {
+        self.renderer.resize(width, height);
+    }
     _ = processor.update(dt);
     self.motion.update(dt, processor.rms_energy, processor.on_beat);
     const viewport = self.updateViewport(dt);
     const mouse = rl.GetMousePosition();
-    const over_ui = pet.compact() or gui.pointerOverUi();
+    const scene_only = pet.compact() or self.performance.active;
+    const accepts_pointer = !scene_only and !gui.pointerOverUi();
     self.script.update(.{
         .width = viewport.width(),
         .height = viewport.height(),
@@ -112,12 +123,12 @@ pub fn frame(self: *App) void {
         .sample_count = processor.curr_buffer.len,
         .spectrum = processor.spectrum.ptr,
         .spectrum_count = processor.spectrum.len,
-        .mouse_x = mouse.x - viewport.left,
-        .mouse_y = mouse.y - viewport.top,
-        .wheel = if (over_ui) 0 else rl.GetMouseWheelMoveV().y,
-        .mouse_down = @intFromBool(!over_ui and rl.IsMouseButtonDown(rl.rl.MOUSE_BUTTON_LEFT)),
+        .mouse_x = if (self.performance.active) viewport.width() / 2 else mouse.x - viewport.left,
+        .mouse_y = if (self.performance.active) viewport.height() / 2 else mouse.y - viewport.top,
+        .wheel = if (accepts_pointer) rl.GetMouseWheelMoveV().y else 0,
+        .mouse_down = @intFromBool(accepts_pointer and rl.IsMouseButtonDown(rl.rl.MOUSE_BUTTON_LEFT)),
     });
-    gui.prepareScene(&self.script);
+    if (!self.performance.active) gui.prepareScene(&self.script);
     const scene: graphics.Frame = .{
         .dt = dt,
         .time = self.elapsed,
@@ -130,7 +141,7 @@ pub fn frame(self: *App) void {
         .camera = self.input.camera,
         .rotation = self.input.rotation_offset,
         .halo_tilt = self.input.halo_tilt,
-        .focus = Highlight.init(if (pet.compact()) null else gui.hoveredElement()),
+        .focus = Highlight.init(if (scene_only) null else gui.hoveredElement()),
     };
     if (self.script.usesBuiltin()) self.layers.update(scene);
 
@@ -145,6 +156,29 @@ pub fn frame(self: *App) void {
     self.applyFpsLimit();
     self.applyAlwaysOnTop();
     self.elapsed += dt;
+}
+
+fn processPerformance(self: *App) bool {
+    if (!Performance.supported or pet.enabled) return false;
+    const requested = gui.takePerformanceRequest();
+    if (self.performance.active) {
+        if (!rl.isKeyPressed(.ESCAPE) and !rl.isKeyPressed(.F11)) {
+            if (rl.isKeyPressed(.B)) self.performance.blackout = !self.performance.blackout;
+            gui.cueShortcuts(&self.script, true);
+            return false;
+        }
+        self.performance.leave();
+    } else {
+        if (!requested and (gui.editingValue() or !rl.isKeyPressed(.F11))) return false;
+        if (!self.performance.enter()) return false;
+        gui.cancelInteraction(&self.audio, &self.script);
+        self.input.halo_drag = false;
+        processor.smoothing_held = false;
+    }
+    self.script.watch_paused = self.performance.active;
+    self.applyWindowOpacity();
+    ui.updateScale();
+    return true;
 }
 
 fn resetSettings(self: *App) void {
@@ -173,8 +207,9 @@ fn applyFpsLimit(self: *App) void {
 }
 
 fn applyWindowOpacity(self: *App) void {
-    const opacity = if (pet.compact()) 1 else std.math.clamp(Config.Window.opacity, 0.15, 1.0);
-    if (!pet.compact()) Config.Window.opacity = opacity;
+    const override = pet.compact() or self.performance.active;
+    const opacity = if (override) 1 else std.math.clamp(Config.Window.opacity, 0.15, 1.0);
+    if (!override) Config.Window.opacity = opacity;
     if (opacity == self.applied_window_opacity) return;
     rl.SetWindowOpacity(opacity);
     self.applied_window_opacity = opacity;
@@ -182,17 +217,23 @@ fn applyWindowOpacity(self: *App) void {
 
 /// Slides the scene clear of the side panel; frame-rate independent.
 fn updateViewport(self: *App, dt: f32) Viewport {
-    const ui = @import("gui/theme.zig");
+    const texture = self.renderer.scene_texture.texture;
+    const target_width: f32 = @floatFromInt(texture.width);
+    const target_height: f32 = @floatFromInt(texture.height);
+    if (pet.compact() or self.performance.active) {
+        self.scene_left = 0;
+        return .{ .target_width = target_width, .target_height = target_height };
+    }
     const bounds = gui.sceneBounds();
     const target = bounds.x * ui.scale_factor;
-    self.scene_left = if (pet.compact()) 0 else Viewport.slide(self.scene_left, target, dt, viewport_slide_seconds);
+    self.scene_left = Viewport.slide(self.scene_left, target, dt, viewport_slide_seconds);
     return .{
         .left = self.scene_left,
-        .top = if (pet.compact()) 0 else bounds.y * ui.scale_factor,
-        .bottom = if (pet.compact()) 0 else (@as(f32, @floatFromInt(rl.GetScreenHeight())) - (bounds.y + bounds.height) * ui.scale_factor),
-        .right = if (pet.compact()) 0 else @max(0, @as(f32, @floatFromInt(rl.GetScreenWidth())) - (bounds.x + bounds.width) * ui.scale_factor),
-        .target_width = @floatFromInt(self.renderer.scene_texture.texture.width),
-        .target_height = @floatFromInt(self.renderer.scene_texture.texture.height),
+        .top = bounds.y * ui.scale_factor,
+        .bottom = target_height - (bounds.y + bounds.height) * ui.scale_factor,
+        .right = @max(0, target_width - (bounds.x + bounds.width) * ui.scale_factor),
+        .target_width = target_width,
+        .target_height = target_height,
     };
 }
 
@@ -211,8 +252,9 @@ fn renderScene(self: *App, scene: graphics.Frame) void {
 
 fn renderWindow(self: *App, viewport: Viewport, focus: Highlight) f64 {
     rl.BeginDrawing();
-    var background = @import("gui/theme.zig").background;
-    background.a = if (pet.compact()) 0 else @intFromFloat(@round(Config.Shader.alpha_factor * 255));
+    var background = ui.background;
+    const alpha = if (self.performance.active) 1 else if (pet.compact()) 0 else std.math.clamp(Config.Shader.alpha_factor, 0, 1);
+    background.a = @intFromFloat(@round(alpha * 255));
     rl.ClearBackground(background);
 
     if (!pet.compact() and self.script.usesBuiltin() and Highlight.Element.marbling.visible()) {
@@ -222,7 +264,7 @@ fn renderWindow(self: *App, viewport: Viewport, focus: Highlight) f64 {
 
     rl.BeginShaderMode(self.renderer.program);
     const noise: f32 = if (pet.compact()) 0 else Config.Shader.noise_factor;
-    self.renderer.setUniforms(self.elapsed, noise);
+    self.renderer.setUniforms(self.elapsed, noise, alpha);
     rl.DrawTextureRec(
         self.renderer.scene_texture.texture,
         .{
@@ -234,13 +276,15 @@ fn renderWindow(self: *App, viewport: Viewport, focus: Highlight) f64 {
     );
     rl.EndShaderMode();
 
-    if (pet.compact()) {
+    if (self.performance.blackout) {
+        rl.rl.DrawRectangle(0, 0, rl.GetScreenWidth(), rl.GetScreenHeight(), rl.rl.BLACK);
+    } else if (pet.compact()) {
         pet.drawHint();
-    } else {
-        @import("gui/theme.zig").beginDrawing();
+    } else if (!self.performance.active) {
+        ui.beginDrawing();
         gui.frame(&self.audio, &self.script);
         debug.render();
-        @import("gui/theme.zig").endDrawing();
+        ui.endDrawing();
     }
     const present_start = rl.rl.GetTime();
     rl.EndDrawing();

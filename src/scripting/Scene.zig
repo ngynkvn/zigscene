@@ -21,6 +21,7 @@ error_buffer: [2048]u8 = @splat(0),
 path_buffer: [4096]u8 = @splat(0),
 example: ?Example = null,
 auto_reload: bool = true,
+watch_paused: bool = false,
 watch_elapsed: f32 = 0,
 last_hash: ?u64 = null,
 last_frame: c.ZsFrame = .{ .width = 1024, .height = 768 },
@@ -176,7 +177,7 @@ pub fn reload(self: *Scene) void {
 }
 pub fn update(self: *Scene, frame: c.ZsFrame) void {
     self.last_frame = frame;
-    if (self.auto_reload and self.path().len != 0) {
+    if (self.auto_reload and !self.watch_paused and self.path().len != 0) {
         self.watch_elapsed += frame.dt;
         if (self.watch_elapsed >= 0.75) {
             self.watch_elapsed = 0;

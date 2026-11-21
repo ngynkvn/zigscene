@@ -82,8 +82,63 @@ fn textInput(view: rl.Rectangle, y: f32, buffer: []u8) void {
 }
 
 pub fn presetsHeight() f32 {
-    return 436 + @as(f32, @floatFromInt(Presets.store.len)) * 76;
+    return 500 + @as(f32, @floatFromInt(Presets.store.len)) * 76;
 }
+
+fn loadPreset(scene: *Scene, index: usize) bool {
+    const item = &Presets.store.items[index];
+    item.apply(scene) catch {
+        notice = "Scene unavailable. Current look kept.";
+        return false;
+    };
+    selected_preset = index;
+    name_buffer = item.name_buffer;
+    notice = "Loaded. Undo returns to your previous look.";
+    text_editing = false;
+    Element.solo = null;
+    return true;
+}
+
+pub fn cueShortcuts(scene: *Scene, number_keys: bool) void {
+    for (Presets.store.cues, 0..) |assignment, slot| {
+        const offset: c_int = @intCast(slot);
+        if (!rl.IsKeyPressed(rl.KEY_F1 + offset) and !(number_keys and rl.IsKeyPressed(rl.KEY_ONE + offset))) continue;
+        const index = assignment orelse continue;
+        if (!loadPreset(scene, index)) State.history.notice = "Cue unavailable. Current look kept.";
+        break;
+    }
+}
+
+fn drawCues(view: rl.Rectangle, y: f32) void {
+    ui.heading(if (selected_preset == null) "Select a saved look to assign a cue" else "Assign selected look to a cue", view.x + 4, y, view.width - 8);
+    const gap = 4;
+    const w = (view.width - gap * (Presets.cue_count - 1)) / Presets.cue_count;
+    const labels = [Presets.cue_count][:0]const u8{ "F1", "F2", "F3", "F4" };
+    for (labels, 0..) |label, slot| {
+        const assignment = Presets.store.cues[slot];
+        const bounds = ui.rect(view.x + @as(f32, @floatFromInt(slot)) * (w + gap), y + 20, w, 28);
+        const in_view = visible(view, bounds.y, 28);
+        const can_edit = in_view and !Presets.load_failed;
+        if (ui.button(bounds, label, assignment != null, can_edit and selected_preset != null)) {
+            Presets.saveCue(slot, selected_preset) catch {
+                notice = "Could not save cue assignment.";
+                return;
+            };
+            notice = "Cue assigned. Use its function key to launch.";
+        } else if (can_edit and !ui.blocked and assignment != null and ui.hovered(bounds) and rl.IsMouseButtonPressed(rl.MOUSE_BUTTON_RIGHT)) {
+            Presets.saveCue(slot, null) catch {
+                notice = "Could not clear cue assignment.";
+                return;
+            };
+            notice = "Cue cleared.";
+        }
+        const name = if (Presets.store.cues[slot]) |index| Presets.store.items[index].name() else "Empty";
+        if (in_view) ui.tooltip(bounds, name);
+        var fitted: [256]u8 = undefined;
+        ui.centered(ui.fitted(name, 11, w - 4, &fitted), ui.rect(bounds.x, y + 49, w, 14), 11, ui.muted);
+    }
+}
+
 pub fn drawPresets(scene: *Scene, view: rl.Rectangle, scroll: f32) void {
     var y = view.y - scroll;
     ui.heading("Starter looks", view.x + 4, y + 6, view.width - 8);
@@ -169,7 +224,8 @@ pub fn drawPresets(scene: *Scene, view: rl.Rectangle, scroll: f32) void {
         notice = "Duplicated. Click its name below to load.";
     }
     ui.label(if (Presets.load_failed) "Library unreadable; existing file kept." else if (notice.len > 0) notice else if (Presets.persistent()) "Click a saved look to load it." else "Session library (preferences unavailable).", view.x + 4, y + 94, 11, ui.muted);
-    ui.label("Visuals and scene parameters; no device settings", view.x + 4, y + 114, 11, ui.muted);
+    drawCues(view, y + 114);
+    y += 64;
     if (Presets.store.len == 0) ui.label("No saved looks yet.", view.x + 4, y + 142, 14, ui.muted);
     for (Presets.store.items[0..Presets.store.len], 0..) |*item, i| {
         const row_y = y + 140 + @as(f32, @floatFromInt(i)) * 76;
@@ -182,15 +238,7 @@ pub fn drawPresets(scene: *Scene, view: rl.Rectangle, scroll: f32) void {
         ui.label(if (item.example != null or item.path_buffer[0] != 0) "Lua scene" else "Built-in layers", bounds.x + 84, bounds.y + 37, 11, ui.muted);
         if (over) ui.requestCursor(rl.MOUSE_CURSOR_POINTING_HAND);
         if (ui.activate(bounds, item.name(), visible(view, row_y, 68))) {
-            item.apply(scene) catch {
-                notice = "Scene unavailable. Current look kept.";
-                return;
-            };
-            selected_preset = i;
-            name_buffer = item.name_buffer;
-            notice = "Loaded. Undo returns to your previous look.";
-            text_editing = false;
-            Element.solo = null;
+            _ = loadPreset(scene, i);
         }
     }
 }

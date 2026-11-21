@@ -96,7 +96,9 @@ window sizes, and built-in/Lua scenes. CPU tests cannot verify GPU output. For a
 `zig build run -Dui-smoke=true`. It renders all editor tabs at representative window
 sizes and UI scales into `.tmp/ui-review` without reading or writing preferences.
 It also checks opaque startup, the topmost default, file/Space playback, keyboard focus, starter-look
-switching, and undo through raylib input events. Inspect the images for clipping
+switching, and undo through raylib input events. The performance check also verifies the full-size
+viewport, cue loading and rollback, black output pixels, playback continuity, and return to the editor.
+It also captures the live input meter with synthetic PCM. Inspect the images for clipping
 or rendering problems, including the built-in and Lua 3D scenes.
 `zig build run -Dpet-smoke=true` checks desktop-pet transitions with raylib input
 events: right-click control resets, opening without an accidental reset, text

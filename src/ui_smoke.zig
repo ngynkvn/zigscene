@@ -48,6 +48,89 @@ fn screenshot(path: [*:0]const u8) !void {
     if (!rl.ExportImage(pixels, path)) return error.ScreenshotFailed;
 }
 
+fn checkPerformance(app: *App) !void {
+    // Restart the test track so editor QA cannot exhaust it before this check.
+    app.audio.playFile(".tmp/ui-review/test-sweep.wav");
+    config.Window.opacity = 0.6;
+    const width = rl.GetScreenWidth();
+    const height = rl.GetScreenHeight();
+    gui.onTabChange(.presets);
+    app.frame();
+    key(app, rl.KEY_PAGE_DOWN);
+    click(app, 136, 560); // Select the saved Orbit look.
+    click(app, 122, 400); // Assign it to F2.
+    if (Presets.store.cues[1] != Presets.store.find("Spectral orbit").?) return error.CueAssignmentFailed;
+    try screenshot(".tmp/ui-review/performance-cues.png");
+    click(app, 136, 490); // Restore the built-in look for the start of the set.
+    if (app.script.runtime != null) return error.StartingLookDidNotLoad;
+    config.Shader.alpha_factor = 0.4;
+    var broken = Presets.store.items[0];
+    broken.name_buffer = @splat(0);
+    @memcpy(broken.name_buffer[0..11], "Missing Lua");
+    const missing = ".tmp/ui-review/missing-cue.lua";
+    @memcpy(broken.path_buffer[0..missing.len], missing);
+    Presets.store.cues[2] = try Presets.store.put(broken, false);
+
+    key(app, rl.KEY_F11);
+    if (!app.performance.active or !app.script.watch_paused or !rl.IsCursorHidden() or app.applied_window_opacity != 1) return error.PresentationDidNotStart;
+    if (config.Shader.alpha_factor != 0.4 or config.Window.opacity != 0.6) return error.PresentationChangedPreferences;
+    if (app.script.last_frame.width != @as(f32, @floatFromInt(rl.GetScreenWidth())) or
+        app.script.last_frame.height != @as(f32, @floatFromInt(rl.GetScreenHeight()))) return error.PresentationViewportClipped;
+
+    key(app, rl.KEY_B);
+    if (!app.performance.blackout) return error.BlackoutDidNotStart;
+    key(app, rl.KEY_TWO);
+    if (app.script.example != .orbit or app.script.runtime == null) return error.CueDidNotLoad;
+    const orbit_alpha = config.Shader.alpha_factor;
+    const orbit_revision = app.script.revision;
+    key(app, rl.KEY_F3);
+    if (app.script.revision != orbit_revision or app.script.runtime == null) return error.CueFailureReplacedLook;
+    key(app, rl.KEY_P);
+    if (!app.audio.isFilePlaying() or !app.performance.blackout) return error.PresentationChangedPlayback;
+    const image = rl.LoadImageFromScreen();
+    defer rl.UnloadImage(image);
+    const pixels = rl.LoadImageColors(image);
+    defer rl.UnloadImageColors(pixels);
+    for (pixels[0..@intCast(image.width * image.height)]) |pixel| {
+        if (pixel.r != 0 or pixel.g != 0 or pixel.b != 0) return error.BlackoutLeakedPixels;
+    }
+    try screenshot(".tmp/ui-review/performance-blackout.png");
+
+    key(app, rl.KEY_B);
+    if (app.performance.blackout) return error.BlackoutDidNotEnd;
+    try screenshot(".tmp/ui-review/performance-orbit.png");
+    key(app, rl.KEY_ESCAPE);
+    if (app.performance.active or app.script.watch_paused or rl.IsCursorHidden()) return error.PresentationDidNotEnd;
+    if (rl.WindowShouldClose() or rl.IsWindowState(rl.FLAG_BORDERLESS_WINDOWED_MODE)) return error.EditorWindowDidNotReturn;
+    if (rl.GetScreenWidth() != width or rl.GetScreenHeight() != height or app.applied_window_opacity != 0.6 or
+        config.Shader.alpha_factor != orbit_alpha) return error.PresentationChangedPreferences;
+}
+
+fn reviewCaptureMeter(app: *App) !void {
+    // Feed the capture queue directly so QA never opens the microphone.
+    const capture = @import("audio/capture.zig");
+    const processor = @import("audio/processor.zig");
+    app.audio.togglePlayback();
+    capture.active = true;
+    defer capture.active = false;
+    processor.selectSource(.capture);
+    defer processor.selectSource(.none);
+    const sample_count = config.Audio.buffer_size * config.Audio.channels;
+    const signal: [sample_count]f32 = @splat(0.25);
+    for (0..4) |_| {
+        processor.submitCapture(&signal);
+        app.frame();
+    }
+    try screenshot(".tmp/ui-review/capture-meter.png");
+    const full_scale: [sample_count]f32 = @splat(-1);
+    rl.SetWindowSize(640, 480);
+    for (0..4) |_| {
+        processor.submitCapture(&full_scale);
+        app.frame();
+    }
+    try screenshot(".tmp/ui-review/capture-meter-clipping.png");
+}
+
 // Generate audio only for this QA executable; the application bundles no audio.
 fn writeTestTrack(path: [*:0]const u8) !void {
     const sample_rate = 22050;
@@ -143,5 +226,7 @@ pub fn main() !void {
     click(&app, 970, 63); // Fit scene.
     app.frame();
     if (app.input.halo_tilt.w != 1) return error.HaloTiltFailed;
-    std.debug.print("Opaque startup, topmost default, file playback, keyboard focus, look undo, halo tilt, and 2D/3D/Lua layouts passed.\n", .{});
+    try checkPerformance(&app);
+    try reviewCaptureMeter(&app);
+    std.debug.print("Editor, playback, cue assignment and switching, fullscreen and blackout checks passed.\n", .{});
 }

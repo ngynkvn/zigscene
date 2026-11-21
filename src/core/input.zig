@@ -12,8 +12,6 @@ pub const event = @import("event.zig");
 const Highlight = @import("../graphics/Highlight.zig");
 const Tilt = @import("../graphics/visualizers/halo.zig").Tilt;
 
-pub const Resize = struct { width: i32, height: i32 };
-
 pub const State = struct {
     rotation_offset: f32 = 0,
     halo_tilt: Tilt = .{},
@@ -41,23 +39,25 @@ fn smoothingHold(held: *bool, pressed: bool, released: bool, editing: bool) void
     if (pressed and !editing) held.* = true else if (released) held.* = false;
 }
 
-pub fn process(state: *State, audio: *AudioSession, script: *ScriptScene) ?Resize {
+pub fn processDrops(audio: *AudioSession, script: *ScriptScene, accept: bool) void {
+    if (!rl.IsFileDropped()) return;
+    const files = rl.LoadDroppedFiles();
+    defer rl.UnloadDroppedFiles(files);
+    if (!accept) return;
+    var last_audio_path: ?[]const u8 = null;
+    for (0..files.count) |i| {
+        const path = std.mem.span(files.paths[i]);
+        if (std.ascii.endsWithIgnoreCase(path, ".lua")) {
+            script.loadFile(path);
+            event.onTabChange(.scene);
+        } else last_audio_path = path;
+    }
+    if (last_audio_path) |path| audio.playFile(path);
+}
+
+pub fn process(state: *State, audio: *AudioSession, script: *ScriptScene) void {
     const ctx = @import("tracy").traceNamed(@src(), "input_processing");
     defer ctx.end();
-    if (rl.IsFileDropped()) {
-        const files = rl.LoadDroppedFiles();
-        defer rl.UnloadDroppedFiles(files);
-        var last_audio_path: ?[]const u8 = null;
-        for (0..files.count) |i| {
-            const path = std.mem.span(files.paths[i]);
-            if (std.ascii.endsWithIgnoreCase(path, ".lua")) {
-                script.loadFile(path);
-                event.onTabChange(.scene);
-            } else last_audio_path = path;
-        }
-        if (last_audio_path) |path| audio.playFile(path);
-    }
-
     if (!pet.compact()) gui.editorShortcuts(script);
     const ui = @import("../gui/theme.zig");
     ui.typing = gui.editingValue();
@@ -106,11 +106,7 @@ pub fn process(state: *State, audio: *AudioSession, script: *ScriptScene) ?Resiz
     const shift_held = rl.rl.IsKeyDown(rl.rl.KEY_LEFT_SHIFT) or rl.rl.IsKeyDown(rl.rl.KEY_RIGHT_SHIFT);
     smoothingHold(&processor.smoothing_held, rl.isKeyPressed(.SPACE) and shift_held, rl.isKeyReleased(.SPACE) or !shift_held, gui.editingValue() or pet.compact());
 
-    var resize: ?Resize = null;
-    if (rl.IsWindowResized()) {
-        resize = .{ .width = rl.GetScreenWidth(), .height = rl.GetScreenHeight() };
-    }
-    if (pet.compact()) return resize;
+    if (pet.compact()) return;
     // Turn only after the press frame, so the halo starts from where it was grabbed.
     const left_down = rl.IsMouseButtonDown(rl.rl.MOUSE_BUTTON_LEFT);
     if (state.halo_drag and left_down) {
@@ -129,7 +125,6 @@ pub fn process(state: *State, audio: *AudioSession, script: *ScriptScene) ?Resiz
     }
 
     debug.frame();
-    return resize;
 }
 
 test "space smoothing ignores editing and never writes the saved setting" {

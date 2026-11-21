@@ -8,6 +8,7 @@ Choose a guide by what you want to do:
 | --- | --- |
 | Install and open zigscene | [Getting started](../README.md#getting-started) |
 | Play files or capture live audio | [User guide](usage.md) |
+| Check a mixer feed, assign cues, and project a live set | [Live performance](usage.md#live-performance) |
 | Put a reactive visualizer on the Windows desktop | [Desktop pet](desktop-pet.md) |
 | Find keyboard controls or saved settings | [Shortcuts](usage.md#shortcuts) · [Preferences](usage.md#saved-settings) |
 | Write or modify a visualizer | [Lua scenes](scripting.md) |

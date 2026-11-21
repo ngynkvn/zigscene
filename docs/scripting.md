@@ -52,6 +52,10 @@ to apply manually. Embedded examples have no watched file: drop their source or
 use `--scene=...` to edit them live. Relative paths resolve against the app's
 working directory.
 
+[Live presentation](usage.md#live-performance) suspends file watching until you
+return to the editor. Launching an assigned cue still loads the look's referenced
+scene from disk.
+
 Edit the Lua file to preserve its configuration and parameter defaults. The app
 saves [native host preferences](usage.md#saved-settings) separately; UI changes
 do not rewrite your script, and script sliders are not saved across restarts.
@@ -162,6 +166,9 @@ Drawing pixels are independent of UI scale.
 | --- | --- |
 | `ctx.mouse.x`, `ctx.mouse.y` | Pointer position in the same viewport drawing coordinates |
 | `ctx.mouse.down`, `ctx.mouse.wheel` | Left-button state and vertical wheel delta; suppressed over the app UI |
+
+During live presentation, the pointer position is the center of the viewport.
+The button state is released and the wheel delta is zero.
 
 ### Reading context safely
 
