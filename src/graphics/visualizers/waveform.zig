@@ -1,6 +1,6 @@
+const Frame = @import("../Frame.zig");
 const Highlight = @import("../Highlight.zig");
 const std = @import("std");
-const processor = @import("../../audio/processor.zig");
 const hsv = @import("../../ext/color.zig").Color.hsv.vec3;
 const cnv = @import("../../ext/convert.zig");
 const ffi = cnv.ffi;
@@ -26,17 +26,29 @@ pub const WaveFormLine = struct {
         }
     };
 
-    pub fn render(center: rl.Vector2, width: f32, i: usize, v: f32, style: Style) void {
-        const amplitude: f32 = Config.amplitude;
-        const SPACING = width / ffi(f32, processor.curr_buffer.len);
-        const x = ffi(f32, i) * SPACING;
-        const y = -std.math.clamp(v * amplitude, -250, 250);
-        // "plot" x and y
-        const px = x + center.x;
-        const py = y + center.y;
+    /// The waveform above the scene center and the spectrum below it.
+    pub fn render(frame: Frame) void {
+        const count = frame.samples.len;
+        if (count == 0) return;
+        const style = Style.init(frame.focus);
+        const spacing = frame.viewport.width() / ffi(f32, count);
+        for (frame.samples, 0..) |value, i| plot(frame.center.y - 80, spacing, i, value, style);
+        if (frame.spectrum.len == 0) return;
+        // The lower line spans the whole transform: a real signal's upper
+        // half mirrors its lower half.
+        const last_bin = frame.spectrum.len - 1;
+        for (0..count) |i| {
+            const bin = @min(i, count - i, last_bin);
+            plot(frame.center.y * 2, spacing, i, frame.spectrum[bin] * 1.2, style);
+        }
+    }
+
+    fn plot(baseline: f32, spacing: f32, i: usize, v: f32, style: Style) void {
+        const px = ffi(f32, i) * spacing;
+        const py = baseline - std.math.clamp(v * Config.amplitude, -250, 250);
         // zig fmt: off
-        rl.DrawRectangleRec(.{ .x = px, .y = py,      .width = SPACING, .height = if (style.emphasized) 3 else 1 }, style.primary);
-        rl.DrawRectangleRec(.{ .x = px, .y = py + 8,  .width = SPACING, .height = if (style.emphasized) 4 else 2 }, style.secondary);
+        rl.DrawRectangleRec(.{ .x = px, .y = py,      .width = spacing, .height = if (style.emphasized) 3 else 1 }, style.primary);
+        rl.DrawRectangleRec(.{ .x = px, .y = py + 8,  .width = spacing, .height = if (style.emphasized) 4 else 2 }, style.secondary);
         // zig fmt: on
     }
 };
@@ -45,8 +57,7 @@ pub const WaveFormBar = struct {
     const Config = @import("../../core/config.zig");
     const N = Config.Audio.buffer_size;
     const WaveConfig = Config.Visualizer.WaveFormBar;
-    const amplitude: *f32 = &WaveConfig.amplitude;
-    const base_h: *f32 = &WaveConfig.base_h;
+    /// Decaying peak height per sample column: the trail behind each bar.
     maxes: [N]f32 = @splat(0),
 
     pub const Style = struct {
@@ -65,26 +76,32 @@ pub const WaveFormBar = struct {
 
     pub fn advance(self: *WaveFormBar, dt_seconds: f32) void {
         const factor = @exp(-@min(dt_seconds, 0.1) / @max(WaveConfig.trail_decay, 0.01));
-        for (&self.maxes) |*value| value.* = @max(base_h.*, value.* * factor);
+        for (&self.maxes) |*value| value.* = @max(WaveConfig.base_h, value.* * factor);
     }
 
-    pub fn render(self: *WaveFormBar, floor: f32, width: f32, i: usize, v: f32, style: Style) void {
-        const SPACING = width / ffi(f32, processor.curr_buffer.len);
-        const x = ffi(f32, i) * SPACING;
-        const y = std.math.clamp(@abs(v) * amplitude.*, 0, 350);
-        const px = x;
-        self.maxes[i] = @max(y + base_h.*, self.maxes[i]);
-        rl.DrawRectangleRec(.{
-            .x = px,
-            .y = floor - self.maxes[i],
-            .width = SPACING,
-            .height = self.maxes[i],
-        }, style.trail);
-        rl.DrawRectangleGradientEx(.{
-            .x = px,
-            .y = floor - y - base_h.*,
-            .width = SPACING,
-            .height = y + base_h.*,
-        }, style.primary, style.secondary, style.secondary, style.primary);
+    pub fn render(self: *WaveFormBar, frame: Frame) void {
+        const count = @min(frame.samples.len, self.maxes.len);
+        if (count == 0) return;
+        const style = Style.init(frame.focus);
+        const spacing = frame.viewport.width() / ffi(f32, count);
+        const base = WaveConfig.base_h;
+        const floor = frame.floor();
+        for (frame.samples[0..count], self.maxes[0..count], 0..) |value, *max, i| {
+            const px = ffi(f32, i) * spacing;
+            const y = std.math.clamp(@abs(value) * WaveConfig.amplitude, 0, 350);
+            max.* = @max(y + base, max.*);
+            rl.DrawRectangleRec(.{
+                .x = px,
+                .y = floor - max.*,
+                .width = spacing,
+                .height = max.*,
+            }, style.trail);
+            rl.DrawRectangleGradientEx(.{
+                .x = px,
+                .y = floor - y - base,
+                .width = spacing,
+                .height = y + base,
+            }, style.primary, style.secondary, style.secondary, style.primary);
+        }
     }
 };

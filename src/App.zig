@@ -14,7 +14,7 @@ const graphics = @import("graphics.zig");
 const gui = @import("gui.zig");
 const rl = @import("raylib.zig");
 const Renderer = @import("shader/shader.zig").Renderer;
-const Highlight = @import("graphics/Highlight.zig");
+const Highlight = graphics.Highlight;
 const Motion = @import("graphics/Motion.zig");
 const ScriptScene = @import("scripting/Scene.zig");
 const Viewport = graphics.Viewport;
@@ -30,8 +30,7 @@ elapsed: f32 = 0,
 /// Animated left inset of the scene viewport, in window pixels.
 scene_left: f32 = 0,
 motion: Motion = .{},
-halo: graphics.Halo = .{},
-wave_bars: graphics.WaveFormBar = .{},
+layers: graphics.Builtin = .{},
 applied_window_opacity: f32 = -1,
 applied_fps_limit: i32 = -1,
 applied_always_on_top: ?bool = null,
@@ -119,19 +118,28 @@ pub fn frame(self: *App) void {
         .mouse_down = @intFromBool(!over_ui and rl.IsMouseButtonDown(rl.rl.MOUSE_BUTTON_LEFT)),
     });
     gui.prepareScene(&self.script);
-    if (self.script.usesBuiltin()) {
-        self.halo.update(dt, processor.spectrum);
-        self.wave_bars.advance(dt);
-    }
-    const center = viewport.center();
+    const scene: graphics.Frame = .{
+        .dt = dt,
+        .time = self.elapsed,
+        .samples = processor.curr_buffer,
+        .spectrum = processor.spectrum,
+        .energy = self.motion.energy,
+        .pulse = self.motion.pulse,
+        .viewport = viewport,
+        .center = viewport.center(),
+        .camera = self.input.camera,
+        .rotation = self.input.rotation_offset,
+        .halo_tilt = self.input.halo_tilt,
+        .focus = Highlight.init(if (pet.compact()) null else gui.hoveredElement()),
+    };
+    if (self.script.usesBuiltin()) self.layers.update(scene);
 
     const render_context = tracy.traceNamed(@src(), "Render");
     defer render_context.end();
     const audio_end = rl.rl.GetTime();
-    const focus = Highlight.init(if (pet.compact()) null else gui.hoveredElement());
-    self.renderScene(viewport, center, focus);
+    self.renderScene(scene);
     const scene_end = rl.rl.GetTime();
-    const ui_end = self.renderWindow(viewport, focus);
+    const ui_end = self.renderWindow(viewport, scene.focus);
     debug.record(.{ .audio = audio_end - frame_start, .scene = scene_end - audio_end, .ui = ui_end - scene_end, .present = rl.rl.GetTime() - ui_end });
     self.applyWindowOpacity();
     self.applyFpsLimit();
@@ -188,7 +196,8 @@ fn updateViewport(self: *App, dt: f32) Viewport {
     };
 }
 
-fn renderScene(self: *App, viewport: Viewport, center: rl.Vector2, focus: Highlight) void {
+fn renderScene(self: *App, scene: graphics.Frame) void {
+    const viewport = scene.viewport;
     rl.BeginTextureMode(self.renderer.scene_texture);
     defer rl.EndTextureMode();
     rl.ClearBackground(.{});
@@ -196,52 +205,8 @@ fn renderScene(self: *App, viewport: Viewport, center: rl.Vector2, focus: Highli
     defer rl.rl.EndScissorMode();
     viewport.begin();
     defer viewport.end();
-    if (self.script.usesBuiltin()) self.renderBuiltin(viewport, center, focus);
-    self.script.render(self.input.camera, viewport);
-}
-
-fn renderBuiltin(self: *App, viewport: Viewport, center: rl.Vector2, focus: Highlight) void {
-    const width = viewport.width();
-    if (Highlight.Element.halo.visible()) {
-        const extent = Config.Visualizer.Halo.radius + Config.Visualizer.Halo.depth + 65;
-        const fit = @min(1, @min(viewport.width(), viewport.height()) / (extent * 2 + 24));
-        rl.rl.rlPushMatrix();
-        rl.rlTranslatef(center.x, center.y, 0);
-        rl.rl.rlScalef(fit, fit, 1);
-        rl.rlTranslatef(-center.x, -center.y, 0);
-        self.halo.render(center, self.motion.energy, self.motion.pulse, focus, self.input.halo_tilt);
-        rl.rl.rlPopMatrix();
-    }
-    const floor = viewport.height() - 6;
-
-    {
-        const context = tracy.traceNamed(@src(), "2d");
-        defer context.end();
-        const lines = Highlight.Element.wave_lines.visible();
-        const bars = Highlight.Element.wave_bars.visible();
-        const line_style = graphics.WaveFormLine.Style.init(focus);
-        const bar_style = graphics.WaveFormBar.Style.init(focus);
-        // The shorter bars stand in front of the spectrum unless it is hovered.
-        const spectrum_on_top = focus.selected(.spectrum);
-        if (Highlight.Element.spectrum.visible() and !spectrum_on_top) graphics.FFTSpectrum.render(floor, width, processor.spectrum, focus);
-        const last_bin = processor.spectrum.len - 1;
-        if (lines or bars) for (processor.curr_buffer, 0..) |value, i| {
-            if (lines) {
-                graphics.WaveFormLine.render(.{ .y = center.y - 80 }, width, i, value, line_style);
-                // The lower line spans the whole transform: a real signal's
-                // upper half mirrors its lower half.
-                const bin = @min(i, processor.curr_buffer.len - i, last_bin);
-                graphics.WaveFormLine.render(.{ .y = center.y * 2 }, width, i, processor.spectrum[bin] * 1.2, line_style);
-            }
-            if (bars) self.wave_bars.render(floor, width, i, value, bar_style);
-        };
-        if (Highlight.Element.spectrum.visible() and spectrum_on_top) graphics.FFTSpectrum.render(floor, width, processor.spectrum, focus);
-    }
-    {
-        const context = tracy.traceNamed(@src(), "3d");
-        defer context.end();
-        if (Highlight.Element.bubble.visible()) graphics.Bubble.render(viewport, self.input.camera, self.input.rotation_offset, self.elapsed, self.motion.energy, self.motion.pulse, focus);
-    }
+    if (self.script.usesBuiltin()) self.layers.render(scene);
+    self.script.render(scene.camera, viewport);
 }
 
 fn renderWindow(self: *App, viewport: Viewport, focus: Highlight) f64 {

@@ -1,4 +1,4 @@
-const Highlight = @import("../Highlight.zig");
+const Frame = @import("../Frame.zig");
 const std = @import("std");
 const rl = @import("../../raylib.zig");
 const Config = @import("../../core/config.zig").Visualizer.Halo;
@@ -84,7 +84,20 @@ pub const Halo = struct {
         }
     }
 
-    pub fn render(self: *const Halo, center: rl.Vector2, energy: f32, pulse: f32, focus: Highlight, tilt: Tilt) void {
+    pub fn render(self: *const Halo, frame: Frame) void {
+        const center = frame.center;
+        const energy = frame.energy;
+        const pulse = frame.pulse;
+        const focus = frame.focus;
+        const tilt = frame.halo_tilt;
+        // Shrink about the center so the whole ring fits a small viewport.
+        const extent = Config.radius + Config.depth + 65;
+        const fit = @min(1, @min(frame.viewport.width(), frame.viewport.height()) / (extent * 2 + 24));
+        rl.rl.rlPushMatrix();
+        defer rl.rl.rlPopMatrix();
+        rl.rlTranslatef(center.x, center.y, 0);
+        rl.rl.rlScalef(fit, fit, 1);
+        rl.rlTranslatef(-center.x, -center.y, 0);
         const focal = 4 * (Config.radius + Config.depth + 65);
         var first_tip: rl.Vector2 = undefined;
         var previous_tip: rl.Vector2 = undefined;

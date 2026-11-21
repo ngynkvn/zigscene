@@ -1,4 +1,4 @@
-const Highlight = @import("../Highlight.zig");
+const Frame = @import("../Frame.zig");
 const std = @import("std");
 const rl = @import("../../raylib.zig");
 const Config = @import("../../core/config.zig").Visualizer.Spectrum;
@@ -12,10 +12,13 @@ pub const FFTSpectrum = struct {
     /// Lowest plotted bin; bin 0 is the DC offset, not a frequency.
     const first_bin: f32 = 1;
 
-    /// Log-frequency analyzer across `width`, standing on `floor`. `bins`
-    /// holds normalized magnitudes (see `processor.spectrum`).
-    pub fn render(floor: f32, width: f32, bins: []const f32, focus: Highlight) void {
+    /// Log-frequency analyzer across the viewport, standing on the floor.
+    pub fn render(frame: Frame) void {
+        const bins = frame.spectrum;
         if (bins.len < 2) return;
+        const floor = frame.floor();
+        const width = frame.viewport.width();
+        const focus = frame.focus;
         const columns: usize = @intFromFloat(@max(1, width / column_spacing));
         const bar_width = @max(1, width / @as(f32, @floatFromInt(columns)) - 1);
         const hsv = @import("../../ext/color.zig").Color.hsv.vec3;

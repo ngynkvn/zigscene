@@ -1,8 +1,6 @@
-const Highlight = @import("../Highlight.zig");
-const Viewport = @import("../Viewport.zig");
+const Frame = @import("../Frame.zig");
 const std = @import("std");
 
-const processor = @import("../../audio/processor.zig");
 const hsv = @import("../../ext/color.zig").Color.hsv.vec3;
 const cnv = @import("../../ext/convert.zig");
 const ffi = cnv.ffi;
@@ -14,8 +12,12 @@ comptime {
 
 pub const Bubble = struct {
     const Config = @import("../../core/config.zig").Visualizer.Bubble;
-    // Radii
-    pub fn render(viewport: Viewport, camera3d: rl.Camera3D, rot_offset: f32, t: f32, energy: f32, pulse: f32, focus: Highlight) void {
+    pub fn render(frame: Frame) void {
+        const t = frame.time;
+        const energy = frame.energy;
+        const pulse = frame.pulse;
+        const focus = frame.focus;
+        const samples = frame.samples;
         var color1 = Config.color1;
         const color2 = Config.color2;
         const r_ring: f32 = Config.ring_radius;
@@ -24,9 +26,9 @@ pub const Bubble = struct {
         const effect: f32 = Config.effect;
         const color_scale: f32 = Config.color_scale;
         const bubble_color_scale: f32 = Config.bubble_color_scale;
-        viewport.begin3D(camera3d);
-        defer viewport.end3D();
-        rl.rlRotatef(rot_offset, 0, 1, 0);
+        frame.viewport.begin3D(frame.camera);
+        defer frame.viewport.end3D();
+        rl.rlRotatef(frame.rotation, 0, 1, 0);
         {
             rl.rlPushMatrix();
             rl.rlRotatef(t * 32, 1, 1, 1);
@@ -39,7 +41,8 @@ pub const Bubble = struct {
         const segments = 128;
         const tsteps = std.math.tau / @as(f32, @floatFromInt(segments));
         for (0..segments) |i| {
-            const v = std.math.clamp(@abs(processor.curr_buffer[i * processor.curr_buffer.len / segments]), 0, 1.5);
+            const sample = if (samples.len == 0) 0 else samples[i * samples.len / segments];
+            const v = std.math.clamp(@abs(sample), 0, 1.5);
             const r = r_ring +
                 (effect * energy) +
                 (v * effect) + pulse * 0.25;
