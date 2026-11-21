@@ -3,7 +3,7 @@
 [Project home](README.md) · [All docs](docs/README.md) ·
 [Development](docs/development.md) · [Lua API](docs/scripting.md)
 
-zigscene is a Zig 0.16 application with raylib rendering/audio, a custom immediate
+zigscene is a Zig 0.17 application with raylib rendering/audio, a custom immediate
 mode GUI, and an embedded Lua 5.4 scene runtime. Native and Emscripten builds use
 the same application, scene, and UI code. Lua controls scene composition and
 animation through a bounded API; Zig owns the window, audio devices, GPU state,
